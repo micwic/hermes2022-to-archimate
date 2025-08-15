@@ -1,0 +1,92 @@
+---
+description: Spécification générale du projet hermes2022-to-archimate
+alwaysApply: true
+---
+
+# hermes2022-to-archimate/.cursor/rules/specification-hermes2022-to-archimate.mdc: Spécification générale du projet hermes2022-to-archimate
+
+> Créé le : 2025-08-15  
+> Dernière mise à jour : 2025-08-15
+
+## Description générale
+
+- Le projet hermes2022-to-archimate est une brique logicielle qui participe à l'objectif de constituer un référentiel unique qui comprend à la fois la méthodologie de projet et les éléments d'architecture du projet qui en découle ainsi que sur un même modèle les réalisations du projet, d'une part à même de produire des artefacts conformes à partir d'une source unique de vérité (selon d'autres normes standards également) et pouvant d'autre part également alimenter des fonctionnalités Retrieval Augmented Generation destinées à alimenter des modèles de langage large (LLM) avec le projet cii-via-cip-archimate-ia-repository. Elle vise à extraire les concepts de la méthodologie HERMES2022 édictée par la Confédération Helvétique pour les traduire en éléments et relations selon la méthode Archimate qui permette la modélisation des principes adoptés dans le cadre du projet sur la base d'éléments conformes et valables selon la méthode.
+- La finalité des projets menés dans le cadre du projet personnel est de faire la démonstration de la pertinence de combiner Archimate avec l'intelligence artificielle pour en faire une norme de représentation qui peut se décliner sur l'entier du cycle de vie d'un produit logiciel de l'élaboration de la vision métier jusqu'à la documentation technique de référence de bas niveau.
+
+## Contexte
+
+- HERMES2022 est la méthodologie standard de gestion de programme et de projet de la confédération helvétique (https://www.hermes.admin.ch/en/)
+- Archimate est une norme de représentation d'architecture d'entreprise édictée par l'Open Group, la version actuelle est la version 3.2 (https://pubs.opengroup.org/architecture/archimate3-doc/)
+- Archi est un outil de gestion et de modélisation d'un référentiel selon la norme Archimate (www.archimatetool.com)
+- Customer Information Interface via Customer Information Port est un projet personnel d'étude d'opportunité mené selon HERMES2022 et Archimate et donnant lieu à l'élaboration d'une preuve de concept complexe nécessitant plusieurs projets de développements spécifiques (React, Spring, Flowable, UIPath, Kexcloack, OsixiaLDAP, OAuth2, ...) dans un contexte sécurisé d'entreprise qui vérifie la faisabilité technique et fournit des indicateurs clés pour mesurer l'effort nécessaire d'une réalisation à l'échelle.
+
+## Objectifs
+
+- Faire traduire - et permettre la mise à jour - de manière efficiente et sûre les concepts de la méthode HERMES2022 en éléments et relations selon Archimate dans un référentiel géré avec Archi
+- Utiliser l'interface du plugin JArchi de Archi pour manipuler le référentiel d'architecture d'entreprise de manière interactive comme alternative comparative à l'architecture ETL d'import/export à partir du format d'interchange standard défini par l'Open Group utilisée dans le cadre du projet cii-via-cip-archimate-ia-repository
+
+## Conception générale
+
+- [Architecture générale retenue - À compléter]
+- [Principes de conception directeurs - À compléter]
+
+## Structure de répertoire
+
+| Élément | Type | Description |
+|:--------|:-----|:------------|
+| `/hermes2022-concepts-site-extraction/` | Répertoire | Module d'extraction des concepts HERMES2022 à partir du site internet |
+| `/archimate-model-loader/` | Répertoire | Chargement initial ou mis à jour dans un modèle Archimate des éléments et relations correspondant aux concepts HERMES2022 |
+| `/shared/` | Répertoire | Interfaces et types partagés entre modules |
+| `/__tests__/` | Répertoire | Tests de conformité à la présente spécification
+| `README.md` | Documentation | [Documentation utilisateur - À définir] |
+
+## Décisions architecturale et technique
+
+### Approche hybride IA & scripting
+
+#### Description détaillée de la décision
+
+Plusieurs approches ont été envisagées pour extraire les concepts HERMES2022 du site internet de la Confédération Helvétique (https://www.hermes.admin.ch/en/).
+L'analyse des contenus du site en question a permis d'identifier des pages spécifiques parfaitement organisées qui contiennent les informations nécessaires. Elles peuvent être interprétées efficacement et sûrement par l'IA avec des prompts appropriés pour produire des listes intermédiaires structurées sur lesquelles se reposer pour alimenter et mettre à jour un référentiel Archimate. Lesdites listes intermédiaires peuvent par ailleurs être administrées manuellement le cas échéant pour procéder à des ajustements et/ou à des corrections. 
+
+Le projet est ainsi divisé en deux modules :
+
+- hermes2022-concepts-site-extraction
+- archimate-model-loader
+
+#### Justification de la décision
+
+- Utilisation et mise en valeur du potentiel de l'IA dans un contexte parfaitement approprié
+- Solution sûre avec revue et validation possible des listes intermédiaires produites
+- Gain de temps et d'effort substantiel
+
+#### Patterns validés à suivre suite à la décision
+
+- **Séparation extraction/chargement** : Modules indépendants avec interfaces définies
+- **Validation humaine** : Processus de revue des listes intermédiaires
+- **IA assistée** : Prompts structurés pour extraction cohérente
+
+#### Anti-Patterns en raison d'erreurs identifiées, à ne pas reproduire
+
+- **Extraction directe** : Éviter l'extraction directe sans validation → **Solution** : Listes intermédiaires validables → **Règle à adopter** : Processus de validation systématique
+
+#### État d'implémentation de la décision
+
+🚧 [En cours de conception et réalisation]
+
+### Choix de JArchi comme interface d'intégration avec un modèle d'architecture d'entreprise Archi
+
+#### Description détaillée de la décision
+
+- Utilisation du plugin JArchi d'Archi comme point d'entrée principal pour manipuler le référentiel ArchiMate
+
+#### Justification de la décision
+
+- Interface JavaScript native et documentée
+- Accès direct au modèle interne d'Archi
+- Possibilité de scripting avancé et d'automatisation
+- Alternative plus flexible et simple que l'approche ETL traditionnelle qui implique de maitriser le format XML très complexe définit par l'Open Group
+
+#### État d'implémentation de la décision
+
+🚧 [En cours de conception et réalisation]
