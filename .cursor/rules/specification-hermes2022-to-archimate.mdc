@@ -18,16 +18,19 @@ alwaysApply: true
 - HERMES2022 est la méthodologie standard de gestion de programme et de projet de la confédération helvétique (https://www.hermes.admin.ch/en/)
 - Archimate est une norme de représentation d'architecture d'entreprise édictée par l'Open Group, la version actuelle est la version 3.2 (https://pubs.opengroup.org/architecture/archimate3-doc/)
 - Archi est un outil de gestion et de modélisation d'un référentiel selon la norme Archimate (www.archimatetool.com)
+- Cursor est un outil de développement centré sur l'usage de l'IA, il est également utilisé comme outil conversationnel pour interroger l'IA dans le contexte du projet 
+- Neo4j est une base de données graphe avec des fonctionnalités additionnelles RAG et Vector utilisées pour alimenter l'IA avec dev composants client-serveur MCP selon les principes RAG intégrés à Cursor
 - Customer Information Interface via Customer Information Port est un projet personnel d'étude d'opportunité mené selon HERMES2022 et Archimate et donnant lieu à l'élaboration d'une preuve de concept complexe nécessitant plusieurs projets de développements spécifiques (React, Spring, Flowable, UIPath, Kexcloack, OsixiaLDAP, OAuth2, ...) dans un contexte sécurisé d'entreprise qui vérifie la faisabilité technique et fournit des indicateurs clés pour mesurer l'effort nécessaire d'une réalisation à l'échelle.
 
 ## Objectifs
 
 - Faire traduire - et permettre la mise à jour - de manière efficiente et sûre les concepts de la méthode HERMES2022 en éléments et relations selon Archimate dans un référentiel géré avec Archi
-- Utiliser l'interface du plugin JArchi de Archi pour manipuler le référentiel d'architecture d'entreprise de manière interactive comme alternative comparative à l'architecture ETL d'import/export à partir du format d'interchange standard défini par l'Open Group utilisée dans le cadre du projet cii-via-cip-archimate-ia-repository
+- Permettre l'injection sûre et fiable des concepts HERMES2022 dans les fenêtres de contexte de l'IA via les services RAG exposé par Neo4j
+- Analyser une alternative à l'architecture ETL d'import/export à partir du format d'interchange standard défini par l'Open Group utilisée dans le cadre du projet cii-via-cip-archimate-ia-repository en utilisant l'interface du plugin JArchi de Archi pour manipuler le référentiel d'architecture d'entreprise de manière interactive
 
 ## Conception générale
 
-- [Architecture générale retenue - À compléter]
+- Trois module distincts : 1) Extraction/Transformation des concepts HERMES2022 à partir du site internet 2) Chargement/Mise à jour des éléments et relations correspondant aux concepts HERMES2022 d'un modèle Archimate de Archi 3) 
 - [Principes de conception directeurs - À compléter]
 
 ## Structure de répertoire
@@ -36,6 +39,7 @@ alwaysApply: true
 |:--------|:-----|:------------|
 | `/hermes2022-concepts-site-extraction/` | Répertoire | Module d'extraction des concepts HERMES2022 à partir du site internet |
 | `/archimate-model-loader/` | Répertoire | Chargement initial ou mis à jour dans un modèle Archimate des éléments et relations correspondant aux concepts HERMES2022 |
+| `/hermes2022-ia-loader` | Répertoire | Chargement des concepts HERMES2022 dans Neo4j
 | `/shared/` | Répertoire | Interfaces et types partagés entre modules |
 | `/__tests__/` | Répertoire | Tests de conformité à la présente spécification
 | `README.md` | Documentation | [Documentation utilisateur - À définir] |
@@ -90,3 +94,12 @@ Le projet est ainsi divisé en deux modules :
 #### État d'implémentation de la décision
 
 🚧 [En cours de conception et réalisation]
+
+## Structure et format du fichier intermédiaire
+
+#### Description détaillée de la décision
+
+- Le fichier intermédiaire est en format JSON
+- La structure est définie et les données sont typées sont un schéma json (jsonschema)
+- Les définitions du schéma json sont gérées dans plusieurs fichiers représentant les différentes parties du fichier (#ref, #ref) pour faciliter la maintenance
+- Un fichier unique est créé afin de faciliter l'interprétation et le chargement de celui-ci dans la base de données graphe Neo4j pour alimenter l'IA par RAG
