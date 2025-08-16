@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/micwic/hermes2022-to-archimate/shared/hermes2022-extraction-files/config/json-schemas/hermes2022-phases.json",
+  "title": "HERMES2022 Phases Schema",
+  "description": "Schéma de validation pour les phases du cycle de vie d'un projet HERMES2022",
+  "type": "object",
+  "version": "1.0.0",
+  "phases": {
+    "type": "array",
+    "description": "Liste des phases du cycle de vie d'un projet HERMES2022",
+    "items": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^ph_[a-zA-Z0-9]{6}$",
+          "description": "Identifiant unique aléatoire de la phase (format: ph_abc123)"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Nom de la phase dans la langue d'extraction"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Description détaillée de la phase dans la langue d'extraction"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Ordre séquentiel de la phase dans le cycle de vie"
+        },
+        "hermesSource": {
+          "type": "string",
+          "description": "URL source de la page HERMES2022 d'où la phase a été extraite"
+        }
+      },
+      "required": ["id", "name", "description", "order"],
+      "additionalProperties": false
+    }
+  },
+  "metadata": {
+    "created": "2025-08-16",
+    "lastModified": "2025-08-16",
+    "author": "Michel Wicky",
+    "project": "hermes2022-to-archimate",
+    "purpose": "Validation des phases HERMES2022 extraites",
+    "status": "draft"
+  },
+  "required": ["phases", "metadata"],
+  "additionalProperties": false
+}

@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/micwic/hermes2022-to-archimate/shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts.json",
+  "title": "HERMES2022 Concepts Extraction Schema",
+  "description": "Schéma de validation pour les fichiers intermédiaires d'extraction des concepts HERMES2022",
+  "type": "object",
+  "version": "1.0.0",
+  "hermesVersion": "2022",
+  "validityPeriod": {
+    "start": "2022-01-01",
+    "end": "2027-12-31",
+    "description": "Période de validité de la version HERMES2022 de la méthodologie"
+  },
+  "extractionSource": {
+    "baseUrl": {
+      "type": "string",
+      "enum": [
+        "https://www.hermes.admin.ch/de/",
+        "https://www.hermes.admin.ch/fr/",
+        "https://www.hermes.admin.ch/it/",
+        "https://www.hermes.admin.ch/en/"
+      ],
+      "description": "URL de base utilisée pour l'extraction, enregistrée au moment de l'extraction"
+    },
+    "language": {
+      "type": "string",
+      "enum": ["de", "fr", "it", "en"],
+      "description": "Code de langue utilisé pour l'extraction, enregistré au moment de l'extraction"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500,
+      "pattern": "^[\\p{L}\\p{N}\\s\\-\\.,;:!?()\\[\\]{}'\"`~@#$%^&*+=|\\\\/<>]+$",
+      "description": "Description de la source d'extraction, enregistrée au moment de l'extraction. Contient uniquement des caractères Unicode valides et des symboles de ponctuation standard."
+    }
+  },
+  "concepts": {
+    "phases": {
+      "$ref": "./hermes2022-phases.json"
+    }
+  },
+  "metadata": {
+    "created": "2025-08-16",
+    "lastModified": "2025-08-16",
+    "author": "Michel Wicky",
+    "project": "hermes2022-to-archimate",
+    "purpose": "Validation des fichiers intermédiaires d'extraction HERMES2022"
+  },
+  "required": ["hermesVersion", "extractionSource", "concepts", "metadata"],
+  "additionalProperties": false
+}
