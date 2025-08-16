@@ -1,0 +1,141 @@
+---
+description: "Spécification générale du module hermes2022-extraction-files"
+alwaysApply: true
+---
+
+# specification-hermes2022-extraction-files.mdc: Spécification générale du module hermes2022-extraction-files
+
+Chemin : hermes2022-to-archimate/shared/hermes2022-extraction-files/.cursor/rules/
+
+> Créé le : 2025-08-16  
+> Dernière mise à jour : 2025-08-16
+
+## Description générale
+
+- Le module hermes2022-extraction-files est un module partagé qui centralise la gestion des fichiers intermédiaires produits par l'extraction des concepts HERMES2022
+- Il fournit la structure, les schémas de validation et les données partagées entre les modules d'extraction, de chargement Archimate et de chargement Neo4j
+- Il assure la cohérence et la validité des données échangées entre les différents modules du projet
+
+## Contexte
+
+- Spécification amont @.cursor/rules/specification-hermes2022-to-archimate.mdc
+- Module consommé par hermes2022-concepts-site-extraction, archimate-model-loader et hermes2022-ia-loader
+- Interface de données standardisée pour l'ensemble du projet
+
+## Objectifs
+
+- Centraliser la définition des structures de données intermédiaires pour les concepts HERMES2022
+- Assurer la validation et la cohérence des données échangées entre modules
+- Fournir un référentiel unique et maintenable pour les schémas de données
+- Faciliter la traçabilité et l'historisation des extractions
+
+## Conception générale
+
+- Architecture modulaire avec séparation claire des responsabilités
+- Interface standardisée basée sur JSON Schema pour la validation
+- Gestion d'archive pour conserver l'historique des extractions
+- Structure extensible pour supporter l'évolution des besoins
+
+## Structure de répertoire
+
+| Élément | Type | Description |
+|:--------|:-----|:------------|
+| `/.cursor/rules/` | Répertoire | Spécifications selon la gouvernance des règles |
+| `/config/` | Répertoire | Schémas JSON Schema pour validation des fichiers intermédiaires |
+| `/data/` | Répertoire | Fichiers de données courantes et actives |
+| `/data/archive/` | Répertoire | Historique des extractions passées conservées |
+
+## Décisions architecturales et techniques
+
+### Structure modulaire des fichiers intermédiaires
+
+#### Description détaillée pour la structure modulaire
+
+- [2025-08-16] Les fichiers intermédiaires sont organisés selon une structure modulaire respectant le principe de ségrégation des domaines
+- [2025-08-16] Chaque concept HERMES2022 (phases, scénarios, modules, tâches, résultats, rôles) dispose de sa propre spécification et de ses propres schémas
+- [2025-08-16] La structure est conçue pour faciliter la maintenance et l'évolution indépendante de chaque concept
+
+#### Justification pour la structure modulaire
+
+- **Maintenabilité** : Évolution indépendante de chaque concept sans impact sur les autres
+- **Lisibilité** : Organisation claire facilitant la compréhension et la maintenance
+- **Extensibilité** : Ajout facile de nouveaux concepts sans modification de l'architecture existante
+- **Cohérence** : Respect du principe de ségrégation des domaines
+
+#### Patterns validés pour la structure modulaire
+
+- **Un schéma par concept** : `/config/{concept}-schema.json` pour chaque concept HERMES2022
+- **Spécifications séparées** : `/config/specification-{concept}.md` pour chaque concept
+- **Données organisées** : `/data/{concept}/` pour les données de chaque concept
+- **Archive structurée** : `/data/archive/{YYYY-MM-DD}/` pour l'historique
+
+#### Anti-Patterns pour la structure modulaire à éviter
+
+- **Schéma monolithique** : Éviter un seul fichier schema complexe → **Solution** : Modularité par concept → **Règle à adopter** : Un schéma par domaine pour faciliter la maintenance
+- **Mélange des responsabilités** : Éviter de mélanger spécifications, schémas et données → **Solution** : Séparation par répertoires → **Règle à adopter** : Structure modulaire avec responsabilités distinctes
+
+#### État d'implémentation pour la structure modulaire
+
+🚧 [En cours de conception et réalisation]
+
+### Format et validation des fichiers intermédiaires
+
+#### Description détaillée pour le format et validation
+
+- [2025-08-16] Les fichiers intermédiaires utilisent le format JSON avec validation JSON Schema
+- [2025-08-16] Chaque concept dispose de son propre schéma de validation pour assurer la cohérence des données
+- [2025-08-16] La validation est automatique et systématique avant toute consommation par les modules avals
+
+#### Justification pour le format et validation
+
+- **Format JSON** : Lisibilité humaine et machine, interopérabilité universelle
+- **JSON Schema** : Validation structurelle automatisée, documentation intégrée
+- **Validation systématique** : Garantie de la qualité et de la cohérence des données
+- **Traçabilité** : Contrôle automatisé des données échangées
+
+#### Patterns validés pour le format et validation
+
+- **Validation automatique** : Contrôles de cohérence avant consommation
+- **Schémas auto-documentés** : Documentation intégrée dans les schémas
+- **Gestion d'erreurs** : Traitement systématique des données invalides
+- **Logs de validation** : Traçabilité des validations effectuées
+
+#### Anti-Patterns pour le format et validation à éviter
+
+- **Validation manuelle** : Éviter les contrôles manuels → **Solution** : Validation automatique → **Règle à adopter** : Contrôles systématiques via JSON Schema
+- **Schémas rigides** : Éviter les schémas non évolutifs → **Solution** : Schémas extensibles → **Règle à adopter** : Versioning et compatibilité ascendante
+
+#### État d'implémentation pour le format et validation
+
+🚧 [En cours de conception et réalisation]
+
+### Gestion d'archive et traçabilité
+
+#### Description détaillée pour la gestion d'archive
+
+- [2025-08-16] Un système d'archive est mis en place pour conserver l'historique des extractions
+- [2025-08-16] Chaque extraction est datée et versionnée pour assurer la traçabilité
+- [2025-08-16] L'archive permet la comparaison et l'analyse des évolutions des concepts HERMES2022
+
+#### Justification pour la gestion d'archive
+
+- **Traçabilité** : Suivi des évolutions des concepts HERMES2022
+- **Audit** : Possibilité de revenir sur des versions antérieures
+- **Analyse** : Comparaison des extractions pour identifier les changements
+- **Conformité** : Respect des exigences de traçabilité du projet
+
+#### Patterns validés pour la gestion d'archive
+
+- **Versioning automatique** : Numérotation automatique des versions
+- **Métadonnées** : Informations de contexte pour chaque extraction
+- **Compression** : Optimisation de l'espace de stockage
+- **Indexation** : Recherche et accès facilités aux archives
+
+#### Anti-Patterns pour la gestion d'archive à éviter
+
+- **Perte d'historique** : Éviter de perdre les extractions passées → **Solution** : Système d'archive → **Règle à adopter** : Conservation systématique des versions
+- **Archive non structurée** : Éviter le stockage non organisé → **Solution** : Structure hiérarchique → **Règle à adopter** : Organisation par date et concept
+
+#### État d'implémentation pour la gestion d'archive
+
+🚧 [En cours de conception et réalisation]

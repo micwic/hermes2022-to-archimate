@@ -12,49 +12,54 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 
 ## Description générale
 
-- [Description générale du module hermes2022-concepts-site-extraction - À compléter]
+- La méthode HERMES des gestion de projet et de programme de la Confédération Helvétique est décrite en anglais sur le site <https://www.hermes.admin.ch/en/>
 - [Finalité et portée du module - À compléter]
 
 ## Contexte
 
-- [Contexte métier et technique - À compléter]
-- [Environnement et contraintes - À compléter]
+- Spécification amont @.cursor/rules/specification-hermes2022-to-archimate.mdc
+- La méthode HERMES de gestion de portefeuille et de gestion des applications sont hors contexte, elles sont ignorées
+- La méthode HERMES de gestion de projet et de programme de la Confédération Helvétique est décrite en plusieurs langues : allemand, français, italien et anglais
+- La racine du site <https://www.hermes.admin.ch> est modifiée automatiquement à la langue par défaut ou est celle définie dans l'url lors de la requête
+- L'url du site en allemand est <https://www.hermes.admin.ch/de/>
+- L'url du site en français est <https://www.hermes.admin.ch/fr/>
+- L'url du site en italien est <https://www.hermes.admin.ch/it/>
+- L'url du site en anglais est <https://www.hermes.admin.ch/en/>
 
 ## Objectifs
 
-- [Objectif principal du module - À compléter]
-- [Objectifs secondaires et critères de succès - À compléter]
+- Faire extraire par l'IA, des pages identifiées comme pertinentes du site internet de référence, les concepts HERMES2022 jugés pertinents pour le projet
+- Faire transformer par l'IA les données jugées pertinentes pour les enregistrer dans des fichiers intermédiaires structurés, lisibles et vérifiables
 
 ## Conception générale
 
-- [Architecture générale retenue - À compléter]
-- [Principes de conception directeurs - À compléter]
+- Un fichier de configuration de l'extraction contient les propriétés utiles à celle-ci
+- Le processus d'extraction est générique et configurable, son exécution conforme est basée sur le contenu du fichier de configuration
+- Les concept HERMES2022 jugés pertinents pour le projet sont : 1) Les phases, 2) Les scénarios, 3) Les modules, 4) Les tâches, 5) Les résultats, 6) Les rôles
+- les structures cibles de la transformation sont les structures et types définis pour les fichiers intermédiaires
 
 ## Structure de répertoire
 
 | Élément | Type | Description |
 |:--------|:-----|:------------|
-| `/répertoire1/` | Répertoire | Description du contenu et finalité |
-| `/répertoire2/` | Répertoire | Description du contenu et finalité |
-| `fichier.js` | Code | Description de la finalité |
-| `fichier.json` | Configuration | Description de la finalité |
+| `/config/` | Répertoire | Configuration d |
 
 ## Décisions architecturales et techniques
 
-### [Énoncé abrégé de la décision n]
+### Site internet de référence HERMES2022
 
-#### Description détaillée de la décision
+#### Description détaillée pour le site internet de référence HERMES2022
 
-[YYYY-MM-DD] [Description détaillée de la décision n]
+- [2025-08-16] Le site internet de référence pour l'extraction des concepts HERMES2022 est <https://www.hermes.admin.ch/en/>
+- [2025-08-16] L'URL relative pour les phases est <https://www.hermes.admin.ch/en/>
 
-#### Justification de la décision
+#### Justification pour le site internet de référence HERMES2022
 
-[Description de la justification de la décision n]
+- La documentation de référence du projet est en anglais, les modèles Archimate sont donc en anglais
 
 #### Patterns validés à suivre suite à la décision
 
-- **[Pattern n] :** [description + exemple]
-- **[Pattern n+1] :** [description + exemple]
+- **URL RACINE** à utiliser pour les requêtes internet par l'IA est <https://www.hermes.admin.ch/en/>
 
 #### Anti-Patterns en raison d'erreurs identifiées, à ne pas reproduire
 
@@ -63,8 +68,124 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 
 #### État d'implémentation de la décision
 
-[✅ [Fonctionnalité réalisée]|🚧 [En cours de conception et réalisation]|❌ [Abandonné/Suspendu - Raison]]
+|🚧 [En cours de conception et réalisation]
 
-### [Énoncé abrégé de la décision n+1]
+### Approche hybride IA : Cursor + API externe évolutive
 
-[Reproduction de tout ou partie de la structure et du contenu selon la description précédente]
+#### Description détaillée pour l'approche hybride IA
+
+- [2025-08-16] L'extraction des concepts HERMES2022 utilise une approche hybride en deux phases : Phase 1 avec l'IA intégrée de Cursor pour le développement initial, Phase 2 avec des API externes (Claude, GPT-4) pour la production et l'optimisation
+- [2025-08-16] L'architecture initiale doit être conçue pour faciliter la transition vers les API externes sans refactoring majeur
+- [2025-08-16] L'approche doit permettre la réutilisation dans d'autres contextes que le projet actuel
+
+#### Justification pour l'approche hybride IA
+
+- **Phase 1 - Cursor** : Validation du concept, développement rapide, pas de coût initial
+- **Phase 2 - API externe** : Contrôle fin des paramètres, modèles spécialisés, traçabilité complète
+- **Réutilisabilité** : Architecture modulaire permettant l'adaptation à d'autres méthodologies et contextes
+- **Évolutivité** : Possibilité de basculer selon les besoins et contraintes
+
+#### Patterns validés à suivre suite à la décision
+
+- **Interface abstraite** : Définir une interface commune entre Cursor et API externe
+- **Configuration évolutive** : Structure de configuration supportant les deux approches
+- **Modularité** : Séparation claire entre logique d'extraction et interface IA
+- **Plugins** : Architecture permettant l'ajout facile de nouveaux fournisseurs IA
+
+#### Anti-Patterns en raison d'erreurs identifiées, à ne pas reproduire
+
+- **Couplage fort** : Éviter de coder directement pour Cursor → **Solution** : Interface abstraite → **Règle à adopter** : Architecture en couches avec abstraction de l'IA
+- **Configuration rigide** : Éviter une configuration spécifique à Cursor → **Solution** : Configuration générique extensible → **Règle à adopter** : Structure de configuration évolutive
+
+#### État d'implémentation de la décision
+
+🚧 [En cours de conception et réalisation]
+
+### Structure et format du fichier de configuration
+
+#### Description détaillée pour la structure et format du fichier de configuration
+
+- [2025-08-16] Le fichier de configuration utilise un format JSON avec validation JSON Schema
+- [2025-08-16] La configuration supporte deux modes d'IA : mode Cursor (intégré) et mode API externe (Claude, GPT-4)
+- [2025-08-16] La structure est conçue pour être extensible et réutilisable dans d'autres contextes
+
+#### Justification pour la structure et format du fichier de configuration
+
+- **Format JSON** : Lisibilité humaine et machine, validation automatique
+- **JSON Schema** : Validation structurelle, documentation intégrée
+- **Configuration évolutive** : Support des deux approches IA sans modification majeure
+- **Réutilisabilité** : Structure générique applicable à d'autres méthodologies
+
+#### Patterns validés pour la structure et format du fichier de configuration
+
+- **Configuration hybride** : Support simultané Cursor + API externe
+- **Prompts configurables** : Instructions IA paramétrables selon le contexte
+- **Validation automatique** : Contrôles de cohérence avant exécution
+- **Extensibilité** : Ajout facile de nouveaux concepts et paramètres
+
+#### Anti-Patterns pour la structure et format du fichier de configuration à éviter
+
+- **Configuration monolithique** : Éviter un fichier unique complexe → **Solution** : Modularité par domaines → **Règle à adopter** : Un schéma par concept pour faciliter la maintenance
+- **Couplage IA** : Éviter de lier la configuration à un fournisseur IA spécifique → **Solution** : Interface abstraite → **Règle à adopter** : Configuration générique avec plugins IA
+
+#### État d'implémentation pour la structure et format du fichier de configuration
+
+🚧 [En cours de conception et réalisation]
+
+### Structure et format des instructions d'extraction
+
+#### Description détaillée pour la structure et format des instructions d'extraction
+
+- [2025-08-16] Les instructions d'extraction utilisent le format Markdown pour optimiser l'utilisation par l'IA intégrée de Cursor
+- [2025-08-16] Un fichier d'instructions séparé est créé pour chaque concept HERMES2022 à extraire (phases, scénarios, modules, tâches, résultats, rôles)
+- [2025-08-16] Les instructions se concentrent uniquement sur l'extraction et la transformation, pas sur la définition de la structure cible
+- [2025-08-16] La structure cible est définie par les schémas JSON des fichiers intermédiaires, créant un contrat d'interface entre extraction et consommation
+
+#### Justification pour la structure et format des instructions d'extraction
+
+- **Format Markdown** : Naturel pour l'IA intégrée de Cursor, instructions conversationnelles claires
+- **Fichiers séparés** : Maintenance facilitée, lisibilité optimale, évolution indépendante par concept
+- **Séparation des responsabilités** : Instructions d'extraction ≠ définition structure cible
+- **Contrat d'interface** : Synchronisation progressive entre instructions et schémas cibles
+
+#### Patterns validés pour la structure et format des instructions d'extraction
+
+- **Un fichier par concept** : `/config/extraction-{concept}.md` pour chaque concept HERMES2022
+- **Instructions conversationnelles** : Prompts naturels adaptés à l'IA de Cursor
+- **Synchronisation progressive** : Évolution conjointe des instructions et des schémas cibles
+- **Validation par schéma** : Contrôle de conformité via JSON Schema des fichiers intermédiaires
+
+#### Anti-Patterns pour la structure et format des instructions d'extraction à éviter
+
+- **Fichier monolithique** : Éviter un seul fichier pour tous les concepts → **Solution** : Fichiers séparés par concept → **Règle à adopter** : Modularité conceptuelle
+- **Mélange des responsabilités** : Éviter de définir la structure cible dans les instructions → **Solution** : Séparation claire extraction/structure → **Règle à adopter** : Contrat d'interface via schémas
+- **Format technique** : Éviter JSON/YAML pour les instructions → **Solution** : Markdown conversationnel → **Règle à adopter** : Instructions naturelles pour l'IA
+
+#### État d'implémentation pour la structure et format des instructions d'extraction
+
+🚧 [En cours de conception et réalisation]
+
+### Contrat d'interface extraction-fichiers intermédiaires
+
+#### Description détaillée pour le contrat d'interface
+
+- [2025-08-16] Un contrat d'interface est établi entre les instructions d'extraction et les schémas des fichiers intermédiaires, il consiste surtout à vérifier et faire se synchroniser les définitions dans les spécifications respectives par l'IA
+- [2025-08-16] La synchronisation se fait progressivement au fur et à mesure de l'évolution des besoins
+- [2025-08-16] Les schémas JSON des fichiers intermédiaires définissent la structure cible de la transformation
+
+#### Justification pour le contrat d'interface
+
+- **Cohérence** : Garantit l'alignement entre extraction et consommation
+- **Évolutivité** : Permet l'adaptation progressive des deux côtés
+- **Validation** : Assure la conformité des données extraites
+- **Maintenance** : Facilite la gestion des changements
+
+#### Patterns validés pour le contrat d'interface
+
+- **Synchronisation progressive** : Évolution conjointe des instructions et schémas
+- **Validation automatique** : Contrôle de conformité via JSON Schema
+- **Documentation partagée** : Référence commune pour l'équipe
+
+#### État d'implémentation pour le contrat d'interface
+
+🚧 [En cours de conception et réalisation]
