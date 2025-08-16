@@ -1,0 +1,59 @@
+---
+description: Spécification générale du module archimate-model-loader
+alwaysApply: true
+---
+
+# specification-archimate-model-loader.mdc: Spécification générale du module archimate-model-loader
+
+Chemin : hermes2022-to-archimate/archimate-model-loader/.cursor/rules/
+
+> Créé le : 2025-08-16  
+> Dernière mise à jour : 2025-08-16
+
+## Description générale
+
+- [Description générale du module archimate-model-loader - À compléter]
+- [Finalité et portée du module - À compléter]
+
+## Contexte
+
+- [Contexte métier et technique - À compléter]
+- [Environnement et contraintes - À compléter]
+
+## Objectifs
+
+- [Objectif principal du module - À compléter]
+- [Objectifs secondaires et critères de succès - À compléter]
+
+## Conception générale
+
+- [Architecture générale retenue - À compléter]
+- [Principes de conception directeurs - À compléter]
+
+## Structure de répertoire
+
+| Élément | Type | Description |
+|:--------|:-----|:------------|
+| `/répertoire1/` | Répertoire | Description du contenu et finalité |
+| `/répertoire2/` | Répertoire | Description du contenu et finalité |
+| `fichier.js` | Code | Description de la finalité |
+| `fichier.json` | Configuration | Description de la finalité |
+
+## Décisions architecturales et techniques
+
+### Choix de JArchi comme interface d'intégration avec un modèle d'architecture d'entreprise Archi
+
+#### Description détaillée pour Choix de JArchi
+
+- Utilisation du plugin JArchi d'Archi comme point d'entrée principal pour manipuler le référentiel ArchiMate
+
+#### Justification pour Choix de JArchi
+
+- Interface JavaScript native et documentée
+- Accès direct au modèle interne d'Archi
+- Possibilité de scripting avancé et d'automatisation
+- Alternative plus flexible et simple que l'approche ETL traditionnelle qui implique de maitriser le format XML très complexe définit par l'Open Group
+
+#### État d'implémentation pour Choix de JArchi
+
+🚧 [En cours de conception et réalisation]
