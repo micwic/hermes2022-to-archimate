@@ -1,0 +1,70 @@
+---
+description: Spécification générale du module hermes2022-ia-loader
+alwaysApply: true
+---
+
+# specification-hermes2022-ia-loader.mdc: Spécification générale du module hermes2022-ia-loader
+
+Chemin : hermes2022-to-archimate/hermes2022-ia-loader/.cursor/rules/
+
+> Créé le : 2025-08-16  
+> Dernière mise à jour : 2025-08-16
+
+## Description générale
+
+- [Description générale du module hermes2022-ia-loader - À compléter]
+- [Finalité et portée du module - À compléter]
+
+## Contexte
+
+- [Contexte métier et technique - À compléter]
+- [Environnement et contraintes - À compléter]
+
+## Objectifs
+
+- [Objectif principal du module - À compléter]
+- [Objectifs secondaires et critères de succès - À compléter]
+
+## Conception générale
+
+- [Architecture générale retenue - À compléter]
+- [Principes de conception directeurs - À compléter]
+
+## Structure de répertoire
+
+| Élément | Type | Description |
+|:--------|:-----|:------------|
+| `/répertoire1/` | Répertoire | Description du contenu et finalité |
+| `/répertoire2/` | Répertoire | Description du contenu et finalité |
+| `fichier.js` | Code | Description de la finalité |
+| `fichier.json` | Configuration | Description de la finalité |
+
+## Décisions architecturales et techniques
+
+### [Énoncé abrégé de la décision n]
+
+#### Description détaillée de la décision
+
+[YYYY-MM-DD] [Description détaillée de la décision n]
+
+#### Justification de la décision
+
+[Description de la justification de la décision n]
+
+#### Patterns validés à suivre suite à la décision
+
+- **[Pattern n] :** [description + exemple]
+- **[Pattern n+1] :** [description + exemple]
+
+#### Anti-Patterns en raison d'erreurs identifiées, à ne pas reproduire
+
+- **[Erreur n] :** [description] → **Solution :** [approche correcte] → **Règle à adopter pour éviter :** [Règle|pattern à adopter]
+- **[Erreur n+1] :** [description] → **Solution :** [approche correcte] → **Règle à adopter pour éviter :** [Règle|pattern à adopter]
+
+#### État d'implémentation de la décision
+
+[✅ [Fonctionnalité réalisée]|🚧 [En cours de conception et réalisation]|❌ [Abandonné/Suspendu - Raison]]
+
+### [Énoncé abrégé de la décision n+1]
+
+[Reproduction de tout ou partie de la structure et du contenu selon la description précédente]
