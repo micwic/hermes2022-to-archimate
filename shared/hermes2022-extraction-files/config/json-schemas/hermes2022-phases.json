@@ -25,6 +25,32 @@
       },
       "required": ["extractionDate", "source", "version"]
     },
+    "phases-concept": {
+      "type": "object",
+      "description": "Description générale des phases HERMES2022 (contexte, articulation, approches traditionnelle/agile).",
+      "properties": {
+        "overview": {
+          "type": "string",
+          "minLength": 50,
+          "maxLength": 5000,
+          "description": "Résumé conceptuel (cycle de vie, interfaces uniformes, jalons/quality gates, hiérarchie 1/2/2.x/3, rôle des phases communes)."
+        },
+        "sourceUrl": {
+          "type": "string",
+          "format": "uri",
+          "enum": [
+            "https://www.hermes.admin.ch/en/project-management/phases.html"
+          ],
+          "description": "URL officielle de référence utilisée pour cette description."
+        },
+        "lastChecked": {
+          "type": "string",
+          "format": "date",
+          "description": "Date de dernière vérification de la source."
+        }
+      },
+      "required": ["overview", "sourceUrl"]
+    },
     "phases": {
       "type": "array",
       "items": {
@@ -96,5 +122,5 @@
       "description": "Liste des phases HERMES2022"
     }
   },
-  "required": ["metadata", "phases"]
+  "required": ["metadata", "phases-concept", "phases"]
 }

@@ -209,6 +209,17 @@ Chemin : hermes2022-to-archimate/shared/hermes2022-extraction-files/.cursor/rule
 - [2025-08-18] **CONTRAINTES DE VALIDATION** : Longueur minimale/maximale, patterns de validation pour assurer la qualité du contenu extrait
 - [2025-08-18] **INTEROPÉRABILITÉ** : Structure compatible avec les modules de chargement Archimate et Neo4j
 
+#### Description générale du concept de phases (phases-concept)
+
+- [2025-08-18] **PROPRIÉTÉ DE NIVEAU SUPÉRIEUR** : Ajout de `phases-concept` au schéma `hermes2022-phases.json` pour porter la description générale des phases HERMES2022.
+- **But** : Capturer un résumé conceptuel (cycle de vie, approches traditionnelle/agile, uniformité des interfaces, jalons/quality gates, hiérarchie 1/2/2.x/3, rôle d'Initiation/Closure) provenant de la page officielle des phases.
+- **Champs** :
+  - `overview` (string, minLength 50, maxLength 5000) : texte synthétique structuré.
+  - `sourceUrl` (string, uri, enum = `<https://www.hermes.admin.ch/en/project-management/phases.html>`) : référence officielle.
+  - `lastChecked` (string, date) : date de dernière vérification.
+- **Obligation** : `phases-concept` est requis au même titre que `metadata` et `phases`.
+- **Complémentarité** : `phases-concept` précède et contextualise la liste `phases` sans la remplacer.
+
 #### Justification pour la structure du schéma JSON
 
 - **Extraction IA optimisée** : Permet l'extraction effective du contenu depuis les pages HERMES2022

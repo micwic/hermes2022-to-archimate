@@ -1,30 +1,39 @@
 # Prompt d'extraction - Phase Concept HERMES2022
 
 ## Objectif
+
 Extraire les informations de la phase Concept depuis la page [https://www.hermes.admin.ch/en/project-management/phases/concept.html](https://www.hermes.admin.ch/en/project-management/phases/concept.html)
 
 ## Instructions d'extraction
 
 ### 1. Informations de base
+
 - **Nom de la phase** : "Concept"
 - **Ordre hiérarchique** : "2.1"
 - **Type** : "simple"
 
 ### 2. Description principale
+
 Extraire la description principale de la phase Concept. Cette description doit expliquer :
+
 - L'objectif principal de la phase
 - Le rôle dans le développement de la solution
 - Les fondements créés pour l'implémentation
 
 ### 3. Contexte et articulation
+
 Extraire le contexte qui explique :
+
 - Comment la phase s'intègre dans l'approche traditionnelle
 - Sa relation avec les phases Initiation et Implementation
 - Son importance dans la validation de la solution
 - La différence avec l'approche agile
+- Intégrer, si pertinent, des éléments d'articulation tirés de la page générale des phases : <https://www.hermes.admin.ch/en/project-management/phases.html>
 
 ### 4. Résultats attendus (outcomes)
+
 Identifier et lister les résultats principaux de la phase Concept, notamment :
+
 - Les concepts de solution développés
 - Les analyses de situation
 - Les concepts organisationnels et IT
@@ -32,14 +41,18 @@ Identifier et lister les résultats principaux de la phase Concept, notamment :
 - Les concepts d'intégration
 
 ### 5. Jalons (milestones)
+
 Identifier les points de contrôle et jalons de la phase, notamment :
+
 - Les décisions d'implémentation release
 - Les validations de faisabilité
 - Les évaluations de risques
 - Les validations de ressources
 
 ### 6. Approches supportées
+
 Déterminer si la phase supporte :
+
 - Approche traditionnelle
 - Approche agile
 - Les deux approches
@@ -48,7 +61,7 @@ Déterminer si la phase supporte :
 
 ```json
 {
-  "id": "ph_conc01",
+  "id": "ph_def456",
   "name": "Concept",
   "order": "2.1",
   "type": "simple",
@@ -69,9 +82,11 @@ Déterminer si la phase supporte :
 ```
 
 ## Notes importantes
+
 - Extraire uniquement les informations présentes sur la page
 - Respecter la structure JSON définie
 - Maintenir la cohérence avec le schéma de validation
 - Privilégier la précision sur la quantité d'informations
 - Noter que cette phase est spécifique à l'approche traditionnelle
 - Cette phase fait partie de la phase composite Execution (2) dans l'approche agile
+- La sortie attendue est un objet Phase (unitaire). L'agrégation et les métadonnées de niveau fichier (champ "metadata" et tableau "phases") sont réalisées en aval lors de la consolidation.
