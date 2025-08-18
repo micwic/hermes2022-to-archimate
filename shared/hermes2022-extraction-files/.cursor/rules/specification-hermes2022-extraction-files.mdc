@@ -8,7 +8,7 @@ alwaysApply: true
 Chemin : hermes2022-to-archimate/shared/hermes2022-extraction-files/.cursor/rules/
 
 > Créé le : 2025-08-16  
-> Dernière mise à jour : 2025-08-16
+> Dernière mise à jour : 2025-08-18
 
 ## Description générale
 
@@ -157,6 +157,80 @@ Chemin : hermes2022-to-archimate/shared/hermes2022-extraction-files/.cursor/rule
 
 - ✅ **Structure des phases** : Définie et implémentée
 - ❌ **Références croisées** : À implémenter avec les autres concepts
+
+### Hiérarchie spécifique des phases HERMES2022 et propriété "order"
+
+#### Description détaillée pour la hiérarchie des phases HERMES2022
+
+- [2025-08-18] **HIÉRARCHIE OFFICIELLE HERMES2022** : La méthodologie HERMES2022 définit une structure hiérarchique spécifique des phases avec la phase "Execution" qui regroupe plusieurs sous-phases
+- [2025-08-18] **STRUCTURE À DEUX NIVEAUX** :
+  - **Niveau 1** : 1=Initiation, 2=Execution, 3=Closure  
+  - **Niveau 2** : Execution (2) = 2.1=Concept + 2.2=Implementation + 2.3=Deployment
+- [2025-08-18] **PROPRIÉTÉ "ORDER" COMPLEXE** : La propriété "order" doit supporter cette hiérarchie à deux niveaux avec un format "\\d+(\\.\\d+)*" pour permettre 1, 2, 2.1, 2.2, 2.3, 3
+- [2025-08-18] **PAGES DE RÉFÉRENCE SPÉCIFIQUES** :
+  - Page générale : <https://www.hermes.admin.ch/en/project-management/phases.html>
+  - Initiation : <https://www.hermes.admin.ch/en/project-management/phases/initiation.html>
+  - Concept : <https://www.hermes.admin.ch/en/project-management/phases/concept.html>
+  - Implementation : <https://www.hermes.admin.ch/en/project-management/phases/implementation.html>
+  - Deployment : <https://www.hermes.admin.ch/en/project-management/phases/deployment.html>
+  - Execution : <https://www.hermes.admin.ch/en/project-management/phases/execution.html>
+  - Closure : <https://www.hermes.admin.ch/en/project-management/phases/closure.html>
+
+#### Justification pour la hiérarchie des phases HERMES2022
+
+- **Conformité méthodologique** : Respect exact de la structure officielle HERMES2022
+- **Phase composite "Execution"** : Regroupement logique Concept+Implementation+Deployment selon la méthodologie
+- **Propriété "order" hiérarchique** : Nécessaire pour représenter correctement la structure à deux niveaux
+- **URLs de référence spécifiques** : Sources officielles pour l'extraction du contexte et de l'articulation
+
+#### Patterns validés pour la hiérarchie des phases HERMES2022
+
+- **Order hiérarchique** : Format "1", "2", "2.1", "2.2", "2.3", "3" selon pattern "\\d+(\\.\\d+)*"
+- **Phase composite** : Type "composite" pour Execution, type "simple" pour les autres
+- **Extraction par URL** : Une URL spécifique par phase pour extraction du contexte
+- **Contexte général** : Page générale phases.html pour articulation d'ensemble
+
+#### Anti-Patterns pour la hiérarchie des phases HERMES2022 à éviter
+
+- **Order séquentiel simple** : Éviter 1,2,3,4,5,6 qui ne respecte pas la hiérarchie → **Solution** : Hiérarchie à deux niveaux → **Règle à adopter** : Format "\\d+(\\.\\d+)*"
+- **URLs génériques** : Éviter l'extraction depuis la page générale uniquement → **Solution** : URLs spécifiques par phase → **Règle à adopter** : Une URL par phase pour le contexte détaillé
+- **Description littérale fixe** : Éviter description prédéfinie dans le schéma → **Solution** : Structure pour contenu extractible → **Règle à adopter** : Description comme string avec contraintes de validation
+
+#### État d'implémentation pour la hiérarchie des phases HERMES2022
+
+🚧 [En cours de spécification et réalisation]
+
+### Structure du schéma JSON pour extraction optimisée
+
+#### Description détaillée pour la structure du schéma JSON
+
+- [2025-08-18] **STRUCTURE DESCRIPTION** : La propriété "description" est définie comme structure pour contenu extractible (string, pattern, required)
+- [2025-08-18] **EXTRACTION CONTEXTE** : La description contient le contexte et l'articulation extraits des pages spécifiques HERMES2022
+- [2025-08-18] **CONTRAINTES DE VALIDATION** : Longueur minimale/maximale, patterns de validation pour assurer la qualité du contenu extrait
+- [2025-08-18] **INTEROPÉRABILITÉ** : Structure compatible avec les modules de chargement Archimate et Neo4j
+
+#### Justification pour la structure du schéma JSON
+
+- **Extraction IA optimisée** : Permet l'extraction effective du contenu depuis les pages HERMES2022
+- **Contexte riche** : Capture l'articulation générale et le contexte spécifique de chaque phase
+- **Validation qualité** : Contraintes pour assurer la pertinence du contenu extrait
+- **Interopérabilité** : Structure compatible avec les modules de chargement Archimate et Neo4j
+
+#### Patterns validés pour la structure du schéma JSON
+
+- **Description extractible** : Type string avec contraintes minLength/maxLength appropriées
+- **Validation pattern** : Contraintes sur le format et la qualité du contenu
+- **Champs required** : Description obligatoire pour chaque phase extraite
+- **Métadonnées extraction** : Source, date, version pour traçabilité
+
+#### Anti-Patterns pour la structure du schéma JSON à éviter
+
+- **Description prédéfinie** : Éviter les littéraux fixes dans le schéma → **Solution** : Structure extractible → **Règle à adopter** : Description comme contenu variable validé
+- **Contraintes trop strictes** : Éviter des patterns trop rigides → **Solution** : Contraintes adaptées au contenu HERMES2022 → **Règle à adopter** : Validation équilibrée qualité/flexibilité
+
+#### État d'implémentation pour la structure du schéma JSON
+
+🚧 [En cours de spécification et réalisation]
 
 ### Gestion d'archive et traçabilité
 
