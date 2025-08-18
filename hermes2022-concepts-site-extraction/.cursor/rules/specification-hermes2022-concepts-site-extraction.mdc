@@ -8,12 +8,14 @@ alwaysApply: true
 Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rules/
 
 > Créé le : 2025-08-16  
-> Dernière mise à jour : 2025-08-16
+> Dernière mise à jour : 2025-08-18
 
 ## Description générale
 
 - La méthode HERMES des gestion de projet et de programme de la Confédération Helvétique est décrite en anglais sur le site <https://www.hermes.admin.ch/en/>
-- [Finalité et portée du module - À compléter]
+- **Finalité du module** : Extraire automatiquement les concepts HERMES2022 depuis les pages officielles spécifiques et les transformer en fichiers intermédiaires structurés JSON validés
+- **Portée du module** : Extraction ciblée des phases HERMES2022 avec leur contexte et articulation générale, selon la hiérarchie officielle (1=Initiation, 2=Execution avec 2.1=Concept, 2.2=Implementation, 2.3=Deployment, 3=Closure)
+- **Interface de sortie** : Fichiers JSON conformes aux schémas définis dans le module hermes2022-extraction-files
 
 ## Contexte
 
@@ -42,7 +44,11 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 
 | Élément | Type | Description |
 |:--------|:-----|:------------|
-| `/config/` | Répertoire | Configuration d |
+| `/config/` | Répertoire | Configuration de l'extraction et instructions IA |
+| `/config/extraction-phases-*.md` | Fichiers | Instructions d'extraction IA spécifiques par phase HERMES2022 |
+| `/config/extraction-config.json` | Configuration | Paramètres de configuration pour l'extraction automatisée |
+| `/output/` | Répertoire | Fichiers JSON de sortie produits par l'extraction |
+| `/logs/` | Répertoire | Journaux d'exécution et de validation |
 
 ## Décisions architecturales et techniques
 
@@ -63,12 +69,13 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 
 #### Anti-Patterns en raison d'erreurs identifiées, à ne pas reproduire
 
-- **[Erreur n] :** [description] → **Solution :** [approche correcte] → **Règle à adopter pour éviter :** [Règle|pattern à adopter]
-- **[Erreur n+1] :** [description] → **Solution :** [approche correcte] → **Règle à adopter pour éviter :** [Règle|pattern à adopter]
+- **Extraction générique uniquement** : Éviter d'extraire depuis la page générale seule → **Solution** : Pages spécifiques par phase → **Règle à adopter** : Une URL par phase pour contexte détaillé
+- **Ignorance contexte articulation** : Éviter d'ignorer la page générale → **Solution** : Extraction contexte général → **Règle à adopter** : Utiliser pages.html pour articulation d'ensemble
+- **Structure hiérarchique incorrecte** : Éviter order séquentiel simple → **Solution** : Hiérarchie à deux niveaux → **Règle à adopter** : Respecter structure officielle Execution composite
 
 #### État d'implémentation de la décision
 
-|🚧 [En cours de conception et réalisation]
+🚧 [En cours de spécification et réalisation]
 
 ### Approche hybride IA : Cursor + API externe évolutive
 
@@ -85,19 +92,19 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 - **Réutilisabilité** : Architecture modulaire permettant l'adaptation à d'autres méthodologies et contextes
 - **Évolutivité** : Possibilité de basculer selon les besoins et contraintes
 
-#### Patterns validés à suivre suite à la décision
+#### Patterns validés pour l'approche hybride IA
 
 - **Interface abstraite** : Définir une interface commune entre Cursor et API externe
 - **Configuration évolutive** : Structure de configuration supportant les deux approches
 - **Modularité** : Séparation claire entre logique d'extraction et interface IA
 - **Plugins** : Architecture permettant l'ajout facile de nouveaux fournisseurs IA
 
-#### Anti-Patterns en raison d'erreurs identifiées, à ne pas reproduire
+#### Anti-Patterns pour l'approche hybride IA à éviter
 
 - **Couplage fort** : Éviter de coder directement pour Cursor → **Solution** : Interface abstraite → **Règle à adopter** : Architecture en couches avec abstraction de l'IA
 - **Configuration rigide** : Éviter une configuration spécifique à Cursor → **Solution** : Configuration générique extensible → **Règle à adopter** : Structure de configuration évolutive
 
-#### État d'implémentation de la décision
+#### État d'implémentation pour l'approche hybride IA
 
 🚧 [En cours de conception et réalisation]
 
@@ -188,4 +195,4 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 
 #### État d'implémentation pour le contrat d'interface
 
-🚧 [En cours de conception et réalisation]
+🚧 [En cours de spécification et réalisation]

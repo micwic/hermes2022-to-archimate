@@ -1,53 +1,100 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/micwic/hermes2022-to-archimate/shared/hermes2022-extraction-files/config/json-schemas/hermes2022-phases.json",
   "title": "HERMES2022 Phases Schema",
-  "description": "Schéma de validation pour les phases du cycle de vie d'un projet HERMES2022",
+  "description": "Schéma pour la validation des phases HERMES2022 extraites",
   "type": "object",
-  "version": "1.0.0",
-  "phases": {
-    "type": "array",
-    "description": "Liste des phases du cycle de vie d'un projet HERMES2022",
-    "items": {
+  "properties": {
+    "metadata": {
       "type": "object",
       "properties": {
-        "id": {
+        "extractionDate": {
           "type": "string",
-          "pattern": "^ph_[a-zA-Z0-9]{6}$",
-          "description": "Identifiant unique aléatoire de la phase (format: ph_abc123)"
+          "format": "date",
+          "description": "Date d'extraction des phases"
         },
-        "name": {
+        "source": {
           "type": "string",
-          "maxLength": 200,
-          "description": "Nom de la phase dans la langue d'extraction"
+          "enum": ["hermes.admin.ch"],
+          "description": "Source de référence pour l'extraction"
         },
-        "description": {
+        "version": {
           "type": "string",
-          "maxLength": 1000,
-          "description": "Description détaillée de la phase dans la langue d'extraction"
-        },
-        "order": {
-          "type": "integer",
-          "minimum": 1,
-          "description": "Ordre séquentiel de la phase dans le cycle de vie"
-        },
-        "hermesSource": {
-          "type": "string",
-          "description": "URL source de la page HERMES2022 d'où la phase a été extraite"
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "Version du schéma"
         }
       },
-      "required": ["id", "name", "description", "order"],
-      "additionalProperties": false
+      "required": ["extractionDate", "source", "version"]
+    },
+    "phases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^ph_[a-z0-9]{6}$",
+            "description": "Identifiant unique de la phase (format: ph_abc123)"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Nom de la phase en anglais"
+          },
+          "order": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)*$",
+            "description": "Ordre hiérarchique de la phase (ex: 1, 2, 2.1, 2.2, 2.3, 3)"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["simple", "composite"],
+            "description": "Type de phase : simple ou composite (regroupant plusieurs sous-phases)"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2000,
+            "description": "Description détaillée de la phase et de ses objectifs"
+          },
+          "context": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 1000,
+            "description": "Contexte et articulation de la phase dans le cycle de vie du projet"
+          },
+          "outcomes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 200
+            },
+            "description": "Liste des résultats attendus de la phase"
+          },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 200
+            },
+            "description": "Points de contrôle et jalons de la phase"
+          },
+          "approach": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["traditional", "agile", "both"]
+            },
+            "description": "Approches supportées par la phase (traditionnelle, agile, ou les deux)"
+          }
+        },
+        "required": ["id", "name", "order", "type", "description", "context", "approach"]
+      },
+      "minItems": 1,
+      "description": "Liste des phases HERMES2022"
     }
   },
-  "metadata": {
-    "created": "2025-08-16",
-    "lastModified": "2025-08-16",
-    "author": "Michel Wicky",
-    "project": "hermes2022-to-archimate",
-    "purpose": "Validation des phases HERMES2022 extraites",
-    "status": "draft"
-  },
-  "required": ["phases", "metadata"],
-  "additionalProperties": false
+  "required": ["metadata", "phases"]
 }
