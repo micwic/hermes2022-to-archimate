@@ -1,0 +1,12 @@
+{
+  "hermesVersion": "2022",
+  "extractionSource": {
+    "baseUrl": "https://www.hermes.admin.ch/en",
+    "language": "en",
+    "description": "Site de référence en anglais pour l'extraction des concepts HERMES2022"
+  },
+  "requireHumanApproval": true,
+  "approvalTargets": [
+    "/concepts/overview"
+  ]
+}

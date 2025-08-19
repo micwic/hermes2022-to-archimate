@@ -9,7 +9,7 @@
   "validityPeriod": {
     "start": "2022-01-01",
     "end": "2027-12-31",
-    "description": "Période de validité de la version HERMES2022 de la méthodologie"
+    "description": "Période de validité de la version HERMES2022 de la méthodologie sur laquelle se basent les extractions"
   },
   "extractionSource": {
     "baseUrl": {
@@ -35,6 +35,13 @@
     }
   },
   "concepts": {
+    "overview": {
+      "type": "string",
+      "minLength": 600,
+      "maxLength": 1500,
+      "pattern": "^[\\p{L}\\p{N}\\s\\-\\.,;:!?()\\[\\]{}'\"`~@#$%^&*+=|\\\\/<>]+$",
+      "description": "Description générale des concepts de HERMES2022, enregistrée au moment de l'extraction. Contient uniquement des caractères Unicode valides et des symboles de ponctuation standard."
+    },
     "phases": {
       "$ref": "./hermes2022-phases.json"
     }
