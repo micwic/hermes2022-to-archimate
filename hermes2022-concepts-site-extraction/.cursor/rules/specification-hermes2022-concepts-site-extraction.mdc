@@ -8,7 +8,7 @@ alwaysApply: true
 Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rules/
 
 > Créé le : 2025-08-16  
-> Dernière mise à jour : 2025-08-18
+> Dernière mise à jour : 2025-08-19
 
 ## Description générale
 
@@ -196,3 +196,38 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 #### État d'implémentation pour le contrat d'interface
 
 🚧 [En cours de spécification et réalisation]
+
+### Visa humain d'overview pour hermes2022-concepts
+
+#### Description détaillée pour le visa humain d'overview
+
+- [2025-08-19] La qualité du champ `overview` des concepts HERMES2022 est validée manuellement via un fichier d'approbation (sidecar) adjacent à l'artefact JSON produit.
+- [2025-08-19] Le visa est consigné par éléments/règles à contrôler (statuts par item) avec des métadonnées globales uniques (reviewer, date, notes).
+
+#### Justification pour le visa humain d'overview
+
+- La conformité structurelle est assurée par JSON Schema; la qualité sémantique de `overview` requiert un jugement humain.
+- La matérialisation explicite du visa améliore la traçabilité et l'auditabilité sans sur‑ingénierie.
+
+#### Patterns validés pour le visa humain d'overview
+
+- **Sidecar d'approbation**: Fichier sidecar adjacent nommé comme l'artefact avec suffixe `.approval.json` généré par l'IA en post extraction
+- **Schéma d'approbation**: `shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts-approval.json`.
+- **Structure du visa**:
+  - Métadonnées globales: `artifact`, `reviewer`, `date`, `notes?`.
+  - Détails par item: `target`, `rule`, `status` (`approved|rejected|pending`), `lastChecked`, `comment?`, `evidence?`.
+- **Initialisation status approbation** : Cible à valider générées selon liste ci-dessous avec status "pending" pour les cibles à valider en post extraction
+
+**Cibles à valider par revue humaine (format JSON Pointer)** :
+
+- `/concepts/overview`
+
+#### Anti-Patterns pour le visa humain d'overview à éviter
+
+- **Visa global unique**: éviter un statut global sans granularité par règle/cible.
+- **Absence de schéma**: éviter des fichiers d'approbation non validés.
+
+#### État d'implémentation pour le visa humain d'overview
+
+✅ Schéma d'approbation créé: `shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts-approval.json`
+🚧 Intégration dans le flux d'extraction/validation BDD à compléter

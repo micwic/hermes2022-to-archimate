@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/micwic/hermes2022-to-archimate/shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts-approval.json",
+  "title": "HERMES2022 Concepts - Human Approval Sidecar",
+  "description": "Visa humain par élément/règle pour l'artefact hermes2022-concepts-*.json. Métadonnées globales uniques; statuts par item.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "artifact": {
+      "type": "string",
+      "pattern": "^hermes2022-concepts-\\d{4}-\\d{2}-\\d{2}\\.json$",
+      "description": "Nom du fichier JSON artefact approuvé"
+    },
+    "reviewer": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Nom du relecteur humain"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date d'approbation du fichier (YYYY-MM-DD)"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Notes générales d'approbation (optionnel)"
+    },
+    "approvals": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Liste des contrôles par élément/règle",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "target": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Chemin de la cible contrôlée (dot-path ou JSON Pointer), ex: 'phases-concept.overview' ou '/concepts/phases/0/description'"
+          },
+          "rule": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Identifiant lisible de la règle/contrôle, ex: 'overview-quality', 'sourceUrl-present'"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["approved", "rejected", "pending"],
+            "description": "Statut du contrôle pour cette cible/règle"
+          },
+          "lastChecked": {
+            "type": "string",
+            "format": "date",
+            "description": "Date du dernier contrôle (YYYY-MM-DD)"
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Commentaire spécifique au contrôle (optionnel)"
+          },
+          "evidence": {
+            "type": "array",
+            "items": { "type": "string", "format": "uri" },
+            "description": "Liens de preuves (captures, documents) optionnels"
+          }
+        },
+        "required": ["target", "rule", "status", "lastChecked"]
+      }
+    }
+  },
+  "required": ["artifact", "approvals"],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "approvals": {
+                "contains": {
+                  "type": "object",
+                  "properties": { "status": { "enum": ["approved", "rejected"] } },
+                  "required": ["status"]
+                }
+              }
+            }
+          },
+          "then": { "required": ["reviewer", "date"] }
+        }
+      ]
+}
+
