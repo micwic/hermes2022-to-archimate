@@ -2,7 +2,7 @@
 
 ## Objectif
 
-Extraire les informations de la phase Initiation depuis la page [https://www.hermes.admin.ch/en/project-management/phases/initiation.html](https://www.hermes.admin.ch/en/project-management/phases/initiation.html)
+Extraire les informations de la phase Initiation depuis la page <{baseUrl}/project-management/phases/initiation.html>
 
 ## Instructions d'extraction
 
@@ -51,7 +51,7 @@ Déterminer si la phase supporte :
 
 - Approche traditionnelle
 - Approche agile
-- Les deux approches
+- Les deux approches (si mention explicite). Renseigner le champ `approach` avec une ou plusieurs valeurs autorisées par le schéma (`traditional`, `agile`, `both`) en fonction du contenu de la page.
 
 ## Format de sortie attendu
 
@@ -73,7 +73,7 @@ Déterminer si la phase supporte :
     "[Jalon 2]",
     "[Jalon 3]"
   ],
-  "approach": ["traditional", "agile"]
+  "approach": ["traditional"]
 }
 ```
 
@@ -84,3 +84,4 @@ Déterminer si la phase supporte :
 - Maintenir la cohérence avec le schéma de validation
 - Privilégier la précision sur la quantité d'informations
 - La sortie attendue est un objet Phase (unitaire). L'agrégation et les métadonnées de niveau fichier (champ "metadata" et tableau "phases") sont réalisées en aval lors de la consolidation.
+- Sortie : texte brut (pas de Markdown riche). Langue du site. Style factuel, neutre, sans extrapolation.

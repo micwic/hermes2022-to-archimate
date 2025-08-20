@@ -1,11 +1,11 @@
 {
   "hermesVersion": "2022",
   "extractionSource": {
-    "baseUrl": "https://www.hermes.admin.ch/en",
+    "baseUrl": "https://www.hermes.admin.ch/en/",
     "language": "en",
     "description": "Site de référence en anglais pour l'extraction des concepts HERMES2022"
   },
   "requireHumanApproval": true,
   "approvalTargets": ["/concepts/overview"],
-  "artifactBaseDir": "__tests__/fixtures/success/1"
+  "artifactBaseDir": "shared/hermes2022-extraction-files/data"
 }

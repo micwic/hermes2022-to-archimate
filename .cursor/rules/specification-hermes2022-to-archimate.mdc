@@ -186,7 +186,7 @@ Le projet est ainsi divisé en deux parties qui se déroulent séquentiellement 
   environnement `node` ; setup: `__tests__/support/jest-cucumber-setup.js`.
 - Résolution des artefacts: répertoire piloté par `artifactBaseDir` dans
   `hermes2022-concepts-site-extraction/config/extraction-config.json` avec
-  override optionnel par `HERMES_CONCEPTS_ARTIFACT_DIR`.
+  override optionnel par `HERMES2022_CONCEPTS_ARTIFACT_DIR`.
 - Sidecar d’approbation: fichier `*.approval.json` adjacent à l’artefact.
 - Schémas de référence: `shared/hermes2022-extraction-files/config/json-schemas/*.json`.
 - Outils éditeur: configuration VSCode Cucumber (Gherkin) dans
