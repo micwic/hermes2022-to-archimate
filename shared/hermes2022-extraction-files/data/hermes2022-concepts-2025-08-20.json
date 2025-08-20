@@ -1,0 +1,86 @@
+{
+  "hermesVersion": "2022",
+  "publicationDate": "04-2023",
+  "extractionSource": {
+    "baseUrl": "https://www.hermes.admin.ch/en/",
+    "language": "en",
+    "description": "Official HERMES2022 reference site in English for concept extraction"
+  },
+  "concepts": {
+    "overview": "HERMES2022 establishes a structured, phase‑oriented life cycle for project management with uniform interfaces between phases, clearly defined decision points and quality gates that provide governance, transparency and predictability. The method frames the project from Initiation through Execution to Closure, ensuring that objectives, scope and feasibility are clarified early, that solution delivery is organised and value‑oriented, and that acceptance and operational transition are completed in a controlled manner. Execution serves as a composite umbrella over Concept, Implementation and Deployment in the traditional approach; in agile contexts, Execution is not subdivided yet preserves the same governance interfaces and checkpoints. Concept defines and validates the solution approach against business needs, constraints and risks, preparing a sound basis for realisation. Implementation focuses on building and integrating the solution components, assuring quality and compliance, and establishing readiness for rollout. Deployment transitions the solution into operations through cutover planning, enablement and acceptance activities. Initiation lays the foundations (vision, scope, feasibility, stakeholder alignment) so planning and governance can proceed on stable ground, while Closure consolidates value realisation, formalises acceptance, transfers responsibilities to operations and captures lessons learned. Across approaches, HERMES2022 emphasises consistency of phase boundaries, artefacts and decision criteria so stakeholders can navigate a common structure regardless of delivery mode, enabling iterative learning and disciplined control while supporting traditional and agile ways of working.",
+    "phases": {
+      "metadata": {
+        "extractionDate": "2025-08-20",
+        "source": "hermes.admin.ch",
+        "version": "1.0.0"
+      },
+      "phases-concept": {
+        "overview": "The project life cycle is organised into Initiation, Execution and Closure with uniform interfaces, milestones and decision points. Execution acts as a composite that groups Concept, Implementation and Deployment in the traditional approach, whereas in agile it remains a single phase while preserving governance checkpoints.",
+        "sourceUrl": "https://www.hermes.admin.ch/en/project-management/phases.html",
+        "lastChecked": "2025-08-20"
+      },
+      "phases": [
+        {
+          "id": "ph_ah12bc",
+          "name": "Initiation",
+          "order": "1",
+          "type": "simple",
+          "description": "Establish vision, scope and feasibility, align stakeholders and set the foundations for planning and governance.",
+          "context": "Precedes Execution and provides the basis for controlled delivery and decision making.",
+          "approach": ["both"]
+        },
+        {
+          "id": "ph_de34fg",
+          "name": "Execution",
+          "order": "2",
+          "type": "composite",
+          "description": "Deliver value through elaboration, realisation and controlled rollout of the solution while ensuring governance.",
+          "context": "Composite parent for Concept, Implementation and Deployment in the traditional approach; single phase in agile.",
+          "approach": ["both"]
+        },
+        {
+          "id": "ph_hi56jk",
+          "name": "Concept",
+          "order": "2.1",
+          "type": "simple",
+          "description": "Define and validate the solution approach against needs, constraints and risks to prepare for realisation.",
+          "context": "Child of Execution; refines scope, acceptance criteria and solution options before construction.",
+          "approach": ["traditional"]
+        },
+        {
+          "id": "ph_lm78no",
+          "name": "Implementation",
+          "order": "2.2",
+          "type": "simple",
+          "description": "Build, integrate and verify the solution components ensuring quality, compliance and integration readiness.",
+          "context": "Child of Execution; focuses on construction, integration and verification prior to rollout.",
+          "approach": ["traditional"]
+        },
+        {
+          "id": "ph_pq90rs",
+          "name": "Deployment",
+          "order": "2.3",
+          "type": "simple",
+          "description": "Transition the solution to operations with readiness checks, cutover execution and stakeholder enablement.",
+          "context": "Child of Execution; prepares and performs controlled rollout and transition to operations.",
+          "approach": ["traditional"]
+        },
+        {
+          "id": "ph_tu12vw",
+          "name": "Closure",
+          "order": "3",
+          "type": "simple",
+          "description": "Formalise acceptance, confirm value realisation, perform handover to operations and capture lessons learned.",
+          "context": "Concludes the project and secures sustainable operations through structured transition and acceptance.",
+          "approach": ["both"]
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "created": "2025-08-20",
+    "lastModified": "2025-08-20"
+  }
+}
+
+

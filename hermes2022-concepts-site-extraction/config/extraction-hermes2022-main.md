@@ -3,10 +3,15 @@
 ## Objectif
 
 Orchestrer la génération complète du fichier intermédiaire `hermes2022-concepts-YYYY-MM-DD.json` (structure conforme au schéma) en:
+
 - agrégeant l’overview général,
 - exécutant les prompts des concepts de la méthode dans l’ordre défini,
 - validant l’artefact,
 - initialisant le sidecar d’approbation pour la revue humaine.
+
+## Contexte
+
+- Les instructions sont à destination de Cursor qui est utilisé comme interface avec l'
 
 ## Références de prompts (inclusions)
 
