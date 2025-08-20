@@ -4,54 +4,68 @@
   "title": "HERMES2022 Concepts Extraction Schema",
   "description": "Schéma de validation pour les fichiers intermédiaires d'extraction des concepts HERMES2022",
   "type": "object",
-  "version": "1.0.0",
-  "hermesVersion": "2022",
-  "validityPeriod": {
-    "start": "2022-01-01",
-    "end": "2027-12-31",
-    "description": "Période de validité de la version HERMES2022 de la méthodologie sur laquelle se basent les extractions"
-  },
-  "extractionSource": {
-    "baseUrl": {
+  "properties": {
+    "hermesVersion": {
       "type": "string",
-      "enum": [
-        "https://www.hermes.admin.ch/de/",
-        "https://www.hermes.admin.ch/fr/",
-        "https://www.hermes.admin.ch/it/",
-        "https://www.hermes.admin.ch/en/"
-      ],
-      "description": "URL de base utilisée pour l'extraction, enregistrée au moment de l'extraction"
+      "enum": ["5", "5.1", "2022"]
     },
-    "language": {
+    "publicationDate": {
       "type": "string",
-      "enum": ["de", "fr", "it", "en"],
-      "description": "Code de langue utilisé pour l'extraction, enregistré au moment de l'extraction"
+      "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$",
+      "description": "Date de publication de la version HERMES (MM-YYYY). Remplace validityPeriod."
     },
-    "description": {
-      "type": "string",
-      "maxLength": 500,
-      "pattern": "^[\\p{L}\\p{N}\\s\\-\\.,;:!?()\\[\\]{}'\"`~@#$%^&*+=|\\\\/<>]+$",
-      "description": "Description de la source d'extraction, enregistrée au moment de l'extraction. Contient uniquement des caractères Unicode valides et des symboles de ponctuation standard."
+    "extractionSource": {
+      "type": "object",
+      "properties": {
+        "baseUrl": {
+          "type": "string",
+          "enum": [
+            "https://www.hermes.admin.ch/de/",
+            "https://www.hermes.admin.ch/fr/",
+            "https://www.hermes.admin.ch/it/",
+            "https://www.hermes.admin.ch/en/"
+          ],
+          "description": "URL de base utilisée pour l'extraction, enregistrée au moment de l'extraction"
+        },
+        "language": {
+          "type": "string",
+          "enum": ["de", "fr", "it", "en"],
+          "description": "Code de langue utilisé pour l'extraction, enregistré au moment de l'extraction"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Description de la source d'extraction"
+        }
+      },
+      "required": ["baseUrl", "language", "description"],
+      "additionalProperties": false
+    },
+    "concepts": {
+      "type": "object",
+      "properties": {
+        "overview": {
+          "type": "string",
+          "minLength": 600,
+          "maxLength": 5000,
+          "description": "Description générale des concepts de HERMES2022"
+        },
+        "phases": {
+          "$ref": "./hermes2022-phases.json"
+        }
+      },
+      "required": ["overview", "phases"],
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "created": { "type": "string", "format": "date" },
+        "lastModified": { "type": "string", "format": "date" }
+      },
+      "required": ["created", "lastModified"],
+      "additionalProperties": true
     }
-  },
-  "concepts": {
-    "overview": {
-      "type": "string",
-      "minLength": 600,
-      "maxLength": 1500,
-      "pattern": "^[\\p{L}\\p{N}\\s\\-\\.,;:!?()\\[\\]{}'\"`~@#$%^&*+=|\\\\/<>]+$",
-      "description": "Description générale des concepts de HERMES2022, enregistrée au moment de l'extraction. Contient uniquement des caractères Unicode valides et des symboles de ponctuation standard."
-    },
-    "phases": {
-      "$ref": "./hermes2022-phases.json"
-    }
-  },
-  "metadata": {
-    "created": "2025-08-16",
-    "lastModified": "2025-08-16",
-    "author": "Michel Wicky",
-    "project": "hermes2022-to-archimate",
-    "purpose": "Validation des fichiers intermédiaires d'extraction HERMES2022"
   },
   "required": ["hermesVersion", "extractionSource", "concepts", "metadata"],
   "additionalProperties": false

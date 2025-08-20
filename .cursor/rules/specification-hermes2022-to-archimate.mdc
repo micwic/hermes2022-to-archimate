@@ -120,3 +120,117 @@ Le projet est ainsi divisé en deux parties qui se déroulent séquentiellement 
 #### État d'implémentation pour Structure et format du fichier intermédiaire
 
 🚧 [En cours de conception et réalisation]
+
+### Cadre de tests BDD et validation JSON — frameworks, versions, usages
+
+#### Description détaillée pour Cadre de tests BDD et validation JSON
+
+- Frameworks et versions actuellement utilisés au stade tests:
+  - Jest: 30.0.5
+  - jest-cucumber: 4.5.0
+  - ts-jest: 29.4.1
+  - babel-jest: 30.0.5
+  - Ajv: 8.17.1
+  - ajv-formats: 3.0.1
+- Portée: exécution des scénarios BDD (Gherkin) et validation des artefacts
+  JSON intermédiaires via JSON Schema.
+- Contexte Node.js: à documenter (version exacte de l’environnement d’exécution).
+
+#### Critères de choix des versions
+
+- Compatibilité Node LTS (≥18; recommandé: 20).
+- Alignement inter-packages (mêmes majors, intégrations éprouvées).
+- Stabilité/maintenance et correctifs récents.
+- Simplicité d’exécution des steps TypeScript sans build.
+
+#### Justification des version par composant
+
+##### Jest 30.0.5**
+
+- Version majeure actuelle, maintenance active, corrections/performances récentes.
+- Aligne babel-jest sur la même major 30.
+- Compatible Node 18/20; pas de besoin d’écosystème Cucumber séparé.
+
+##### jest-cucumber 4.5.0
+
+- Couche BDD Gherkin fine au‑dessus de Jest; découplée du moteur TS.
+- Version récente stable, compatible Jest 29/30.
+
+##### ts-jest 29.4.1
+
+- Permet d’exécuter directement des steps .ts sans transpilation préalable.
+- Choix pragmatique tant que la compatibilité avec Jest 30 est satisfaisante dans ce repo. Si contrainte, on bascule soit:
+à Jest 29.x (compat matrice officielle avec ts-jest 29.x), soit
+à une chaîne Babel‑only (supprimer ts-jest, compiler via babel-jest + preset TS).
+
+##### babel-jest 30.0.5
+
+- Major alignée avec Jest 30; nécessaire pour transformer d’éventuels fichiers JS/ESM et alternative de repli pour TS si on quitte ts-jest.
+
+##### Ajv 8.17.1 + ajv-formats 3.0.1
+
+- Derniers mineurs du major 8; ajv-formats v3 est la branche prévue pour Ajv v8.
+- Validation JSON Schema robuste, stricte et performante.
+
+#### Justification pour Cadre de tests BDD et validation JSON
+
+- jest-cucumber: BDD lisible (Gherkin) avec une exécution unifiée via Jest.
+- ts-jest: exécution directe des steps TypeScript sans build préalable.
+- Ajv (+ formats): validation stricte et traçable des artefacts JSON selon
+  les schémas partagés (contrat d’interface).
+
+#### Patterns validés à suivre pour Cadre de tests BDD et validation JSON
+
+- Configuration centralisée: `cursor-ws-hermes2022-to-archimate/cucumber-jest.config.js`.
+- Découverte des steps: `**/__tests__/{integration,e2e}/**/*.steps.{js,ts}` ;
+  environnement `node` ; setup: `__tests__/support/jest-cucumber-setup.js`.
+- Résolution des artefacts: répertoire piloté par `artifactBaseDir` dans
+  `hermes2022-concepts-site-extraction/config/extraction-config.json` avec
+  override optionnel par `HERMES_CONCEPTS_ARTIFACT_DIR`.
+- Sidecar d’approbation: fichier `*.approval.json` adjacent à l’artefact.
+- Schémas de référence: `shared/hermes2022-extraction-files/config/json-schemas/*.json`.
+- Outils éditeur: configuration VSCode Cucumber (Gherkin) dans
+  `cursor-ws-hermes2022-to-archimate/cucumber-vscode-plugin-settings.json`.
+
+#### Anti-Patterns en raison d'erreurs identifiées, à ne pas reproduire pour Cadre de tests BDD et validation JSON
+
+- Runner Cucumber séparé: éviter la duplication d’infrastructure de test ;
+  privilégier Jest unique.
+- Recherche multi-emplacements implicite pour les artefacts: éviter des
+  fallbacks opaques ; privilégier la configuration explicite du répertoire.
+- Couplage dur aux chemins: éviter les chemins codés en dur dans les steps ;
+  utiliser config + variables d’environnement.
+
+#### État d'implémentation de Cadre de tests BDD et validation JSON
+
+✅ Fonctionnel pour le module `hermes2022-concepts-site-extraction` (tests BDD
+et validations JSON). Montées de version à effectuer de manière coordonnée
+(Jest/ts-jest) si nécessaire.
+
+### Gestionnaire de paquets — npm (interdiction de mixer avec yarn)
+
+#### Description détaillée
+
+- Gestionnaire retenu pour ce projet: npm.
+- Contexte: d’autres projets imposent yarn (ex. intégrations Flowable/React), mais ce dépôt utilise npm depuis l’origine (installation des dépendances, exécution des tests).
+
+#### Justification
+
+- Cohérence et traçabilité: éviter les dérives de lockfiles et résolutions différentes.
+- Simplicité: outillage homogène (`npm install`, `npx jest`, scripts npm).
+- Isolation des projets: chaque dépôt fixe explicitement son gestionnaire.
+
+#### Patterns validés
+
+- Installation: `npm install` exclusivement.
+- Exécution: `npx jest …` ou via scripts npm (`npm run test` si défini).
+- Pas de lockfile yarn: pas de `yarn.lock` dans ce repo.
+
+#### Anti-Patterns à éviter
+
+- Mélange npm/yarn dans le même dépôt.
+- Utilisation de `yarn` ou `pnpm` pour ce projet.
+
+#### État d’implémentation
+
+✅ npm utilisé pour l’installation et l’exécution (`npx jest …`); aucun artefact yarn attendu.
