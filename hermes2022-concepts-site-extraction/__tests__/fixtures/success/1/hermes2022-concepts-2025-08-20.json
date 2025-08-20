@@ -1,0 +1,86 @@
+{
+  "hermesVersion": "2022",
+  "extractionSource": {
+    "baseUrl": "https://www.hermes.admin.ch/en/",
+    "language": "en",
+    "description": "Official HERMES2022 reference site in English for concept extraction"
+  },
+  "concepts": {
+    "overview": "HERMES2022 defines a structured, phase‑oriented life cycle for projects with clear and uniform interfaces between phases, decision points, and quality gates that enable governance, predictability, and transparency across traditional and agile delivery modes. The approach emphasises a consistent articulation from Initiation to Closure, with Execution acting as a composite umbrella that contains the Concept, Implementation, and Deployment sub‑phases. Each phase has distinct objectives, responsibilities, and deliverables, with traceability to project outcomes. In Initiation, the vision, scope, and feasibility are established to ensure that the endeavour is justified and aligned with strategic objectives. Execution provides a rigorous framework to refine solution concepts, realise the solution incrementally, and deploy it in a controlled, value‑centric manner. Concept establishes the solution approach and validates it against business needs and constraints. Implementation focuses on building the solution components, ensuring quality, compliance, and integration readiness. Deployment brings the solution to the operational environment with structured readiness checks, transition activities, and stakeholder enablement. Closure consolidates the achieved value, formalises acceptance, transfers operational responsibilities, and captures lessons learned to enrich organisational knowledge. The methodology maintains uniform interfaces so that stakeholders can navigate across phases consistently, regardless of delivery method, and creates decision checkpoints that ensure continued alignment with objectives. HERMES2022 thus supports both traditional and agile ways of working, encouraging iterative delivery and continuous learning while preserving governance discipline.",
+    "phases": {
+      "metadata": {
+        "extractionDate": "2025-08-20",
+        "source": "hermes.admin.ch",
+        "version": "1.0.0"
+      },
+      "phases-concept": {
+        "overview": "Project phases provide a coherent life‑cycle with uniform interfaces, milestones, and decision points. Execution is a composite that groups Concept, Implementation and Deployment to ensure cohesive delivery and governance.",
+        "sourceUrl": "https://www.hermes.admin.ch/en/project-management/phases.html",
+        "lastChecked": "2025-08-20"
+      },
+      "phases": [
+        {
+          "id": "ph_ab12cd",
+          "name": "Initiation",
+          "order": "1",
+          "type": "simple",
+          "description": "Start the project with clarified vision, scope, feasibility and stakeholder alignment.",
+          "context": "Precedes Execution and establishes foundations for planning and governance.",
+          "approach": ["both"]
+        },
+        {
+          "id": "ph_ef34gh",
+          "name": "Execution",
+          "order": "2",
+          "type": "composite",
+          "description": "Deliver value through concept elaboration, realisation and controlled deployment.",
+          "context": "Composite parent for Concept, Implementation and Deployment.",
+          "approach": ["both"]
+        },
+        {
+          "id": "ph_ij56kl",
+          "name": "Concept",
+          "order": "2.1",
+          "type": "simple",
+          "description": "Define and validate the solution approach against needs and constraints.",
+          "context": "Child of Execution; refines solution scope and acceptance criteria.",
+          "approach": ["both"]
+        },
+        {
+          "id": "ph_mn78op",
+          "name": "Implementation",
+          "order": "2.2",
+          "type": "simple",
+          "description": "Build, integrate and assure quality of the solution components.",
+          "context": "Child of Execution; focuses on construction and verification.",
+          "approach": ["both"]
+        },
+        {
+          "id": "ph_qr90st",
+          "name": "Deployment",
+          "order": "2.3",
+          "type": "simple",
+          "description": "Transition the solution to operations with readiness, cutover and enablement.",
+          "context": "Child of Execution; prepares and executes controlled rollout.",
+          "approach": ["both"]
+        },
+        {
+          "id": "ph_uv12wx",
+          "name": "Closure",
+          "order": "3",
+          "type": "simple",
+          "description": "Formalise acceptance, confirm value realisation and capture lessons learned.",
+          "context": "Finalises the project and transfers responsibilities to operations.",
+          "approach": ["both"]
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "created": "2025-08-20",
+    "lastModified": "2025-08-20",
+    "author": "Michel Wicky",
+    "project": "hermes2022-to-archimate",
+    "purpose": "Validation des fichiers intermédiaires d'extraction HERMES2022"
+  }
+}

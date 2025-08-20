@@ -231,3 +231,33 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 
 ✅ Schéma d'approbation créé: `shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts-approval.json`
 🚧 Intégration dans le flux d'extraction/validation BDD à compléter
+
+### Paramétrage du répertoire des artefacts (artifactBaseDir)
+
+#### Description détaillée
+
+- [2025-08-20] Ajout d’une propriété `artifactBaseDir` dans `config/extraction-config.json` pour orienter l’outillage (tests BDD inclus) vers un répertoire unique d’artefacts sans recherche multiple.
+- Valeur: chemin relatif au répertoire `hermes2022-concepts-site-extraction/` (chemin absolu accepté).
+- Objectif: permette l'exécution avec des fixtures pour attester les fonctionnement des tests sans créer de sur consommation de ressources (alternative systématique avec fallback)
+
+#### Justification
+
+- Sûreté: les tests restent strictement conformes aux schémas; traçabilité inchangée.
+- Durabilité: supprime les recherches/fallbacks redondants (économie CPU/IO).
+- Gouvernance: distingue explicitement les jeux d’attestation (`__tests__/fixtures/...`) des données “réelles” (`shared/.../data/`) par configuration, pas par heuristique.
+
+#### Patterns validés
+
+- Répertoire unique piloté par `artifactBaseDir`.
+- Sidecar d’approbation adjacent et résolu depuis le même répertoire.
+- Override optionnel via variable d’environnement `HERMES_CONCEPTS_ARTIFACT_DIR` (si présent, prioritaire sur `artifactBaseDir`).
+
+#### Anti-Patterns (à éviter)
+
+- Recherche multi-emplacements implicite (fixtures → shared) dans le code des steps.
+- Dénominations spéciales dans les noms de fichiers (la distinction se fait par le répertoire).
+- Couplage fort aux chemins en dur dans les steps.
+
+#### État d’implémentation
+
+🚧 À implémenter dans les steps BDD et la configuration

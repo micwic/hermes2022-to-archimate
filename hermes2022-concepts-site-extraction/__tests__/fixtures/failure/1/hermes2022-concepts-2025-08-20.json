@@ -1,0 +1,31 @@
+{
+  "hermesVersion": "2022",
+  "extractionSource": {
+    "baseUrl": "https://www.hermes.admin.ch/en/",
+    "language": "en",
+    "description": "Official HERMES2022 reference site in English"
+  },
+  "concepts": {
+    "overview": "Too short",
+    "phases": {
+      "metadata": {
+        "extractionDate": "2025-08-20",
+        "source": "hermes.admin.ch",
+        "version": "1.0.0"
+      },
+      "phases-concept": {
+        "overview": "Phases overview",
+        "sourceUrl": "https://www.hermes.admin.ch/en/project-management/phases.html",
+        "lastChecked": "2025-08-20"
+      },
+      "phases": []
+    }
+  },
+  "metadata": {
+    "created": "2025-08-20",
+    "lastModified": "2025-08-20",
+    "author": "Michel Wicky",
+    "project": "hermes2022-to-archimate",
+    "purpose": "Validation des fichiers intermédiaires d'extraction HERMES2022"
+  }
+}

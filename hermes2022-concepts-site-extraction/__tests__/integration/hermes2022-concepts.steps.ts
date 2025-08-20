@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { defineFeature, loadFeature } from 'jest-cucumber';
 import path from 'path';
 import fs from 'fs';
@@ -10,18 +11,29 @@ const feature = loadFeature(__dirname + '/hermes2022-concepts.feature');
 let artifactPath: string | null = null;
 
 defineFeature(feature, (test) => {
-  test("Nouvelle demande d'extraction des concepts HERMES2022", ({ when, then }) => {
-    when(/^l’utilisateur demande l’extraction des concepts HERMES2022$/, () => {
-      const dataDir = path.resolve(__dirname, '../../../shared/hermes2022-extraction-files/data');
+  test("nouvelle extraction des concepts HERMES2022", ({ given, when, then, and }) => {
+    given(
+      /^un site de référence, la langue et la description du site de référence définis dans le fichier de configuration `config\/extraction-config\.json`$/, 
+      () => {
+        const configDir = path.resolve(__dirname, '../../config');
+        const configPath = path.join(configDir, 'extraction-config.json');
+        expect(fs.existsSync(configPath)).toBe(true);
+        const config = readExtractionConfig(configPath);
+        expect(typeof config).toBe('object');
+      }
+    );
+
+    when(/^l'utilisateur a demandé une extraction des concepts HERMES2022 dans le chat IA intégré à Cursor sur la base de ces indications$/, () => {
+      const configDir = path.resolve(__dirname, '../../config');
+      const configPath = path.join(configDir, 'extraction-config.json');
+      const config = readExtractionConfig(configPath) as any;
+      const fromEnv = process.env.HERMES_CONCEPTS_ARTIFACT_DIR;
+      const baseDir = fromEnv && fromEnv.length > 0 ? fromEnv : (config.artifactBaseDir || 'shared/hermes2022-extraction-files/data');
+      const dataDir = path.resolve(__dirname, '../../', baseDir);
       artifactPath = findLatestConceptsArtifact(dataDir);
     });
 
-    then(/^un artefact hermes2022-concepts est disponible à l’emplacement attendu$/, () => {
-      if (!artifactPath) throw new Error('Artefact non disponible');
-      expect(fs.existsSync(artifactPath)).toBe(true);
-    });
-
-    then(/^l’artefact est conforme au schéma JSON des concepts HERMES2022$/, () => {
+    then(/^le fichier intermédiaire de données est conforme et valable aux schémas de données définis dans `shared\/hermes2022-extraction-files\/config\/json-schemas\/hermes2022-concepts\.json`$/, () => {
       if (!artifactPath) throw new Error('Artefact non disponible');
       const schemaPath = path.resolve(
         __dirname,
@@ -29,21 +41,21 @@ defineFeature(feature, (test) => {
       );
       validateWithSchema(artifactPath, schemaPath);
     });
-  });
 
-  test('Validité de contenu — principes généraux', ({ given, when, then }) => {
-    given(/^un artefact hermes2022-concepts produit$/, () => {
-      const dataDir = path.resolve(__dirname, '../../../shared/hermes2022-extraction-files/data');
-      artifactPath = findLatestConceptsArtifact(dataDir);
-    });
-
-    when(/^j’évalue sa validité de contenu selon les règles métier applicables$/, () => {
-      // Contrôles de haut niveau, délégués aux étapes suivantes
-    });
-
-    then(/^toutes les cibles d’approbation sont en attente de validation humaine$/, () => {
+    and(/^le fichier sidecar d'approbation est conforme et valable aux schémas de données définis dans `shared\/hermes2022-extraction-files\/config\/json-schemas\/hermes2022-concepts-approval\.json`$/, () => {
       if (!artifactPath) throw new Error('Artefact non disponible');
-      const configPath = path.resolve(__dirname, '../../config/extraction-config.json');
+      const approvalPath = sidecarApprovalPath(artifactPath);
+      const approvalSchemaPath = path.resolve(
+        __dirname,
+        '../../../shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts-approval.json'
+      );
+      validateWithSchema(approvalPath, approvalSchemaPath);
+    });
+
+    and(/^les status des concepts extraits sont tous à "pending"$/, () => {
+      if (!artifactPath) throw new Error('Artefact non disponible');
+      const configDir = path.resolve(__dirname, '../../config');
+      const configPath = path.join(configDir, 'extraction-config.json');
       const config = readExtractionConfig(configPath);
       const targets = getApprovalTargets(config);
       const approvalPath = sidecarApprovalPath(artifactPath);

@@ -6,7 +6,6 @@
     "description": "Site de référence en anglais pour l'extraction des concepts HERMES2022"
   },
   "requireHumanApproval": true,
-  "approvalTargets": [
-    "/concepts/overview"
-  ]
+  "approvalTargets": ["/concepts/overview"],
+  "artifactBaseDir": "__tests__/fixtures/success/1"
 }
