@@ -2,7 +2,7 @@
 
 ## Objectif
 
-Extraire les informations de la phase Implementation depuis la page [https://www.hermes.admin.ch/en/project-management/phases/implementation.html](https://www.hermes.admin.ch/en/project-management/phases/implementation.html)
+Extraire les informations de la phase Implementation depuis la page <{baseUrl}/project-management/phases/implementation.html>
 
 ## Instructions d'extraction
 
@@ -91,3 +91,4 @@ Déterminer si la phase supporte :
 - Noter que cette phase est spécifique à l'approche traditionnelle
 - Cette phase fait partie de la phase composite Execution (2) dans l'approche agile
 - La sortie attendue est un objet Phase (unitaire). L'agrégation et les métadonnées de niveau fichier (champ "metadata" et tableau "phases") sont réalisées en aval lors de la consolidation.
+- Sortie : texte brut (pas de Markdown riche). Langue du site. Style factuel, neutre, sans extrapolation.

@@ -18,8 +18,10 @@ defineFeature(feature, (test) => {
       const configDir = path.resolve(__dirname, '../../config');
       const configPath = path.join(configDir, 'extraction-config.json');
       const config = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as any;
-      const fromEnv = process.env.HERMES_CONCEPTS_ARTIFACT_DIR;
+      const fromEnv = process.env.HERMES2022_CONCEPTS_ARTIFACT_DIR;
       const baseDir = fromEnv && fromEnv.length > 0 ? fromEnv : (config.artifactBaseDir || 'shared/hermes2022-extraction-files/data');
+      const used = fromEnv && fromEnv.length > 0 ? 'env:HERMES2022_CONCEPTS_ARTIFACT_DIR' : 'config:artifactBaseDir';
+      console.log(`[tests] artefacts dir = ${baseDir} (${used})`);
       const dataDir = path.resolve(__dirname, '../../', baseDir);
       artifactPath = findLatestConceptsArtifact(dataDir);
       expect(fs.existsSync(artifactPath)).toBe(true);
