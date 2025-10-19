@@ -1,0 +1,16 @@
+{
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "babel-jest": "^30.0.5",
+    "jest": "^30.0.5",
+    "jest-cucumber": "^4.5.0",
+    "ts-jest": "^29.4.1"
+  },
+  "scripts": {
+    "test-all": "jest --config /home/micwic/gitRepositories/cursor-ws-hermes2022-to-archimate/cucumber-jest.config.js --rootDir .",
+    "test:artifacts": "HERMES2022_CONCEPTS_ARTIFACT_DIR=shared/hermes2022-extraction-files/data npm run test-all",
+    "test:api": "NUEXTRACT_API_KEY=\"$NUEXTRACT_API_KEY\" HERMES2022_CONCEPTS_ARTIFACT_DIR=shared/hermes2022-extraction-files/data npm run test-all"
+  }
+}

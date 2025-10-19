@@ -7,21 +7,21 @@ alwaysApply: true
 
 Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rules/
 
-> Créé le : 2025-08-16  
-> Dernière mise à jour : 2025-08-19
+> Créé le : 2025-08-16
+> Dernière mise à jour : 2025-10-16
 
 ## Description générale
 
 - La méthode HERMES des gestion de projet et de programme de la Confédération Helvétique est décrite en anglais sur le site <https://www.hermes.admin.ch/en/>
 - **Finalité du module** : Extraire automatiquement les concepts HERMES2022 depuis les pages officielles spécifiques et les transformer en fichiers intermédiaires structurés JSON validés
-- **Portée du module** : Extraction ciblée des phases HERMES2022 avec leur contexte et articulation générale, selon la hiérarchie officielle (1=Initiation, 2=Execution avec 2.1=Concept, 2.2=Implementation, 2.3=Deployment, 3=Closure)
+- **Portée du module** : Extraction ciblée des concepts de la méthode HERMES2022 avec leur contexte et articulation générale, selon la hiérarchie officielle (1=Initiation, 2=Execution avec 2.1=Concept, 2.2=Implementation, 2.3=Deployment, 3=Closure)
 - **Interface de sortie** : Fichiers JSON conformes aux schémas définis dans le module hermes2022-extraction-files
 
 ## Contexte
 
 - Spécification amont @.cursor/rules/specification-hermes2022-to-archimate.mdc
-- La méthode HERMES de gestion de portefeuille et de gestion des applications sont hors contexte, elles sont ignorées
-- La méthode HERMES de gestion de projet et de programme de la Confédération Helvétique est décrite en plusieurs langues : allemand, français, italien et anglais
+- Les méthodes HERMES de gestion de portefeuille et de gestion des applications sont hors contexte, elles sont ignorées
+- La méthode HERMES2022 de gestion de projet et de programme de la Confédération Helvétique est décrite en plusieurs langues : allemand, français, italien et anglais
 - La racine du site <https://www.hermes.admin.ch> est modifiée automatiquement à la langue par défaut ou est celle définie dans l'url lors de la requête
 - L'url du site en allemand est <https://www.hermes.admin.ch/de/>
 - L'url du site en français est <https://www.hermes.admin.ch/fr/>
@@ -30,127 +30,180 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 
 ## Objectifs
 
-- Faire extraire par l'IA, des pages identifiées comme pertinentes du site internet de référence, les concepts HERMES2022 jugés pertinents pour le projet
-- Faire transformer par l'IA les données jugées pertinentes pour les enregistrer dans des fichiers intermédiaires structurés, lisibles et vérifiables
+- Faire extraire par l'IA les concepts HERMES2022 jugés pertinents pour le projet des pages identifiées comme pertinentes du site internet de référence dans la langue souhaitée.
+- Faire transformer par l'IA les données jugées pertinentes pour les enregistrer dans des fichiers intermédiaires structurés, lisibles et vérifiables par un humain avant chargement ultérieur
 
 ## Conception générale
 
-- Un fichier de configuration de l'extraction contient les propriétés utiles à celle-ci
-- Le processus d'extraction est générique et configurable, son exécution conforme est basée sur le contenu du fichier de configuration
-- Les concept HERMES2022 jugés pertinents pour le projet sont : 1) Les phases, 2) Les scénarios, 3) Les modules, 4) Les tâches, 5) Les résultats, 6) Les rôles
-- les structures cibles de la transformation sont les structures et types définis pour les fichiers intermédiaires
+- Un fichier de configuration JSON de l'extraction contient les propriétés utiles à celle-ci
+- Le processus d'extraction est un agent spécialisé :<br>- Javascript compatible comme plugin JArchi de Archi<br>- générique et configurable, son exécution conforme est basée sur le contenu du fichier de configuration et sur les définitions de structure du fichier intermédiaire cible
+- L'extraction des contenus du site internet est assurée par l'agent spécialisé à partir des urls définies pour chaque concept dans le fichier de configuration
+- Les transformations sont effectuées par l'IA spécialisée NuExtract en faisant appel aux APIs disponibles en mode SaaS dans un projet nommé HERMES2022 qui peut comprendre des exemples ajustables propres à chaque contexte directement dans la plateforme SaaS en dehors du code de l'agent.
+- Les concept HERMES2022 jugés pertinents sont, en plus de la vue générale de la méthode dans son ensemble : 1) Les phases, 2) Les scénarios, 3) Les modules, 4) Les tâches, 5) Les résultats, 6) Les rôles
+- les structures cibles de la transformation sont les structures et types définis pour les fichiers intermédiaires JSON
 
 ## Structure de répertoire
 
 | Élément | Type | Description |
 |:--------|:-----|:------------|
-| `/config/` | Répertoire | Configuration de l'extraction et instructions IA |
-| `/config/extraction-phases-*.md` | Fichiers | Instructions d'extraction IA spécifiques par phase HERMES2022 |
-| `/config/extraction-config.json` | Configuration | Paramètres de configuration pour l'extraction automatisée |
+| `/src/` | Répertoire | Code source de l'agent JavaScript pour l'extraction via APIs NuExtract |
+| `/src/nuextract-client.js` | Code | Client pour les requêtes HTTP vers APIs NuExtract et gestion des réponses JSON |
+| `/config/` | Répertoire | Configuration de l'extraction et paramètres pour l'agent JS |
+| `/config/extraction-config.json` | Configuration | Paramètres de configuration pour l'extraction automatisée (clés API, URLs, etc.) |
 | `/output/` | Répertoire | Fichiers JSON de sortie produits par l'extraction |
-| `/logs/` | Répertoire | Journaux d'exécution et de validation |
+| `/logs/` | Répertoire | Journaux d'exécution et de validation de l'agent JS |
 
 ## Décisions architecturales et techniques
 
 ### Site internet de référence HERMES2022
 
+#### Justification pour le site internet de référence HERMES2022 en anglais
+
+- La documentation de référence du projet est en anglais, les modèles Archimate sont donc en anglais, le site de référence à prendre en considération pour HERMES2022 celui en anglais (<https://www.hermes.admin.ch/en/>).
+
 #### Description détaillée pour le site internet de référence HERMES2022
 
-- [2025-08-16] Le site internet de référence pour l'extraction des concepts HERMES2022 est <https://www.hermes.admin.ch/en/>
-- [2025-08-16] L'URL relative pour les phases est <https://www.hermes.admin.ch/en/>
-
-#### Justification pour le site internet de référence HERMES2022
-
-- La documentation de référence du projet est en anglais, les modèles Archimate sont donc en anglais
+- [2025-08-16] La racine du site internet de référence pour l'extraction des concepts HERMES2022 est <https://www.hermes.admin.ch/en/>. Elle permet de définir la version de la méthodologie.
+- [2025-10-16] La vue générale de la méthodologie est décrite dans les pages : <br>- <https://www.hermes.admin.ch/en/project-management/method-overview.html><br>- <https://www.hermes.admin.ch/en/project-management/method-overview/hermes-project-management-method-components.html><br>- <https://www.hermes.admin.ch/en/project-management/method-overview/preface.html>
+- [2025-08-16] Les phases sont décrites dans les pages : <br>- https://www.hermes.admin.ch/en/project-management/phases.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/initiation.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/concept.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/implementation.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/deployment.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/execution.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/closure.html>
 
 #### Patterns validés à suivre suite à la décision
 
-- **URL RACINE** à utiliser pour les requêtes internet par l'IA est <https://www.hermes.admin.ch/en/>
-
-#### Anti-Patterns en raison d'erreurs identifiées, à ne pas reproduire
-
-- **Extraction générique uniquement** : Éviter d'extraire depuis la page générale seule → **Solution** : Pages spécifiques par phase → **Règle à adopter** : Une URL par phase pour contexte détaillé
-- **Ignorance contexte articulation** : Éviter d'ignorer la page générale → **Solution** : Extraction contexte général → **Règle à adopter** : Utiliser pages.html pour articulation d'ensemble
-- **Structure hiérarchique incorrecte** : Éviter order séquentiel simple → **Solution** : Hiérarchie à deux niveaux → **Règle à adopter** : Respecter structure officielle Execution composite
+- **URL RACINE** à utiliser pour les requêtes internet est <https://www.hermes.admin.ch/en/>
 
 #### État d'implémentation de la décision
 
 🚧 [En cours de spécification et réalisation]
 
-### Approche hybride IA : Cursor + API externe évolutive
+### Approche hybride IA : Javascript et modèle LLM spécialisé NuExtract dans le cloud par API
 
 #### Description détaillée pour l'approche hybride IA
 
-- [2025-08-16] L'extraction des concepts HERMES2022 utilise une approche hybride en deux phases : Phase 1 avec l'IA intégrée de Cursor pour le développement initial, Phase 2 avec des API externes (Claude, GPT-4) pour la production et l'optimisation
-- [2025-08-16] L'architecture initiale doit être conçue pour faciliter la transition vers les API externes sans refactoring majeur
-- [2025-08-16] L'approche doit permettre la réutilisation dans d'autres contextes que le projet actuel
+- [2025-10-14] L'extraction des concepts HERMES2022 utilise une approche hybride en deux phases : Phase 1 avec l'extraction de pages internet de références par Javascript qui aliment des appels à l'IA spécialisée NuExtract par les APIs disponibles dans le cloud pour synthétiser les contenus et assurer la transformation dans le format JSON.
+- [2025-08-16] L'approche doit permettre la réutilisation des comportements dans d'autres contextes que le projet actuel, notamment avec du paramétrage (autres contenants et contenus, autres instructions pour l'IA).
+- [2025-10-14] Le composant doit pouvoir s'exécuter dans Archi avec le plugin JArchi
 
-#### Justification pour l'approche hybride IA
+#### Justification pour l'approche hybride IA avec NuExtract
 
-- **Phase 1 - Cursor** : Validation du concept, développement rapide, pas de coût initial
-- **Phase 2 - API externe** : Contrôle fin des paramètres, modèles spécialisés, traçabilité complète
-- **Réutilisabilité** : Architecture modulaire permettant l'adaptation à d'autres méthodologies et contextes
-- **Évolutivité** : Possibilité de basculer selon les besoins et contraintes
+- NuExtract est un LLM spécialisé pour l'extraction de données à partir de différentes sources pour transformation dans un format structurés tel que JSON
+- Une plateforme SaaS est disponible et gratuite avec de faible volume de données
 
 #### Patterns validés pour l'approche hybride IA
 
-- **Interface abstraite** : Définir une interface commune entre Cursor et API externe
-- **Configuration évolutive** : Structure de configuration supportant les deux approches
-- **Modularité** : Séparation claire entre logique d'extraction et interface IA
-- **Plugins** : Architecture permettant l'ajout facile de nouveaux fournisseurs IA
+Exemples de la documentation officielle :
+
+```bash
+ curl "https://nuextract.ai/api/projects" \
+  -H "Authorization: Bearer $NUEXTRACT_API_KEY"
+```
+
+```bash
+PROJECT_ID="4c64870d-da8c-4718-aea9-fb2f86f07b42"
+curl "https://nuextract.ai/api/projects/$PROJECT_ID/extract" \
+  -X "POST" \
+  -H "Authorization: Bearer $NUEXTRACT_API_KEY" \
+  -H "content-type: text/plain" \
+  -d "This is a text"
+```
+
+```bash
+  PROJECT_ID="4c64870d-da8c-4718-aea9-fb2f86f07b42"
+curl "https://nuextract.ai/api/projects/$PROJECT_ID/extract" \
+  -X "POST" \
+  -H "Authorization: Bearer $NUEXTRACT_API_KEY" \
+  -H "content-type: application/octet-stream" \
+  --data-binary @file_name.ext
+```
+
+L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extraction/.cursor/rules/nuextract-platform.yaml qui est la référence officielle à utiliser
 
 #### Anti-Patterns pour l'approche hybride IA à éviter
 
-- **Couplage fort** : Éviter de coder directement pour Cursor → **Solution** : Interface abstraite → **Règle à adopter** : Architecture en couches avec abstraction de l'IA
-- **Configuration rigide** : Éviter une configuration spécifique à Cursor → **Solution** : Configuration générique extensible → **Règle à adopter** : Structure de configuration évolutive
+- Néant
 
 #### État d'implémentation pour l'approche hybride IA
 
 🚧 [En cours de conception et réalisation]
 
-### Structure et format du fichier de configuration
+### Utilisation d'un agent JavaScript pour l'extraction via APIs NuExtract
 
-#### Description détaillée pour la structure et format du fichier de configuration
+#### Description détaillée pour l'utilisation d'un agent JavaScript
 
-- [2025-08-16] Le fichier de configuration utilise un format JSON avec validation JSON Schema
-- [2025-08-16] La configuration supporte deux modes d'IA : mode Cursor (intégré) et mode API externe (Claude, GPT-4)
-- [2025-08-16] La structure est conçue pour être extensible et réutilisable dans d'autres contextes
+- [2025-10-14] L'extraction des concepts HERMES2022 est réalisée par un agent JavaScript exécuté dans JArchi (plugin d'Archi), qui articule les requêtes HTTP vers les APIs de NuExtract dans le cloud pour analyser et résumer le contenu des pages HTML, puis générer des fichiers JSON structurés avec les synthèses opérées.
+- [2025-10-14] L'agent gère le cycle complet : récupération des pages via HTTP, appel à NuExtract pour extraction/synthèse, validation et écriture des JSON dans `/output/`. Les journaux d'exécution sont placés dans `/logs/`.
+- [2025-10-14] L'agent est conçu pour être modulaire, réutilisable et intégré à l'écosystème JArchi de Archi sans dépendances externes inutiles.
 
-#### Justification pour la structure et format du fichier de configuration
+#### Justification pour l'utilisation d'un agent JavaScript
 
-- **Format JSON** : Lisibilité humaine et machine, validation automatique
-- **JSON Schema** : Validation structurelle, documentation intégrée
-- **Configuration évolutive** : Support des deux approches IA sans modification majeure
-- **Réutilisabilité** : Structure générique applicable à d'autres méthodologies
+- **Simplicité et Intégration** : Langage de référence qui permet d'utiliser les APIs Java natives (java.net.http.HttpClient) pour les requêtes HTTP et les appels aux APIs de NuExtract, évitant les dépendances Node.js ou Axios, et permettant une exécution directe dans JArchi de Archi.
+- **Limitation plateforme SaaS** : L'utilisation d'un agent permet d'assurer une meilleure maitrise des templates NuExtract en contournant certaines limitations de l'assistant de transformation JSON->Template de la plateforme qui ne traite pas complètement les énumérations décrites dans les formats JSON par exemple
 
-#### Patterns validés pour la structure et format du fichier de configuration
+#### Patterns validés pour l'utilisation d'un agent JavaScript
 
-- **Configuration hybride** : Support simultané Cursor + API externe
-- **Prompts configurables** : Instructions IA paramétrables selon le contexte
-- **Validation automatique** : Contrôles de cohérence avant exécution
-- **Extensibilité** : Ajout facile de nouveaux concepts et paramètres
+- **Requêtes HTTP natives** : Utilisation de java.net.http.HttpClient pour les extractions de pages internet et les appels vers NuExtract, avec gestion des timeouts et redirections.
+- **Gestion asynchrone** : Promesses JavaScript pour les requêtes non-bloquantes.
+- **Validation JSON** : Utilisation de Zod ou Ajv pour valider les réponses NuExtract contre les schémas JSON.
+- **Logging et Erreurs** : Journalisation détaillée dans `/logs/` pour traçabilité et debugging.
 
-#### Anti-Patterns pour la structure et format du fichier de configuration à éviter
+#### Anti-Patterns pour l'utilisation d'un agent JavaScript à éviter
 
-- **Configuration monolithique** : Éviter un fichier unique complexe → **Solution** : Modularité par domaines → **Règle à adopter** : Un schéma par concept pour faciliter la maintenance
-- **Couplage IA** : Éviter de lier la configuration à un fournisseur IA spécifique → **Solution** : Interface abstraite → **Règle à adopter** : Configuration générique avec plugins IA
+- **Dépendances externes lourdes** : Éviter Axios ou libs Node.js → **Solution** : APIs Java natives → **Règle à adopter** : Minimalisme pour intégration JArchi.
+- **Gestion d'erreurs insuffisante** : Éviter les timeouts infinis → **Solution** : Timeouts explicites → **Règle à adopter** : Robustesse et non-blocage de l'UI.
 
-#### État d'implémentation pour la structure et format du fichier de configuration
+#### État d'implémentation pour l'utilisation d'un agent JavaScript
 
 🚧 [En cours de conception et réalisation]
+
+### Intégration des APIs NuExtract pour l'extraction structurée
+
+#### Description détaillée pour l'intégration des APIs NuExtract
+
+- [2025-10-14] L'agent JavaScript utilise les APIs de NuExtract (modèle open source 3.8B basé sur Phi-3-mini) pour extraire des données structurées depuis du texte ou HTML vers JSON, garantissant un JSON valide et respectueux des schémas.
+- [2025-10-16] Les APIs NuExtact sont décrites dans @/home/micwic/gitRepositories/hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rules/nuextract-platform.yaml
+- [2025-10-16] GET /api/projects permet de lister les projets disponibles pour le compte dans dans la plateforme SaaS nuextact.ai, cela permet de déterminer {PROJECT_ID} pour HERMES2022 si il existe déjà dans la plateforme SaaS nuextact.ai pour le compte.
+- [2025-10-16] La clé API valable est stockée dans @hermes2022-concepts-site-extraction/config/nuextract-api-key.key
+- [2025-10-16] POST /api/projects permet de créer un projet et de déterminer {PROJECT_ID} pour HERMES2022 si un tel projet n'existe pas encore dans la plateforme SaaS nuextact.ai. Le projet est créé avec son template associé qui doit exister au préalable dans le format requis par NuExtract
+- [2025-10-16] POST /api/infer-template permet de créer un Template NuExtract à partir d'une description textuelle. Dans le contexte du projet, il faut fusionner les instructions textuelles de @/home/micwic/gitRepositories/hermes2022-to-archimate/hermes2022-concepts-site-extraction/config/instructions-template-nuextract.md avec les formats JSON pertinents, avec y compris les éventuelles références (Exemple : "phases": {"$ref": "./hermes2022-phases.json"}) dans un seul format JSON homogène.
+- [2025-10-16] PUT /api/projects/{projectId}/template permet de mettre à jour le template pour un projet déjà existant
+- [2025-10-17] POST /api/projects/{projectId}/infer-text permet d'exécuter une extraction sur la base d'un texte dans le cadre fixé pour le projet à savoir sur la base d'un template NuExtract et des exemples de transformation fournis pour les paramètres définis. Dans le contexte du projet, il faut fusionner les instructions textuelles conformément à la séquence définie dans @hermes2022-concepts-site-extraction/config/extraction-hermes2022-main.md avec avec les contenus HTML extrait des pages de références correspondantes
+- [2025-10-14] Gestion des quotas : L'API supporte des requêtes gratuites avec limites (ex. : 1000 requêtes/mois), et payantes pour plus de volume ; l'agent inclut un suivi des usages.
+
+#### Justification pour l'intégration des APIs NuExtract
+
+- **Précision et Fiabilité** : Modèle spécialisé pour extraction HTML→JSON, surpassant les modèles généralistes pour cette tâche, avec validation automatique du JSON.
+- **Sécurité et Conformité** : Utilisation de la clé API personnelle (pas de stockage sensible externe), respect des licences MIT et lois suisses.
+- **Intégration avec JArchi** : APIs REST simples, compatibles avec java.net.http.HttpClient, sans dépendances supplémentaires.
+- **Évolutivité** : Support de schémas personnalisés pour différents concepts HERMES2022, et possibilité d'extension à d'autres modèles IA.
+
+#### Patterns validés pour l'intégration des APIs NuExtract
+
+- **Authentification Bearer** : Utilisation de l'en-tête `Authorization: Bearer <clé JWT>` pour sécuriser les requêtes avec la clé définie dans @hermes2022-concepts-site-extraction/config/nuextract-api-key.key
+- **Gestion des Quotas** : Implémentation d'un compteur d'usage dans l'agent, avec logging pour éviter les dépassements.
+- **Validation de Réponse** : Parsing de la réponse JSON avec vérification des erreurs (ex. : code 429 pour quota dépassé).
+
+#### Anti-Patterns pour l'intégration des APIs NuExtract à éviter
+
+- **Utilisation sans authentification** : Éviter les requêtes non authentifiées → **Solution** : Toujours inclure la clé Bearer → **Règle à adopter** : Sécurité des accès API.
+- **Dépassement de quotas** : Éviter les requêtes excessives → **Solution** : Suivi et limites → **Règle à adopter** : Gestion proactive des ressources.
+- **Hardcodage de la clé** : Éviter de coder la clé en dur → **Solution** : Variable d'environnement ou config → **Règle à adopter** : Sécurité et maintenabilité.
+
+#### État d'implémentation pour l'intégration des APIs NuExtract
+
+🚧 Intégration dans l'agent JS en cours
 
 ### Structure et format des instructions d'extraction
 
 #### Description détaillée pour la structure et format des instructions d'extraction
 
-- [2025-08-16] Les instructions d'extraction utilisent le format Markdown pour optimiser l'utilisation par l'IA intégrée de Cursor
+- [2025-08-16] Les instructions d'extraction utilisent le format Markdown pour optimiser l'utilisation par l'IA
 - [2025-08-16] Un fichier d'instructions séparé est créé pour chaque concept HERMES2022 à extraire (phases, scénarios, modules, tâches, résultats, rôles)
-- [2025-08-16] Les instructions se concentrent uniquement sur l'extraction et la transformation, pas sur la définition de la structure cible
+- [2025-08-16] Les instructions se concentrent uniquement sur la transformation, pas sur la définition de la structure cible
 - [2025-08-16] La structure cible est définie par les schémas JSON des fichiers intermédiaires, créant un contrat d'interface entre extraction et consommation
+- [2015-10-18] Les pages html de référence pour un concept sont déclarées dans une propriété sourceURL de type caractère associée à une énumération pour la liste qui est à concaténée pour la former la chaîne de caractère à l'exécution pour journaliser les pages effectivement utilisées lors de la création du fichier intermédiaire. Le schéma JSON sert à la fois de définition de la propriété de journalisation et de paramètre avec l'énumération.
 
 #### Justification pour la structure et format des instructions d'extraction
 
-- **Format Markdown** : Naturel pour l'IA intégrée de Cursor, instructions conversationnelles claires
+- **Format Markdown** : Naturel pour l'IA, instructions conversationnelles claires
 - **Fichiers séparés** : Maintenance facilitée, lisibilité optimale, évolution indépendante par concept
 - **Séparation des responsabilités** : Instructions d'extraction ≠ définition structure cible
 - **Contrat d'interface** : Synchronisation progressive entre instructions et schémas cibles
@@ -158,7 +211,7 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 #### Patterns validés pour la structure et format des instructions d'extraction
 
 - **Un fichier par concept** : `/config/extraction-{concept}.md` pour chaque concept HERMES2022
-- **Instructions conversationnelles** : Prompts naturels adaptés à l'IA de Cursor
+- **Instructions conversationnelles** : Prompts naturels adaptés à l'IA
 - **Synchronisation progressive** : Évolution conjointe des instructions et des schémas cibles
 - **Validation par schéma** : Contrôle de conformité via JSON Schema des fichiers intermédiaires
 

@@ -1,11 +1,24 @@
 {
   "hermesVersion": "2022",
   "extractionSource": {
-    "baseUrl": "https://www.hermes.admin.ch/en/",
+    "baseUrl": "https://www.hermes.admin.ch/en",
     "language": "en",
     "description": "Site de référence en anglais pour l'extraction des concepts HERMES2022"
   },
+  "nuextract": {
+    "apiKeyFile": "/config/nuextract-api-key.key",
+    "projectName": "HERMES2022",
+    "projectDescription": "Project for HERMES2022 concepts extraction by using NuExtact",
+    "templateTransformationInstructionFile": "../config/instructions-template-nuextract.md",
+    "mainJSONConfigurationFile": "/shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts.json",
+    "templateReset": false,
+    "model": "nuextract-large",
+    "baseUrl": "https://nuextract.ai",
+    "projectsPath": "/api/projects",
+    "extractPath": "/api/projects/{PROJECT_ID}/extract",
+    "description": "Configuration pour l'utilisation des APIs NuExtract"
+  },
   "requireHumanApproval": true,
   "approvalTargets": ["/concepts/overview"],
-  "artifactBaseDir": "shared/hermes2022-extraction-files/data"
+  "artifactBaseDir": "/shared/hermes2022-extraction-files/data"
 }

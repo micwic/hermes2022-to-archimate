@@ -11,7 +11,7 @@ Orchestrer la génération complète du fichier intermédiaire `hermes2022-conce
 
 ## Contexte
 
-- Les instructions sont à destination de Cursor qui est utilisé comme interface avec l'
+- Les instructions sont à destination de Cursor qui est utilisé comme interface avec l'IA (LLM)
 
 ## Références de prompts (inclusions)
 

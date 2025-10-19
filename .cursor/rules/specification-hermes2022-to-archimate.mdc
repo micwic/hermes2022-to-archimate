@@ -10,29 +10,64 @@ alwaysApply: true
 
 ## Description générale
 
-- Le projet hermes2022-to-archimate est une brique logicielle qui participe à l'objectif de constituer un référentiel unique qui comprend à la fois la méthodologie de projet et les éléments d'architecture du projet qui en découle ainsi que sur un même modèle les réalisations du projet, d'une part à même de produire des artefacts conformes à partir d'une source unique de vérité (selon d'autres normes standards également) et pouvant d'autre part également alimenter des fonctionnalités Retrieval Augmented Generation destinées à alimenter des modèles de langage large (LLM) avec le projet cii-via-cip-archimate-ia-repository. Cette brique logicielle vise à extraire les concepts de la méthodologie HERMES2022 édictée par la Confédération Helvétique pour d'une part les traduire en éléments et relations selon la méthode Archimate qui permette la modélisation des principes adoptés dans le cadre du projet sur la base d'éléments conformes et valables selon la méthode et d'autre part alimenter l'intelligence artificielle selon les principes RAG.
-- La finalité des projets menés dans le cadre du projet personnel est de faire la démonstration de la pertinence de combiner Archimate avec l'intelligence artificielle pour en faire un référentiel source unique de vérité bâti selon une norme de représentation standard qui peut se décliner sur l'entier du cycle de vie d'un produit logiciel de l'élaboration de la vision métier jusqu'à la documentation technique de référence de bas niveau et qui soit interprétable par l'IA de manière sûre et fiable pour produire des artefacts sous diverses autres formes à but et destination d'audiences spécifiques (audit par exemple, conformité à des standards, ...).
+- Le projet hermes2022-to-archimate vise à créer une brique logicielle qui participe à l'objectif de constituer un référentiel d'architecture d'entreprise unique qui comprend à la fois les méthodologies de projet - en l'occurrence HERMES2022 édictée par la Confédération Helvétique - et les éléments d'architecture d'entreprise (selon les couches du framework Archimate 3.2 : Stratégie, Métier, Application, Technologie, Implémentation & Migration et Migration et l'analyse transverse Motivation) impactés par les projets de transformation digitale.
+
+- La brique logicielle est appelée à traduire les concepts HERMES2022 en éléments et relations standards de référence conformes à Archimate de manière à permettre de les décliner ensuite dans des éléments spécialisés sous-jacents spécifiques aux projets respectifs dans lesquels la méthode est appliquée. Ces derniers étant liés aux éléments standards par une relation de Spécialisation pour assurer le lien avec les standards de la méthodologie.
+
+  | Concept HERMES2022    | Traduction en Archimate 3.2 |
+  |-----------------------|-----------------------------|
+  | Scénarios            | Fonctions métier qui regroupe des modules |
+  | Modules              | Fonctions métier qui regroupe des processus métier |
+  | Phases               | Processus métier qui regroupe des tâches |
+  | Tâches               | Processus (élémentaire) métier qui implique (assignation selon raci) des rôles et qui produit (trigger événements, lecture/écriture données métier) des résultats |
+  | Rôles                | Rôles métier assigné à une tâche ou associé une collaboration métier (représentant un comité) |
+  | Résultats (jalons)   | Evénements métier |
+  | Résultats (artefacts)| Données métier -> Artefacts |
+
+- Le concept est appelé à servir de repère méthodologique de manière totalement intégré au référentiel d'entreprise qui comprend dès lors la démarche standard de référence et la démarche effectivement appliquée aussi bien que les éléments impactés par la démarche de projet de transformation digitale constituant une source unique de vérité (selon d'autres normes standards également) à même d'alimenter des fonctionnalités Retrieval Augmented Generation destinées à des modèles de langage large (LLM) par exemple avec le projet cii-via-cip-archimate-ia-repository. Le concept est étendu en cours d'exécution du projet après avoir été alimenté avec la méthodologie standard d'une part avec les éléments spécifiques mis en oeuvre dans la démarche projet dans le contexte et également d'autre part avec les éventuelles applications qui supportent les tâches (relation de service), voire produisent des artefacts (données applicatives intermédiaires entre artefacts et données métier).
+
+  | Couche | Description                                      | Éléments Clés                                                                 |
+  |--------|--------------------------------------------------|-------------------------------------------------------------------------------|
+  | 1      | Méthodologie standard (Référence/Repère méthodologique) | - Eléments (Processus métier, données métier, artefacts (modèles de document), rôles, collaborations métier (instances)                                     |
+  | 2      | Démarche appliquée au projet                     | - Extensions ajoutées en cours d'exécution avec des éléments de mêmes type que ceux de la méthodologie standard effectivement mis en oeuvre, reliés au standard avec une relation de spécialisation                                             |
+  | 3      | Extensions potentielles (Moyens au service du projet)                          | - Applications mises en œuvre (gestion, bureautique, modélisation, dev, ...)<br>- Artefacts produits dans le cadre de la démarche de projet<br>- Localisation/Emplacement des artefacts (node, device)                              |
+  | 4      | Éléments de l'architecture impactés                                | - Infrastructure (Sites)<br>- Systèmes & Réseaux<br>- Applications & Données métier<br>- Organisation et Chaîne de valeur Métier<br>- Motivation & stratégie |
+
+- La finalité des différents projets menés dans le cadre de cette initiative personnelle est de faire la démonstration de la pertinence de combiner Archimate avec l'intelligence artificielle pour en faire un référentiel source unique de vérité bâti selon des métamodèles standards qui peut se décliner sur l'entier du cycle de vie d'un produit logiciel de l'élaboration de la vision métier jusqu'à la documentation technique de référence de bas niveau et qui soit interprétable par l'IA de manière sûre et fiable pour produire des artefacts sous diverses autres formes à but et destination d'audiences spécifiques (audit par exemple, conformité à des standards, ...).
 
 ## Contexte
 
-- HERMES2022 est la méthodologie standard de gestion de programme et de projet de la confédération helvétique (<https://www.hermes.admin.ch/en/>)
-- Archimate est une norme de représentation d'architecture d'entreprise édictée par l'Open Group, la version actuelle est la version 3.2 (<https://pubs.opengroup.org/architecture/archimate3-doc/>)
-- Archi est un outil de gestion et de modélisation d'un référentiel selon la norme Archimate (<www.archimatetool.com>)
-- Cursor est un outil de développement centré sur l'usage de l'IA, il est également utilisé comme outil conversationnel pour interroger l'IA dans le contexte du projet
-- Neo4j est une base de données graphe avec des fonctionnalités additionnelles RAG et Vector utilisées pour alimenter l'IA avec dev composants client-serveur MCP selon les principes RAG intégrés à Cursor
+- HERMES2022 est la méthodologie standard de gestion de programme et de projet de la confédération helvétique (<https://www.hermes.admin.ch/fr/>)
+- Archimate est une norme de représentation d'architecture d'entreprise édictée par l'Open Group, la version actuelle est la version 3.2 (<https://pubs.opengroup.org/architecture/archimate3-doc>)
+- Archi est un outil de gestion et de modélisation d'un référentiel d'architecture d'entreprise selon la norme Archimate (<https://www.archimatetool.com>), il comprend un plugin JArchi qui permet de manipuler programmatiquement les modèles ainsi que les éléments, les relations et les vues d'un modèle.
+- Cursor est un outil de développement centré sur l'usage de l'IA.
+- NuExtract (3.8B, basé sur Phi-3-mini) est un llm open source conçu expressément pour extraire des données structurées depuis du texte ou HTML vers JSON (<https://www.numind.ai>). Développé par NuMind, le modèle garantit un JSON valide systématiquement et excelle dans le respect des schémas.
+- Ollama est un outil open source pour servir des modèles de langage locaux de manière simple et efficace (<https://www.ollama.com>), permettant le déploiement et l'exécution de LLM comme NuExtract directement sur du hardware personnel (ex. RTX 1000 Ada). Il fournit une API compatible OpenAI pour une intégration aisée avec des applications TypeScript, facilitant l'extraction structurée HTML→JSON en environnement souverain et hors ligne, tout en optimisant l'utilisation des ressources GPU.
+- Javascript/Typescript sont les langages de scripting privilégiés dans le cadre du projet.
+- Le cycle de développement logiciel priviliégie Behavior-driven Development, avec Gherkin et les framerwork cucumber et Jest (voir @bdd-governance.mdc)
+- Neo4j est une base de données graphe avec des fonctionnalités additionnelles RAG et Vector utilisées pour alimenter l'IA avec des composants client-serveur MCP selon les principes RAG intégrées au chat Cursor. Une base documentaire vectorisée est créée dans neo4j à partir des modèles Archimate exporté de Archi pour alimenter l'IA dans le cadre du projet cii-via-cip-archimate-ia-repository.
 - Customer Information Interface via Customer Information Port est un projet personnel d'étude d'opportunité mené selon HERMES2022 et Archimate et donnant lieu à l'élaboration d'une preuve de concept complexe nécessitant plusieurs projets de développements spécifiques (React, Spring, Flowable, UIPath, Kexcloack, OsixiaLDAP, OAuth2, ...) dans un contexte sécurisé d'entreprise qui vérifie la faisabilité technique et fournit des indicateurs clés pour mesurer l'effort nécessaire d'une réalisation à l'échelle.
 
 ## Objectifs
 
-- Faire traduire - et permettre la mise à jour - de manière efficiente et sûre les concepts de la méthode HERMES2022 en éléments et relations selon Archimate dans un référentiel géré avec Archi
-- Permettre l'injection sûre et fiable des concepts HERMES2022 dans les fenêtres de contexte de l'IA via les services RAG exposé par Neo4j
-- Analyser une alternative à l'architecture ETL d'import/export à partir du format d'interchange standard défini par l'Open Group utilisée dans le cadre du projet cii-via-cip-archimate-ia-repository en utilisant l'interface du plugin JArchi de Archi pour manipuler le référentiel d'architecture d'entreprise de manière interactive
+- Acquérir à partir d'internet, faire traduire et mettre à jour de manière efficiente et sûre les concepts de la méthode HERMES2022 en éléments et relations selon Archimate à l'aide de l'IA (modèle LLM spécialisé NuExtract) dans un référentiel d'architecture d'entprise selon Archimate géré avec Archi. Ces éléments et relations de référence à la méthodologie standard peuvent ainsi être utilisés dans le cadre des projets avec des éléments spécialisés de même type selon l'application de la méthode dans les contexte des projects planifiés et exécutés.
+
+- Alimenter un pipeline RAG à base MCP avec ces mêmes informations de référence de la méthodolgie standard chargées dans Neo4j aux côtés des éléments du référentiel d'architecture d'entpreprise. Le modèle IA généraliste utilisé pour générer des réponses à partir du référentiel d'architecture d'entreprise peut ainsi être alimenté en information sûre et fiable sur la méthodologie standard appliquée même si il n'a pas été entraîné sur le sujet.
+
+- Proposer une alternative à l'architecture ETL d'import/export à partir du format d'interchange standard défini par l'Open Group utilisée dans le cadre du projet cii-via-cip-archimate-ia-repository en utilisant plutôt l'interface du plugin JArchi de Archi pour manipuler le référentiel d'architecture d'entreprise sous Archi de manière interactive.
 
 ## Conception générale
 
-- Le projet est divisé en trois module distincts : 1) Extraction/Transformation des concepts HERMES2022 à partir du site internet 2) Chargement/Mise à jour des éléments et relations correspondant aux concepts HERMES2022 d'un modèle Archimate de Archi 3) Chargement/Mise à jour des noeuds d'une base de données graphe Neo4j correspondant aux concepts HERMES2022
-- L'Extraction/Transformation donne lieu à la création/mise à jour de fichiers intermédiaires structurés et vérifiables pour être partagés comme données de référence en entrée par les autres modules 1) pour le chargement initial et la mise à jour de modèles Archimate Archi 2) et pour le chargement de la base de données graphe Neo4j
-- Les fichiers intermédiaires sont structurés selon un standard reconnu, lisibles et vérifiables tant par l'humain que par la machine
+- Le projet est divisé en deux modules distincts :
+  - **Script Javascript JArchi**
+    - 1a) Extraction/Transformation des concepts HERMES2022 à partir du site internet
+    - 1b) Chargement/Mise à jour des éléments et relations correspondant aux concepts HERMES2022 dans un modèle Archimate de Archi
+  - **Javascript**
+    - 2) Chargement/Mise à jour des noeuds d'une base de données graphe Neo4j correspondant aux concepts standards HERMES2022.
+
+- L'Extraction/Transformation donne lieu à la création/mise à jour de fichiers intermédiaires structurés et vérifiables pour être partagés comme données de référence en entrée par les autres modules 1) pour le chargement initial et la mise à jour de modèles Archimate Archi 2) et pour le chargement des concepts HERMES2022 dans la base de données graphe Neo4j.
+
+- Les fichiers intermédiaires sont structurés selon un standard reconnu, lisibles et vérifiables tant par l'humain que par la machine (process flow with humanin the loop).
 
 ## Structure de répertoire
 

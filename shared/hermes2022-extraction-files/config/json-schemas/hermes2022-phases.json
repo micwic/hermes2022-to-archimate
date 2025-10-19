@@ -4,54 +4,39 @@
   "description": "Schéma pour la validation des phases HERMES2022 extraites",
   "type": "object",
   "properties": {
-    "metadata": {
-      "type": "object",
-      "properties": {
-        "extractionDate": {
-          "type": "string",
-          "format": "date",
-          "description": "Date d'extraction des phases"
-        },
-        "source": {
-          "type": "string",
-          "enum": ["hermes.admin.ch"],
-          "description": "Source de référence pour l'extraction"
-        },
-        "version": {
-          "type": "string",
-          "pattern": "^\\d+\\.\\d+\\.\\d+$",
-          "description": "Version du schéma"
-        }
-      },
-      "required": ["extractionDate", "source", "version"]
+    "overview": {
+      "type": "string",
+      "minLength": 50,
+      "maxLength": 5000,
+      "description": "Résumé conceptuel (cycle de vie, interfaces uniformes, jalons/quality gates, hiérarchie 1/2/2.x/3, rôle des phases communes)."
     },
-    "phases-concept": {
-      "type": "object",
-      "description": "Description générale des phases HERMES2022 (contexte, articulation, approches traditionnelle/agile).",
-      "properties": {
-        "overview": {
-          "type": "string",
-          "minLength": 50,
-          "maxLength": 5000,
-          "description": "Résumé conceptuel (cycle de vie, interfaces uniformes, jalons/quality gates, hiérarchie 1/2/2.x/3, rôle des phases communes)."
-        },
-        "sourceUrl": {
-          "type": "string",
-          "format": "uri",
-          "enum": [
-            "https://www.hermes.admin.ch/en/project-management/phases.html"
-          ],
-          "description": "URL officielle de référence utilisée pour cette description."
-        },
-        "lastChecked": {
-          "type": "string",
-          "format": "date",
-          "description": "Date de dernière vérification de la source."
-        }
-      },
-      "required": ["overview", "sourceUrl"]
+    "sourceUrl": {
+      "type": "string",
+      "format": "uri",
+      "enum": [
+        "/project-management/phases.html"
+      ],
+      "description": "URL officielle de référence utilisée pour cette description."
+    },
+    "lastChecked": {
+      "type": "string",
+      "format": "date",
+      "description": "Date de dernière vérification de la source."
     },
     "phases": {
+      "sourceUrl": {
+        "type": "string",
+        "format": "uri",
+        "enum": [
+          "/project-management/phases/initiation.html",
+          "/project-management/phases/concept.html",
+          "/project-management/phases/deployment.html",
+          "/project-management/phases/implementation.html",
+          "/project-management/phases/execution.html",
+          "/project-management/phases/closure.html"
+        ],
+        "description": "Liste des URLs des pages spécifiques de chaque phase"
+      },
       "type": "array",
       "items": {
         "type": "object",
@@ -60,6 +45,24 @@
             "type": "string",
             "pattern": "^ph_[a-z0-9]{6}$",
             "description": "Identifiant unique de la phase (format: ph_abc123)"
+          },
+          "sourceUrl": {
+            "type": "string",
+            "format": "uri",
+            "enum": [
+              "/project-management/phases/initiation.html",
+              "/project-management/phases/concept.html",
+              "/project-management/phases/deployment.html",
+              "/project-management/phases/implementation.html",
+              "/project-management/phases/execution.html",
+              "/project-management/phases/closure.html"
+            ],
+            "description": "URL de la page spécifique de la phase (construite à partir de baseUrl)"
+          },
+          "lastChecked": {
+            "type": "string",
+            "format": "date",
+            "description": "Date de dernière vérification de la source de cette phase."
           },
           "name": {
             "type": "string",
@@ -116,11 +119,11 @@
             "description": "Approches supportées par la phase (traditionnelle, agile, ou les deux)"
           }
         },
-        "required": ["id", "name", "order", "type", "description", "context", "approach"]
+        "required": ["id", "name", "order", "type", "sourceUrl", "lastChecked", "description", "context", "approach"]
       },
       "minItems": 1,
       "description": "Liste des phases HERMES2022"
     }
   },
-  "required": ["metadata", "phases-concept", "phases"]
+  "required": ["overview", "sourceUrl", "lastChecked", "phases"]
 }
