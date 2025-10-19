@@ -5,6 +5,7 @@ import fs from 'fs';
 import os from 'os';
 import { findLatestConceptsArtifact } from '../shared/approval';
 import { validateWithSchema } from '../shared/jsonschema';
+import { spawnSync } from 'child_process';
 
 const feature = loadFeature(__dirname + '/extraction-phases.feature');
 
@@ -22,6 +23,16 @@ defineFeature(feature, (test) => {
       const baseDir = fromEnv && fromEnv.length > 0 ? fromEnv : (config.artifactBaseDir || 'shared/hermes2022-extraction-files/data');
       const used = fromEnv && fromEnv.length > 0 ? 'env:HERMES2022_CONCEPTS_ARTIFACT_DIR' : 'config:artifactBaseDir';
       console.log(`[tests] artefacts dir = ${baseDir} (${used})`);
+      if (process.env.NUEXTRACT_API_KEY) {
+        const scriptPath = path.resolve(__dirname, '../../src/nuextract-client.js');
+        console.log(`[tests] lancement extraction via ${scriptPath}`);
+        const run = spawnSync(process.execPath, [scriptPath], { stdio: 'inherit', env: process.env });
+        if (run.status !== 0) {
+          throw new Error(`L'extraction a échoué avec le code ${run.status}`);
+        }
+      } else {
+        console.warn('[tests] NUEXTRACT_API_KEY absente, aucune extraction temps réel exécutée (utilisation d\'artefacts existants)');
+      }
       const dataDir = path.resolve(__dirname, '../../', baseDir);
       artifactPath = findLatestConceptsArtifact(dataDir);
       expect(fs.existsSync(artifactPath)).toBe(true);

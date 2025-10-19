@@ -5,6 +5,7 @@ import fs from 'fs';
 import { findLatestConceptsArtifact, sidecarApprovalPath, readApproval, allTargetsPending } from '../shared/approval';
 import { readExtractionConfig, getApprovalTargets } from '../shared/approval-config';
 import { validateWithSchema } from '../shared/jsonschema';
+import { spawnSync } from 'child_process';
 
 const feature = loadFeature(__dirname + '/hermes2022-concepts.feature');
 
@@ -33,6 +34,17 @@ defineFeature(feature, (test) => {
       // Log d'information pour diagnostiquer la source utilisée
       // Affiché par Jest sauf si --silent est activé
       console.log(`[tests] artefacts dir = ${baseDir} (${used})`);
+      // Exécuter l'extraction réelle si la clé API est disponible
+      if (process.env.NUEXTRACT_API_KEY) {
+        const scriptPath = path.resolve(__dirname, '../../src/nuextract-client.js');
+        console.log(`[tests] lancement extraction via ${scriptPath}`);
+        const run = spawnSync(process.execPath, [scriptPath], { stdio: 'inherit', env: process.env });
+        if (run.status !== 0) {
+          throw new Error(`L'extraction a échoué avec le code ${run.status}`);
+        }
+      } else {
+        console.warn('[tests] NUEXTRACT_API_KEY absente, aucune extraction temps réel exécutée (utilisation d\'artefacts existants)');
+      }
       const dataDir = path.resolve(__dirname, '../../', baseDir);
       artifactPath = findLatestConceptsArtifact(dataDir);
     });
