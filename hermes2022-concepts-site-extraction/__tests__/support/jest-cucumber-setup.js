@@ -1,24 +1,24 @@
-const fs = require('fs');
-const path = require('path');
+// Setup for Jest-Cucumber
+// This file is executed before each test suite
 
-// Charger la clé API dans le process.env si absente, depuis le fichier .key
-(() => {
-  if (!process.env.NUEXTRACT_API_KEY) {
-    const keyPath = path.resolve(__dirname, '../../config/nuextract-api-key.key');
-    if (fs.existsSync(keyPath)) {
-      try {
-        const key = fs.readFileSync(keyPath, 'utf8').trim();
-        if (key) {
-          process.env.NUEXTRACT_API_KEY = key;
-          // eslint-disable-next-line no-console
-          console.log('[jest-setup] NUEXTRACT_API_KEY chargé depuis le fichier .key');
-        }
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.warn('[jest-setup] Impossible de charger la clé API depuis le fichier .key:', e.message);
-      }
-    }
-  }
-})();
+// Global test setup
+beforeAll(() => {
+  // Setup global test environment if needed
+  console.log('[tests] Initialisation de l\'environnement de test');
+});
 
-module.exports = {};
+// Cleanup after all tests
+afterAll(() => {
+  // Cleanup if needed
+  console.log('[tests] Nettoyage de l\'environnement de test');
+});
+
+// Setup before each test
+beforeEach(() => {
+  // Reset any global state if needed
+});
+
+// Cleanup after each test
+afterEach(() => {
+  // Cleanup after each test if needed
+});

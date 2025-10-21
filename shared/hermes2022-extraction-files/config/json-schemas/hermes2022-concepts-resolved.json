@@ -1,0 +1,294 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/micwic/hermes2022-to-archimate/shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts.json",
+  "title": "HERMES2022 Method Extraction Schema",
+  "description": "Schéma de validation pour les fichiers intermédiaires d'extraction des concepts de la méthode HERMES2022",
+  "type": "object",
+  "properties": {
+    "config": {
+      "type": "object",
+      "properties": {
+        "extractionSource": {
+          "type": "object",
+          "properties": {
+            "baseUrl": {
+              "type": "string",
+              "enum": [
+                "https://www.hermes.admin.ch/de",
+                "https://www.hermes.admin.ch/fr",
+                "https://www.hermes.admin.ch/it",
+                "https://www.hermes.admin.ch/en"
+              ],
+              "default": "https://www.hermes.admin.ch/en",
+              "description": "URL de base utilisée pour l'extraction, enregistrée au moment de l'extraction"
+            },
+            "language": {
+              "type": "string",
+              "enum": [
+                "de",
+                "fr",
+                "it",
+                "en"
+              ],
+              "default": "en",
+              "description": "Code de langue utilisé pour l'extraction, enregistré au moment de l'extraction"
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 500,
+              "description": "Description de la source de référence pour l'extraction et transformation des concepts de la méthode HERMES2022"
+            }
+          },
+          "required": [
+            "baseUrl",
+            "language",
+            "description"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "extractionSource"
+      ],
+      "additionalProperties": false
+    },
+    "method": {
+      "type": "object",
+      "properties": {
+        "hermesVersion": {
+          "type": "string",
+          "enum": [
+            "5",
+            "5.1",
+            "2022"
+          ],
+          "default": "2022",
+          "description": "Version de la méthode HERMES (5, 5.1, 2022). La valeur par défaut est 2022."
+        },
+        "publicationDate": {
+          "type": "string",
+          "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$",
+          "default": "04-2023",
+          "description": "Date de publication de la version HERMES (MM-YYYY). La valeur par défaut est 04-2023."
+        },
+        "overview": {
+          "type": "string",
+          "minLength": 600,
+          "maxLength": 5000,
+          "description": "Description générale des concepts de HERMES2022"
+        },
+        "sourceUrl": {
+          "type": "string",
+          "format": "uri",
+          "enum": [
+            "/"
+          ],
+          "default": "/",
+          "description": "URL des pages de référence utilisées pour cette description. Ces pages sont utilisées pour extraire la description générale de la méthode HERMES2022."
+        },
+        "lastChecked": {
+          "type": "string",
+          "format": "date",
+          "description": "Date de dernière vérification de la source."
+        }
+      },
+      "required": [
+        "hermesVersion",
+        "publicationDate",
+        "overview",
+        "sourceUrl",
+        "lastChecked"
+      ],
+      "additionalProperties": false
+    },
+    "concepts": {
+      "type": "object",
+      "properties": {
+        "overview": {
+          "type": "string",
+          "minLength": 600,
+          "maxLength": 5000,
+          "description": "Description générale des concepts de HERMES2022"
+        },
+        "sourceUrl": {
+          "type": "string",
+          "format": "uri",
+          "enum": [
+            "/project-management/method-overview.html",
+            "/project-management/method-overview/preface.html"
+          ],
+          "description": "URL des pages de référence utilisées pour cette description. Ces pages sont utilisées pour extraire la description générale des concepts de HERMES2022."
+        },
+        "lastChecked": {
+          "type": "string",
+          "format": "date",
+          "description": "Date de dernière vérification de la source."
+        },
+        "concept-phases": {
+          "description": "Schéma pour la validation des phases HERMES2022 extraites",
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "HERMES2022 Phases Schema",
+          "type": "object",
+          "properties": {
+            "overview": {
+              "type": "string",
+              "minLength": 50,
+              "maxLength": 5000,
+              "description": "Résumé conceptuel (cycle de vie, interfaces uniformes, jalons/quality gates, hiérarchie 1/2/2.x/3, rôle des phases communes)."
+            },
+            "sourceUrl": {
+              "type": "string",
+              "format": "uri",
+              "enum": [
+                "/project-management/phases.html"
+              ],
+              "description": "URL officielle de référence utilisée pour cette description."
+            },
+            "lastChecked": {
+              "type": "string",
+              "format": "date",
+              "description": "Date de dernière vérification de la source."
+            },
+            "phases": {
+              "sourceUrl": {
+                "type": "string",
+                "format": "uri",
+                "enum": [
+                  "/project-management/phases/initiation.html",
+                  "/project-management/phases/concept.html",
+                  "/project-management/phases/deployment.html",
+                  "/project-management/phases/implementation.html",
+                  "/project-management/phases/execution.html",
+                  "/project-management/phases/closure.html"
+                ],
+                "description": "Liste des URLs des pages spécifiques de chaque phase"
+              },
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^ph_[a-z0-9]{6}$",
+                    "description": "Identifiant unique de la phase (format: ph_abc123)"
+                  },
+                  "sourceUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "enum": [
+                      "/project-management/phases/initiation.html",
+                      "/project-management/phases/concept.html",
+                      "/project-management/phases/deployment.html",
+                      "/project-management/phases/implementation.html",
+                      "/project-management/phases/execution.html",
+                      "/project-management/phases/closure.html"
+                    ],
+                    "description": "URL de la page spécifique de la phase (construite à partir de baseUrl)"
+                  },
+                  "lastChecked": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "Date de dernière vérification de la source de cette phase."
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "description": "Nom de la phase en anglais"
+                  },
+                  "order": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d+)*$",
+                    "description": "Ordre hiérarchique de la phase (ex: 1, 2, 2.1, 2.2, 2.3, 3)"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "simple",
+                      "composite"
+                    ],
+                    "description": "Type de phase : simple ou composite (regroupant plusieurs sous-phases)"
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 2000,
+                    "description": "Description détaillée de la phase et de ses objectifs"
+                  },
+                  "context": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 1000,
+                    "description": "Contexte et articulation de la phase dans le cycle de vie du projet"
+                  },
+                  "outcomes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 5,
+                      "maxLength": 200
+                    },
+                    "description": "Liste des résultats attendus de la phase"
+                  },
+                  "milestones": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 5,
+                      "maxLength": 200
+                    },
+                    "description": "Points de contrôle et jalons de la phase"
+                  },
+                  "approach": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "traditional",
+                        "agile",
+                        "both"
+                      ]
+                    },
+                    "description": "Approches supportées par la phase (traditionnelle, agile, ou les deux)"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "order",
+                  "type",
+                  "sourceUrl",
+                  "lastChecked",
+                  "description",
+                  "context",
+                  "approach"
+                ]
+              },
+              "minItems": 1,
+              "description": "Liste des phases HERMES2022"
+            }
+          },
+          "required": [
+            "overview",
+            "sourceUrl",
+            "lastChecked",
+            "phases"
+          ]
+        }
+      },
+      "required": [
+        "overview",
+        "sourceUrl",
+        "lastChecked",
+        "concept-phases"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "config",
+    "method",
+    "concepts"
+  ],
+  "additionalProperties": false
+}

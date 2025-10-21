@@ -8,7 +8,7 @@ alwaysApply: true
 Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rules/
 
 > Créé le : 2025-08-16
-> Dernière mise à jour : 2025-10-16
+> Dernière mise à jour : 2025-10-21
 
 ## Description générale
 
@@ -191,6 +191,78 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 🚧 Intégration dans l'agent JS en cours
 
+### Utilisation de l'API asynchrone /api/infer-template-async
+
+#### Description détaillée pour l'utilisation de l'API asynchrone
+
+- [2025-10-20] L'API synchrone `/api/infer-template` timeout à ~11 secondes avec le schéma `hermes2022-concepts.json` (4442 caractères) et retourne erreur 206 (Partial Content) avec body vide `{}`
+- [2025-10-20] L'API asynchrone `/api/infer-template-async` permet de traiter le même schéma en 44 secondes avec succès
+- [2025-10-20] Workflow : POST `/api/infer-template-async?timeout=60s` → obtenir jobId → polling GET `/api/jobs/{jobId}` toutes les 3s → récupérer outputData
+- [2025-10-20] Le template généré est sauvegardé dans `shared/hermes2022-extraction-files/config/nuextract-template-generated/nuextract-template.json`
+- [2025-10-20] Sleep initial de 30 secondes avant le premier polling pour laisser le temps au job de s'initialiser
+
+#### Justification pour l'utilisation de l'API asynchrone
+
+- **Résout les timeouts** : L'API synchrone timeout systématiquement avec des schémas JSON complexes (>2000 caractères)
+
+#### Patterns validés pour l'utilisation de l'API asynchrone
+
+- **Timeout configuré** : 60 secondes pour la génération (`?timeout=60s`)
+- **Sleep initial** : 30 secondes avant le premier polling pour laisser le job s'initialiser
+- **Polling interval** : 3 secondes entre chaque vérification de statut
+- **Statuts acceptés** : `"completed"` (succès normal) ET `"timeout"` (succès avec dépassement timeout mais outputData présent)
+- **Statut échec** : `"failed"` (échec du job)
+- **Sauvegarde automatique** : Le template est sauvegardé dans `shared/hermes2022-extraction-files/config/nuextract-template-generated/nuextract-template.json`
+- **Max attempts** : 20 tentatives de polling (soit 30s + 20*3s = 90 secondes max)
+- **Vérification API réelle** : Curl sur jobId `0dfba16b-80ab-4bba-b8e8-6584a05d15a9` confirme statut `"timeout"` avec `completedAt` défini
+- **Format description** : Schéma JSON en premier, puis instructions (sans headers/commentaires) — Les instructions placées avant le schéma perturbent la génération du template
+- **Limite taille** : 32k caractères pour le champ `description` selon support NuMind
+
+#### Anti-Patterns pour l'utilisation de l'API asynchrone à éviter
+
+- **Utiliser API synchrone pour schémas >2000 caractères** : Éviter `/api/infer-template` → **Solution** : Utiliser `/api/infer-template-async` → **Règle à adopter** : Workflow async pour schémas complexes
+- **Polling immédiat** : Éviter de poller dès la soumission → **Solution** : Sleep 30s initial → **Règle à adopter** : Laisser le temps au job de s'initialiser
+- **Polling trop rapide** : Éviter interval <2s → **Solution** : Interval 3s → **Règle à adopter** : Limiter la charge sur l'API
+- **Instructions avant schéma** : Éviter headers/instructions avant le schéma JSON → **Solution** : Schéma d'abord, instructions après → **Règle à adopter** : Format description = schéma + instructions (sans headers)
+
+#### État d'implémentation pour l'utilisation de l'API asynchrone
+
+🚧 [En cours de réalisation]
+
+### Parsing des instructions complémentaires depuis fichier Markdown
+
+#### Description détaillée pour le parsing des instructions complémentaires
+
+- [2025-10-21] Les instructions complémentaires pour l'API NuExtract sont stockées dans un fichier Markdown structuré avec documentation humaine et instructions opérationnelles séparées
+- [2025-10-21] Le parsing extrait uniquement le contenu sous le heading `## Instructions complémentaires pour /api/infer-template /api/infer-template-async de NuExtract`
+- [2025-10-21] La documentation (Objectif, Mode d'utilisation) est préservée pour la lisibilité humaine mais exclue de l'envoi à l'API
+- [2025-10-21] Le parsing s'arrête au prochain heading de niveau 1 ou 2 (ou fin de fichier) pour isoler uniquement les instructions pertinentes
+
+#### Justification pour le parsing des instructions complémentaires
+
+- **Lisibilité préservée** : Le fichier reste documenté et compréhensible pour les humains
+- **API optimisée** : Seules les instructions pertinentes sont envoyées, évitant la pollution du contexte
+- **Maintenabilité** : Séparation claire entre documentation et instructions opérationnelles dans un fichier unique
+- **Robustesse** : Fallback sur le fichier complet si le heading n'est pas trouvé
+
+#### Patterns validés pour le parsing des instructions complémentaires
+
+- **Heading standard** : `## Instructions complémentaires pour /api/infer-template /api/infer-template-async de NuExtract` comme marqueur de section
+- **Parsing par lignes** : Extraction ligne par ligne depuis le heading jusqu'au prochain heading de niveau 1-2
+- **Regex arrêt** : Pattern `/^#{1,2}\s+/` pour détecter les headings de niveau 1 ou 2
+- **Fallback documenté** : Warning si heading non trouvé, utilisation fichier complet
+- **Trim final** : Nettoyage des espaces/lignes vides avant/après
+
+#### Anti-Patterns pour le parsing des instructions complémentaires à éviter
+
+- **Fichiers séparés** : Éviter duplication doc/instructions → **Solution** : Fichier unique avec parsing → **Règle à adopter** : Documentation et instructions colocalisées
+- **Envoi complet** : Éviter d'envoyer toute la documentation à l'API → **Solution** : Extraction ciblée → **Règle à adopter** : Parser le Markdown pour isoler les instructions
+- **Heading variable** : Éviter des noms de heading changeants → **Solution** : Heading standard documenté → **Règle à adopter** : Convention de nommage stricte
+
+#### État d'implémentation pour le parsing des instructions complémentaires
+
+✅ [Fonctionnalité réalisée]
+
 ### Structure et format des instructions d'extraction
 
 #### Description détaillée pour la structure et format des instructions d'extraction
@@ -311,6 +383,46 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 - Dénominations spéciales dans les noms de fichiers (la distinction se fait par le répertoire).
 - Couplage fort aux chemins en dur dans les steps.
 
-#### État d’implémentation
+#### État d'implémentation
 
 🚧 À implémenter dans les steps BDD et la configuration
+
+### Format du template NuExtract généré par l'API
+
+#### Description détaillée pour le format du template NuExtract
+
+- [2025-10-21] L'API `/api/infer-template-async` transforme un schéma JSON Schema en template NuExtract avec des règles de conversion spécifiques
+- [2025-10-21] **Fixture de référence** : Template valide obtenu de la plateforme SaaS disponible dans `__tests__/fixtures/nuextract-template-valid.json`
+- [2025-10-21] **Types de base** : `"type": "string"` → `"string"`, `"type": "string", "pattern": "..."` → `"verbatim-string"`, `"type": "string", "format": "date"` → `"date-time"`
+- [2025-10-21] **Énumérations** : Les `enum` JSON Schema sont converties en **tableaux** dans le template NuExtract (ex: `"enum": ["de", "fr", "it", "en"]` → `["de", "fr", "it", "en"]`)
+- [2025-10-21] **Tableaux** : Les `"type": "array"` JSON Schema sont représentés avec **un seul élément type** dans le template
+- [2025-10-21] **Références $ref** : Les références sont **résolues et intégrées** dans le template final (pas de `$ref` dans le template NuExtract)
+
+#### Justification pour le format du template NuExtract
+
+- **Interopérabilité** : Format standardisé NuExtract pour les extractions futures
+- **Validation** : Template validé par la plateforme SaaS garantit la conformité
+- **Tests** : Fixture de référence permet la validation automatisée des générations de template
+- **Documentation par l'exemple** : Template valide sert de référence pour comprendre les transformations
+
+#### Patterns validés pour le format du template NuExtract
+
+- **Conversion énumérations** : `"language": {"type": "string", "enum": ["de", "fr", "it", "en"]}` → `"language": ["de", "fr", "it", "en"]`
+- **Types NuExtract** : `"verbatim-string"` pour patterns, `"string"` pour texte libre, `"date-time"` pour dates
+- **Résolution références** : `"concept-phases": {"$ref": "./hermes2022-phases.json"}` → structure complète intégrée
+- **Arrays template** : `"phases": [{"id": "verbatim-string", "name": "string", ...}]` (un seul élément type)
+- **Fixture de test** : `__tests__/fixtures/nuextract-template-valid.json` comme référence pour validation
+
+#### Anti-Patterns pour le format du template NuExtract à éviter
+
+- **$ref non résolues** : Éviter de laisser des `$ref` dans le template → **Solution** : Résoudre toutes les références avant envoi à l'API → **Règle à adopter** : Utiliser le schéma résolu complet
+- **Énumérations non converties** : Éviter de tester avec `"enum": [...]` dans template → **Solution** : Valider que les énumérations sont des tableaux → **Règle à adopter** : Tests BDD vérifient la conversion
+- **Structure array incorrecte** : Éviter plusieurs éléments types dans array → **Solution** : Un seul élément type → **Règle à adopter** : Format NuExtract standard
+
+#### État d'implémentation pour le format du template NuExtract
+
+✅ [Fixture validée et tests adaptés]
+
+- ✅ **Fixture de référence** : `__tests__/fixtures/nuextract-template-valid.json` créée depuis plateforme SaaS
+- ✅ **Tests BDD améliorés** : Validation de la structure, des énumérations converties, des types NuExtract, et de la résolution des `$ref`
+- 🚧 **API retourne template vide** : Investigation en cours avec NuMind sur pourquoi l'API retourne `{}` alors que la plateforme SaaS fonctionne correctement

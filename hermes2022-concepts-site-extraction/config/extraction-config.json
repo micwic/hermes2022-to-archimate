@@ -6,19 +6,23 @@
     "description": "Site de référence en anglais pour l'extraction des concepts HERMES2022"
   },
   "nuextract": {
-    "apiKeyFile": "/config/nuextract-api-key.key",
+    "apiKeyFile": "hermes2022-concepts-site-extraction/config/nuextract-api-key.key",
     "projectName": "HERMES2022",
     "projectDescription": "Project for HERMES2022 concepts extraction by using NuExtact",
-    "templateTransformationInstructionFile": "../config/instructions-template-nuextract.md",
-    "mainJSONConfigurationFile": "/shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts.json",
-    "templateReset": false,
+    "templateTransformationInstructionFile": "hermes2022-concepts-site-extraction/config/instructions-template-nuextract.md",
+    "mainJSONConfigurationFile": "shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts.json",
+    "templateOutputDirectory": "shared/hermes2022-extraction-files/config/nuextract-template-generated",
+    "templateReset": true,
     "model": "nuextract-large",
-    "baseUrl": "https://nuextract.ai",
+    "baseUrl": "nuextract.ai",
+    "port": 443,
     "projectsPath": "/api/projects",
-    "extractPath": "/api/projects/{PROJECT_ID}/extract",
+    "infer-templatePath": "/api/infer-template",
+    "infer-textPath": "/api/projects/{projectId}/infer-text",
+    "extractPath": "/api/projects/{projectId}/extract",
     "description": "Configuration pour l'utilisation des APIs NuExtract"
   },
   "requireHumanApproval": true,
   "approvalTargets": ["/concepts/overview"],
-  "artifactBaseDir": "/shared/hermes2022-extraction-files/data"
+  "artifactBaseDirectory": "shared/hermes2022-extraction-files/data"
 }
