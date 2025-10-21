@@ -6,7 +6,7 @@ alwaysApply: true
 # hermes2022-to-archimate/.cursor/rules/specification-hermes2022-to-archimate.mdc: Spécification générale du projet hermes2022-to-archimate
 
 > Créé le : 2025-08-15  
-> Dernière mise à jour : 2025-08-15
+> Dernière mise à jour : 2025-10-20
 
 ## Description générale
 
@@ -269,3 +269,30 @@ et validations JSON). Montées de version à effectuer de manière coordonnée
 #### État d’implémentation
 
 ✅ npm utilisé pour l’installation et l’exécution (`npx jest …`); aucun artefact yarn attendu.
+
+### Gestion des dépendances inter-modules : Chemins explicites relatifs à repoRoot
+
+#### Description détaillée
+
+- [2025-10-20] Les dépendances vers les modules partagés (ex: `shared/hermes2022-extraction-files`) sont gérées via des chemins explicites relatifs à la racine du repository dans les fichiers de configuration
+- [2025-10-20] Alternative évaluée : API JavaScript exposée par les modules partagés (rejetée pour complexité excessive)
+
+#### Justification
+
+- Simplicité de configuration (centralisée dans extraction-config.json)
+- Ratio coût/bénéfice favorable pour notre contexte
+- Pas de sur-engineering pour une flexibilité non nécessaire
+
+#### Patterns validés
+
+- **CHEMINS COMPLETS** : Utiliser chemins complets depuis repoRoot (ex: `hermes2022-concepts-site-extraction/config/nuextract-api-key.key`)
+- **RÉSOLUTION** : Utiliser `find-up` + `path.resolve()` comme défini dans `@root-directory-governance.mdc`
+
+#### Anti-Patterns à éviter
+
+- **CHEMINS RELATIFS FRAGILES** : Éviter `../../../config/...` → **Solution** : Chemins depuis repoRoot → **Règle à adopter** : Utiliser `find-up` pour déterminer repoRoot
+- **CHEMINS RELATIFS AU MODULE** : Éviter `config/nuextract-api-key.key` même dans le module → **Solution** : Toujours depuis repoRoot → **Règle à adopter** : `hermes2022-concepts-site-extraction/config/...`
+
+#### État d'implémentation
+
+🚧 [En cours d'implémentation]
