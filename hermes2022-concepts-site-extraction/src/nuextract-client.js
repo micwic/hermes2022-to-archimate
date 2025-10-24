@@ -44,13 +44,13 @@ async function loadApiKey(config) {
   }
 };
 
-// Dériver un template depuis une description textuelle
-async function inferTemplateFromDescription(apiKey, description) {
+// Dériver un template depuis une description textuelle (mode synchrone)
+async function inferTemplateFromDescription(apiKey, description, timeoutMs = 35000) {
   return new Promise((resolve, reject) => {
     // Utiliser la configuration avec fallbacks
     const hostname = GLOBAL_CONFIG?.nuextract?.baseUrl || 'nuextract.ai';
     const port = GLOBAL_CONFIG?.nuextract?.port || 443;
-    const path = GLOBAL_CONFIG?.nuextract?.inferTemplatePath || '/api/infer-template';
+    const path = GLOBAL_CONFIG?.nuextract?.['infer-templatePath'] || '/api/infer-template';
 
     const options = {
       hostname: hostname,
@@ -77,9 +77,9 @@ async function inferTemplateFromDescription(apiKey, description) {
         }
       });
     });
-    req.setTimeout(10000, () => {
+    req.setTimeout(timeoutMs, () => {
       req.destroy();
-      reject(new Error('Timeout: La requête infer-template a dépassé 10 secondes'));
+      reject(new Error(`Timeout sync après ${timeoutMs}ms. Pour schémas >4000 caractères, utilisez templateMode: 'async'`));
     });
     req.on('error', reject);
     req.write(JSON.stringify({ description }));
@@ -175,9 +175,9 @@ async function getJobStatus(apiKey, jobId) {
 }
 
 // Fonction pour poller le statut d'un job jusqu'à completion
-async function pollJobUntilComplete(apiKey, jobId, maxAttempts = 20, interval = 3000) {
-  console.log(`Polling job ${jobId} - attente initiale de 30 secondes...`);
-  await new Promise(resolve => setTimeout(resolve, 30000)); // Sleep initial 30s
+async function pollJobUntilComplete(apiKey, jobId, maxAttempts = 20, interval = 3000, initialSleepMs = 30000) {
+  console.log(`Polling job ${jobId} - attente initiale de ${initialSleepMs}ms...`);
+  await new Promise(resolve => setTimeout(resolve, initialSleepMs));
   
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const jobResponse = await getJobStatus(apiKey, jobId);
@@ -308,41 +308,57 @@ function resolveJSONSchemaRefs(schema, baseDir, visitedFiles = new Set()) {
 
   // Fonction pour construire la description du template
   // Format : schéma JSON en premier, puis instructions (sans headers inutiles)
+  // Utilisation de trim() sur chaque argument et sur le résultat final pour garantir aucun espace parasite
   function buildTemplateDescription(instructions, mainSchema) {
-    return [
-      mainSchema,
-      '\n',
-      instructions
-    ].join('\n');
+    return [mainSchema.trim(), instructions.trim()].join('\n').trim();
   }
 
-  // Générer un template via /api/infer-template-async (version asynchrone)
+  // Générer un template via /api/infer-template (sync) ou /api/infer-template-async (async)
   async function generateTemplate(config, apiKey) {
     try {
       const instructions = loadInstructions();
       const mainSchema = loadAndResolveSchemas();
       const description = buildTemplateDescription(instructions, mainSchema);
 
-      // Lancer génération asynchrone avec timeout de 60s
-      console.log('Lancement génération template asynchrone (timeout: 60s)...');
-      const asyncResponse = await inferTemplateFromDescriptionAsync(apiKey, description, 60);
-      const jobId = asyncResponse.jobId;
+      // Déterminer le mode (sync par défaut)
+      const templateMode = config?.nuextract?.templateMode || 'sync';
       
-      if (!jobId) {
-        throw new Error('Pas de jobId reçu de l\'API async');
+      // Validation du mode
+      if (templateMode !== 'sync' && templateMode !== 'async') {
+        throw new Error(`templateMode invalide: "${templateMode}". Valeurs acceptées: "sync", "async"`);
       }
       
-      console.log(`Job lancé avec ID: ${jobId}`);
+      // Récupérer templateGenerationDuration (défaut 30000ms)
+      const templateGenerationDuration = config?.nuextract?.templateGenerationDuration || 30000;
       
-      // Polling avec sleep initial 30s puis tentatives toutes les 3s
-      const templateData = await pollJobUntilComplete(apiKey, jobId, 20, 3000);
-      
-      // Vérifier si templateData est une string JSON à parser
       let template;
-      if (typeof templateData === 'string') {
-        template = JSON.parse(templateData);
+      
+      if (templateMode === 'async') {
+        // Mode async
+        console.log(`Mode async: Lancement génération template asynchrone (timeout API: 60s, sleep initial: ${templateGenerationDuration}ms)...`);
+        const asyncResponse = await inferTemplateFromDescriptionAsync(apiKey, description, 60);
+        const jobId = asyncResponse.jobId;
+        
+        if (!jobId) {
+          throw new Error('Pas de jobId reçu de l\'API async');
+        }
+        
+        console.log(`Job lancé avec ID: ${jobId}`);
+        
+        // Polling avec sleep initial = templateGenerationDuration puis tentatives toutes les 3s
+        const templateData = await pollJobUntilComplete(apiKey, jobId, 20, 3000, templateGenerationDuration);
+        
+        // Vérifier si templateData est une string JSON à parser
+        if (typeof templateData === 'string') {
+          template = JSON.parse(templateData);
+        } else {
+          template = templateData;
+        }
       } else {
-        template = templateData;
+        // Mode sync
+        const syncTimeout = templateGenerationDuration + 5000; // Marge de sécurité +5s
+        console.log(`Mode sync: Génération template synchrone (timeout HTTP: ${syncTimeout}ms)...`);
+        template = await inferTemplateFromDescription(apiKey, description, syncTimeout);
       }
       
       // Sauvegarder le template généré

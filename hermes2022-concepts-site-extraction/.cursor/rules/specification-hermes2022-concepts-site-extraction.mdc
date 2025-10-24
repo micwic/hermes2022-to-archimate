@@ -8,7 +8,7 @@ alwaysApply: true
 Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rules/
 
 > Créé le : 2025-08-16
-> Dernière mise à jour : 2025-10-21
+> Dernière mise à jour : 2025-10-24
 
 ## Description générale
 
@@ -50,8 +50,6 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 | `/src/nuextract-client.js` | Code | Client pour les requêtes HTTP vers APIs NuExtract et gestion des réponses JSON |
 | `/config/` | Répertoire | Configuration de l'extraction et paramètres pour l'agent JS |
 | `/config/extraction-config.json` | Configuration | Paramètres de configuration pour l'extraction automatisée (clés API, URLs, etc.) |
-| `/output/` | Répertoire | Fichiers JSON de sortie produits par l'extraction |
-| `/logs/` | Répertoire | Journaux d'exécution et de validation de l'agent JS |
 
 ## Décisions architecturales et techniques
 
@@ -65,7 +63,7 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 
 - [2025-08-16] La racine du site internet de référence pour l'extraction des concepts HERMES2022 est <https://www.hermes.admin.ch/en/>. Elle permet de définir la version de la méthodologie.
 - [2025-10-16] La vue générale de la méthodologie est décrite dans les pages : <br>- <https://www.hermes.admin.ch/en/project-management/method-overview.html><br>- <https://www.hermes.admin.ch/en/project-management/method-overview/hermes-project-management-method-components.html><br>- <https://www.hermes.admin.ch/en/project-management/method-overview/preface.html>
-- [2025-08-16] Les phases sont décrites dans les pages : <br>- https://www.hermes.admin.ch/en/project-management/phases.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/initiation.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/concept.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/implementation.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/deployment.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/execution.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/closure.html>
+- [2025-08-16] Les phases sont décrites dans les pages : <br>- <https://www.hermes.admin.ch/en/project-management/phases.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/initiation.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/concept.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/implementation.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/deployment.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/execution.html><br>- <https://www.hermes.admin.ch/en/project-management/phases/closure.html>
 
 #### Patterns validés à suivre suite à la décision
 
@@ -130,7 +128,7 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 #### Description détaillée pour l'utilisation d'un agent JavaScript
 
 - [2025-10-14] L'extraction des concepts HERMES2022 est réalisée par un agent JavaScript exécuté dans JArchi (plugin d'Archi), qui articule les requêtes HTTP vers les APIs de NuExtract dans le cloud pour analyser et résumer le contenu des pages HTML, puis générer des fichiers JSON structurés avec les synthèses opérées.
-- [2025-10-14] L'agent gère le cycle complet : récupération des pages via HTTP, appel à NuExtract pour extraction/synthèse, validation et écriture des JSON dans `/output/`. Les journaux d'exécution sont placés dans `/logs/`.
+- [2025-10-14] L'agent gère le cycle complet : récupération des pages via HTTP, appel à NuExtract pour extraction/synthèse, validation et écriture des templates générés.
 - [2025-10-14] L'agent est conçu pour être modulaire, réutilisable et intégré à l'écosystème JArchi de Archi sans dépendances externes inutiles.
 
 #### Justification pour l'utilisation d'un agent JavaScript
@@ -143,7 +141,6 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 - **Requêtes HTTP natives** : Utilisation de java.net.http.HttpClient pour les extractions de pages internet et les appels vers NuExtract, avec gestion des timeouts et redirections.
 - **Gestion asynchrone** : Promesses JavaScript pour les requêtes non-bloquantes.
 - **Validation JSON** : Utilisation de Zod ou Ajv pour valider les réponses NuExtract contre les schémas JSON.
-- **Logging et Erreurs** : Journalisation détaillée dans `/logs/` pour traçabilité et debugging.
 
 #### Anti-Patterns pour l'utilisation d'un agent JavaScript à éviter
 
@@ -191,43 +188,57 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 🚧 Intégration dans l'agent JS en cours
 
-### Utilisation de l'API asynchrone /api/infer-template-async
+### Gestion des modes de génération de template (sync/async)
 
-#### Description détaillée pour l'utilisation de l'API asynchrone
+#### Description détaillée pour la gestion des modes
 
-- [2025-10-20] L'API synchrone `/api/infer-template` timeout à ~11 secondes avec le schéma `hermes2022-concepts.json` (4442 caractères) et retourne erreur 206 (Partial Content) avec body vide `{}`
-- [2025-10-20] L'API asynchrone `/api/infer-template-async` permet de traiter le même schéma en 44 secondes avec succès
-- [2025-10-20] Workflow : POST `/api/infer-template-async?timeout=60s` → obtenir jobId → polling GET `/api/jobs/{jobId}` toutes les 3s → récupérer outputData
-- [2025-10-20] Le template généré est sauvegardé dans `shared/hermes2022-extraction-files/config/nuextract-template-generated/nuextract-template.json`
-- [2025-10-20] Sleep initial de 30 secondes avant le premier polling pour laisser le temps au job de s'initialiser
+- [2025-10-24] L'extraction supporte deux modes de génération de template via le paramètre `templateMode` dans `extraction-config.json`
+- [2025-10-24] **Mode sync** : Utilise `/api/infer-template` - traitement synchrone avec timeout HTTP global
+- [2025-10-24] **Mode async** : Utilise `/api/infer-template-async` - traitement asynchrone avec polling de statut
+- [2025-10-24] **Constat empirique** : L'API synchrone timeout à ~11 secondes avec le schéma `hermes2022-concepts.json` (4442 caractères) et retourne erreur 206 (Partial Content) avec body vide `{}`, tandis que l'API asynchrone permet de traiter le même schéma en 44 secondes avec succès
+- [2025-10-24] **Paramètre unifié `templateGenerationDuration`** : Représente le temps estimé de génération (défaut 30000ms)
+  - **Mode sync** : Utilisé comme base pour le timeout HTTP avec marge de sécurité = `templateGenerationDuration + 5000`
+  - **Mode async** : Utilisé comme sleep initial avant le polling = `templateGenerationDuration`
+- [2025-10-24] Le template généré est sauvegardé dans `shared/hermes2022-extraction-files/config/nuextract-template-generated/nuextract-template.json`
 
-#### Justification pour l'utilisation de l'API asynchrone
+#### Justification pour la gestion des modes
 
-- **Résout les timeouts** : L'API synchrone timeout systématiquement avec des schémas JSON complexes (>2000 caractères)
+- **Flexibilité** : Permet de choisir entre rapidité (sync pour petits schémas) et fiabilité (async pour schémas complexes >4000 caractères)
+- **Résout les timeouts** : Le mode async résout les timeouts systématiques avec des schémas JSON complexes
+- **Gestion d'erreur explicite** : Message d'erreur clair en cas de timeout sync proposant de passer en mode async
 
-#### Patterns validés pour l'utilisation de l'API asynchrone
+#### Patterns validés pour la gestion des modes
 
-- **Timeout configuré** : 60 secondes pour la génération (`?timeout=60s`)
-- **Sleep initial** : 30 secondes avant le premier polling pour laisser le job s'initialiser
-- **Polling interval** : 3 secondes entre chaque vérification de statut
-- **Statuts acceptés** : `"completed"` (succès normal) ET `"timeout"` (succès avec dépassement timeout mais outputData présent)
-- **Statut échec** : `"failed"` (échec du job)
-- **Sauvegarde automatique** : Le template est sauvegardé dans `shared/hermes2022-extraction-files/config/nuextract-template-generated/nuextract-template.json`
-- **Max attempts** : 20 tentatives de polling (soit 30s + 20*3s = 90 secondes max)
-- **Vérification API réelle** : Curl sur jobId `0dfba16b-80ab-4bba-b8e8-6584a05d15a9` confirme statut `"timeout"` avec `completedAt` défini
+- **Paramètre `templateMode`** : Valeurs acceptées "sync" ou "async" (défaut "sync" si absent)
+- **Paramètre `templateGenerationDuration`** : Temps estimé en ms (défaut 30000)
+- **Paramètres d'endpoints** : `infer-templatePath` et `infer-templateAsyncPath` dans configuration
+- **Mode sync** :
+  - Timeout HTTP = `templateGenerationDuration + 5000` ms
+  - Pas de sleep, pas de retry
+  - Template retourné directement dans la réponse
+  - Message d'erreur timeout explicite : "Timeout sync après Xms. Pour schémas >4000 caractères, utilisez templateMode: 'async'"
+- **Mode async** :
+  - Timeout paramètre API = 60 secondes (`?timeout=60s`)
+  - Sleep initial = `templateGenerationDuration` ms
+  - Polling interval = 3 secondes entre chaque vérification
+  - Max attempts = 20 tentatives de polling
+  - Workflow : POST `/api/infer-template-async?timeout=60s` → obtenir jobId → sleep → polling GET `/api/jobs/{jobId}` → récupérer outputData
+  - Statuts acceptés : `"completed"` (succès normal) ET `"timeout"` (succès avec dépassement timeout mais outputData présent)
+  - Statut échec : `"failed"` (échec du job)
 - **Format description** : Schéma JSON en premier, puis instructions (sans headers/commentaires) — Les instructions placées avant le schéma perturbent la génération du template
 - **Limite taille** : 32k caractères pour le champ `description` selon support NuMind
 
-#### Anti-Patterns pour l'utilisation de l'API asynchrone à éviter
+#### Anti-Patterns pour la gestion des modes à éviter
 
-- **Utiliser API synchrone pour schémas >2000 caractères** : Éviter `/api/infer-template` → **Solution** : Utiliser `/api/infer-template-async` → **Règle à adopter** : Workflow async pour schémas complexes
-- **Polling immédiat** : Éviter de poller dès la soumission → **Solution** : Sleep 30s initial → **Règle à adopter** : Laisser le temps au job de s'initialiser
-- **Polling trop rapide** : Éviter interval <2s → **Solution** : Interval 3s → **Règle à adopter** : Limiter la charge sur l'API
+- **Mode invalide** : Éviter templateMode ni "sync" ni "async" → **Solution** : Validation stricte → **Règle à adopter** : Lever erreur explicite si valeur invalide
+- **Utiliser mode sync pour schémas >4000 caractères** : Éviter `/api/infer-template` pour gros schémas → **Solution** : Utiliser mode async → **Règle à adopter** : Workflow async pour schémas complexes
+- **Polling immédiat (async)** : Éviter de poller dès la soumission → **Solution** : Sleep `templateGenerationDuration` initial → **Règle à adopter** : Laisser le temps au job de s'initialiser
+- **Polling trop rapide (async)** : Éviter interval <2s → **Solution** : Interval 3s → **Règle à adopter** : Limiter la charge sur l'API
 - **Instructions avant schéma** : Éviter headers/instructions avant le schéma JSON → **Solution** : Schéma d'abord, instructions après → **Règle à adopter** : Format description = schéma + instructions (sans headers)
 
-#### État d'implémentation pour l'utilisation de l'API asynchrone
+#### État d'implémentation pour la gestion des modes
 
-🚧 [En cours de réalisation]
+✅ [Fonctionnalité réalisée]
 
 ### Parsing des instructions complémentaires depuis fichier Markdown
 
