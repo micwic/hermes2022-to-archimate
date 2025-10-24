@@ -6,7 +6,7 @@ alwaysApply: true
 # hermes2022-to-archimate/.cursor/rules/specification-hermes2022-to-archimate.mdc: Spécification générale du projet hermes2022-to-archimate
 
 > Créé le : 2025-08-15  
-> Dernière mise à jour : 2025-10-20
+> Dernière mise à jour : 2025-10-24
 
 ## Description générale
 
@@ -178,7 +178,7 @@ Le projet est ainsi divisé en deux parties qui se déroulent séquentiellement 
 - Stabilité/maintenance et correctifs récents.
 - Simplicité d’exécution des steps TypeScript sans build.
 
-#### Justification des version par composant
+#### Justification de version par composant
 
 ##### Jest 30.0.5**
 
@@ -252,23 +252,25 @@ et validations JSON). Montées de version à effectuer de manière coordonnée
 #### Justification
 
 - Cohérence et traçabilité: éviter les dérives de lockfiles et résolutions différentes.
-- Simplicité: outillage homogène (`npm install`, `npx jest`, scripts npm).
+- Simplicité: outillage homogène (`npm install`, scripts npm).
 - Isolation des projets: chaque dépôt fixe explicitement son gestionnaire.
 
 #### Patterns validés
 
 - Installation: `npm install` exclusivement.
-- Exécution: `npx jest …` ou via scripts npm (`npm run test` si défini).
+- Exécution des tests: `npm run test` ou `npm test` avec les scripts définis dans `package.json` (ne pas utiliser `npx jest` directement).
+- Passage d'arguments à Jest: `npm run test -- --testPathPatterns=pattern` (noter le `--` séparateur et `--testPathPatterns` au pluriel).
 - Pas de lockfile yarn: pas de `yarn.lock` dans ce repo.
 
 #### Anti-Patterns à éviter
 
 - Mélange npm/yarn dans le même dépôt.
 - Utilisation de `yarn` ou `pnpm` pour ce projet.
+- Utilisation de `npx jest` directement au lieu de `npm run test` (éviter contournement des scripts package.json).
 
-#### État d’implémentation
+#### État d'implémentation
 
-✅ npm utilisé pour l’installation et l’exécution (`npx jest …`); aucun artefact yarn attendu.
+✅ npm utilisé pour l'installation et l'exécution des tests via scripts `package.json`; aucun artefact yarn attendu.
 
 ### Gestion des dépendances inter-modules : Chemins explicites relatifs à repoRoot
 
