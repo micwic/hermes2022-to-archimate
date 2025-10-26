@@ -5,7 +5,11 @@ import fs from 'fs';
 import path from 'path';
 
 // Import des fonctions du script refactorisé
-import { loadGlobalConfig, loadApiKey, generateTemplate } from '../../src/nuextract-client.js';
+import { 
+  _testOnly_loadGlobalConfig as loadGlobalConfig, 
+  _testOnly_loadApiKey as loadApiKey, 
+  _testOnly_generateTemplate as generateTemplate 
+} from '../../src/nuextract-client.js';
 import { resolveFromRepoRoot } from '../../src/path-resolver.js';
 
 const feature = loadFeature(__dirname + '/template-generation.feature');

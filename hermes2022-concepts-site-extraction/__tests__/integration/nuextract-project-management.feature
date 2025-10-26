@@ -1,16 +1,30 @@
 # language: fr
 Fonctionnalité: Gestion des projets NuExtract
 
-  Scénario: Création d'un nouveau projet avec template
-    Etant donné une configuration NuExtract valide
-    Quand on demande la création d'un projet "HERMES2022"
+  Scénario: Création d'un nouveau projet avec template sans qu'il existe préalablement sur la plateforme SaaS NuExtract
+    Etant donné des paramètres de configuration NuExtract pour la gestion de projet
+    Et une clé API NuExtract
+    Et un template NuExtract valide
+    Et le projet "HERMES2022" n'existe pas sur la plateforme
+    Quand on demande la création du projet avec findOrCreateProject
     Alors le projet est créé avec succès
-    Et le projet contient le template généré
-    Et le projet a l'ID correct stocké dans PROJECT_ID
+    Et le projet contient le template fourni
+    Et l'ID du projet est retourné
 
-  Scénario: Recherche d'un projet existant
-    Etant donné un projet "HERMES2022" existant
-    Quand on recherche le projet par nom
-    Alors le projet existant est retourné
-    Et le projet peut être mis à jour avec un nouveau template
-    Et l'ID du projet est stocké dans PROJECT_ID
+  Scénario: Recherche d'un projet existant et mise à jour avec un nouveau template pour un projet qui existe déjà sur la plateforme SaaS NuExtract
+    Etant donné des paramètres de configuration NuExtract pour la gestion de projet
+    Et une clé API NuExtract
+    Et un projet "HERMES2022" existant sur la plateforme
+    Et un nouveau template NuExtract valide
+    Quand on met à jour le template du projet avec putProjectTemplate
+    Alors le template est mis à jour avec succès
+    Et le projet contient le nouveau template
+    Et l'ID du projet reste inchangé
+
+  Scénario: Recherche d'un projet existant sans mise à jour pour un projet qui existe déjà sur la plateforme SaaS NuExtract
+    Etant donné des paramètres de configuration NuExtract pour la gestion de projet
+    Et une clé API NuExtract
+    Et un projet "HERMES2022" existant sur la plateforme
+    Quand on recherche le projet avec findOrCreateProject sans nouveau template
+    Alors Ne rien faire
+    Et l'ID du projet existant est retourné

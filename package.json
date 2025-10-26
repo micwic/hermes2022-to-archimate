@@ -9,6 +9,7 @@
     "find-up": "^5.0.0",
     "jest": "^30.0.5",
     "jest-cucumber": "^4.5.0",
+    "jsonwebtoken": "^9.0.2",
     "ts-jest": "^29.4.1"
   },
   "scripts": {
