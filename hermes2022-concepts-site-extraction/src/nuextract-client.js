@@ -4,210 +4,105 @@
 const fs = require('fs');
 const https = require('https');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 const { resolveFromRepoRoot } = require('./path-resolver.js');
+const nuextractApi = require('./nuextract-api.js');
 
-// Variable globale pour la configuration (chargée une seule fois au démarrage)
-let GLOBAL_CONFIG = null;
-let API_KEY = null;
+// Variables globales pour compatibilité avec l'exécution séquentielle de main()
 let TEMPLATE = null;
 let PROJECT_ID = null;
 
 // Charger la configuration depuis le fichier
 async function loadGlobalConfig() {
   const configPath = resolveFromRepoRoot('hermes2022-concepts-site-extraction/config/extraction-config.json');
+  console.log(`[info] Chargement de la configuration à partir de : ${configPath}`);
+  
+  // Étape 1: Lire le fichier
+  let configContent;
   try {
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    console.log('[info] Configuration chargée une seule fois au démarrage');
-    return config;
+    configContent = fs.readFileSync(configPath, 'utf8');
   } catch (error) {
-    console.error(`Erreur lors du chargement de la configuration : ${error.message}`);
-    throw new Error('Configuration not found. Script stopped');
+    console.error(`Erreur lors de la lecture du fichier de configuration général extraction-config.json : ${error.message}`);
+    throw new Error('Configuration file not found. Script stopped');
   }
+  
+  // Étape 2: Parser le JSON
+  let config;
+  try {
+    config = JSON.parse(configContent);
+  } catch (error) {
+    console.error(`Erreur lors du parsing JSON de la configuration : ${error.message}`);
+    throw new Error('Invalid JSON in configuration file. Script stopped');
+  }
+  
+  // Étape 3: Validation structurelle minimale
+  if (!config || typeof config !== 'object' || Array.isArray(config)) {
+    console.error('Erreur: la configuration doit être un objet JSON');
+    throw new Error('Invalid configuration structure: expected an object. Script stopped');
+  }
+  
+  if (!config.nuextract || typeof config.nuextract !== 'object') {
+    console.error('Erreur: la section "nuextract" est manquante ou invalide dans la configuration');
+    throw new Error('Invalid configuration structure: missing "nuextract" section. Script stopped');
+  }
+  
+  // Vérifier que la section nuextract contient au moins 15 clés définies
+  const nuextractKeys = Object.keys(config.nuextract);
+  if (nuextractKeys.length < 15) {
+    console.error(`Erreur: la section "nuextract" doit contenir au moins 15 clés, mais contient seulement ${nuextractKeys.length} clés`);
+    throw new Error('Invalid JSON minimal content for nuextract-client.js in configuration file. Script stopped');
+  }
+  
+  console.log('[info] Configuration chargée avec succès');
+  return config;
 };
 
 // Lire la clé API depuis un fichier externe si elle n'est pas déjà dans l'environnement
 async function loadApiKey(config) {
-  const fromEnv = process.env.NUEXTRACT_API_KEY && process.env.NUEXTRACT_API_KEY.trim();
-  if (fromEnv) {
-    return fromEnv;
-  }
-  else {
+  let apiKey = null;
+  
+  // Priorité 1 : Variable d'environnement
+  if (process.env.NUEXTRACT_API_KEY) {
+    apiKey = process.env.NUEXTRACT_API_KEY;
+  } else {
+    // Priorité 2/3 : Fichier (config ou fallback)
     const keyFile = config?.nuextract?.apiKeyFile || 'hermes2022-concepts-site-extraction/config/nuextract-api-key.key';
     const keyPath = resolveFromRepoRoot(keyFile);
     try {
-      const apiKey = fs.readFileSync(keyPath, 'utf8').trim();  // la clé API est lue depuis le fichier
-      return apiKey;
+      apiKey = fs.readFileSync(keyPath, 'utf8');
     } catch (error) {
       console.error(`Impossible de lire la clé API NuExtract (env NUEXTRACT_API_KEY ou fichier ${keyPath}) : ${error.message}`);
       throw new Error('API_KEY is not set. Script stopped.');
     }
   }
-};
-
-// Dériver un template depuis une description textuelle (mode synchrone)
-async function inferTemplateFromDescription(apiKey, description, timeoutMs = 35000) {
-  return new Promise((resolve, reject) => {
-    // Utiliser la configuration avec fallbacks
-    const hostname = GLOBAL_CONFIG?.nuextract?.baseUrl || 'nuextract.ai';
-    const port = GLOBAL_CONFIG?.nuextract?.port || 443;
-    const path = GLOBAL_CONFIG?.nuextract?.['infer-templatePath'] || '/api/infer-template';
-
-    const options = {
-      hostname: hostname,
-      port: port,
-      path: path,
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    };
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => (data += chunk));
-      res.on('end', () => {
-        if (res.statusCode !== 200) {
-          reject(new Error(`Erreur infer-template: ${res.statusCode} - ${data}`));
-          return;
-        }
-        try {
-          resolve(JSON.parse(data));
-        } catch (err) {
-          reject(new Error(`Réponse JSON invalide: ${err.message}`));
-        }
-      });
-    });
-    req.setTimeout(timeoutMs, () => {
-      req.destroy();
-      reject(new Error(`Timeout sync après ${timeoutMs}ms. Pour schémas >4000 caractères, utilisez templateMode: 'async'`));
-    });
-    req.on('error', reject);
-    req.write(JSON.stringify({ description }));
-    req.end();
-  });
-}
-
-// Fonction pour générer un template via /api/infer-template-async (version asynchrone)
-async function inferTemplateFromDescriptionAsync(apiKey, description, timeout = 60) {
-  return new Promise((resolve, reject) => {
-    const hostname = GLOBAL_CONFIG?.nuextract?.baseUrl || 'nuextract.ai';
-    const port = GLOBAL_CONFIG?.nuextract?.port || 443;
-    const path = `/api/infer-template-async?timeout=${timeout}s`;
-    
-    const options = {
-      hostname: hostname,
-      port: port,
-      path: path,
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    };
-    
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => (data += chunk));
-      res.on('end', () => {
-        if (res.statusCode !== 200) {
-          reject(new Error(`Erreur infer-template-async: ${res.statusCode} - ${data}`));
-          return;
-        }
-        try {
-          resolve(JSON.parse(data));
-        } catch (err) {
-          reject(new Error(`Réponse JSON invalide: ${err.message}`));
-        }
-      });
-    });
-    
-    req.setTimeout(10000, () => {
-      req.destroy();
-      reject(new Error('Timeout: La requête infer-template-async a dépassé 10 secondes'));
-    });
-    req.on('error', reject);
-    req.write(JSON.stringify({ description }));
-    req.end();
-  });
-}
-
-// Fonction pour obtenir le statut d'un job via /api/jobs/{jobId}
-async function getJobStatus(apiKey, jobId) {
-  return new Promise((resolve, reject) => {
-    const hostname = GLOBAL_CONFIG?.nuextract?.baseUrl || 'nuextract.ai';
-    const port = GLOBAL_CONFIG?.nuextract?.port || 443;
-    const path = `/api/jobs/${jobId}`;
-    
-    const options = {
-      hostname: hostname,
-      port: port,
-      path: path,
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    };
-    
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => (data += chunk));
-      res.on('end', () => {
-        if (res.statusCode !== 200) {
-          reject(new Error(`Erreur GET job: ${res.statusCode} - ${data}`));
-          return;
-        }
-        try {
-          resolve(JSON.parse(data));
-        } catch (err) {
-          reject(new Error(`Réponse JSON invalide: ${err.message}`));
-        }
-      });
-    });
-    
-    req.setTimeout(5000, () => {
-      req.destroy();
-      reject(new Error('Timeout: La requête GET job a dépassé 5 secondes'));
-    });
-    req.on('error', reject);
-    req.end();
-  });
-}
-
-// Fonction pour poller le statut d'un job jusqu'à completion
-async function pollJobUntilComplete(apiKey, jobId, maxAttempts = 20, interval = 3000, initialSleepMs = 30000) {
-  console.log(`Polling job ${jobId} - attente initiale de ${initialSleepMs}ms...`);
-  await new Promise(resolve => setTimeout(resolve, initialSleepMs));
   
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const jobResponse = await getJobStatus(apiKey, jobId);
-    const status = jobResponse.status;
-    
-    console.log(`[${attempt}/${maxAttempts}] Statut: ${status}`);
-    
-    // Statuts terminaux
-    if (status === 'completed' || status === 'timeout') {
-      if (!jobResponse.outputData) {
-        throw new Error(`Job ${status} mais pas de outputData`);
-      }
-      if (status === 'timeout') {
-        console.warn('⚠️  Job terminé avec statut "timeout" mais outputData présent - traitement comme succès');
-      }
-      return jobResponse.outputData;
-    }
-    
-    if (status === 'failed') {
-      throw new Error(`Job failed: ${JSON.stringify(jobResponse)}`);
-    }
-    
-    // Attendre avant la prochaine tentative
-    if (attempt < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, interval));
-    }
+  // Trim unique sur la clé chargée
+  apiKey = apiKey.trim();
+  
+  // Vérifier que la clé n'est pas vide après trim
+  if (!apiKey || apiKey.length === 0) {
+    throw new Error('API key is empty after trimming whitespace. Script stopped.');
   }
   
-  throw new Error(`Timeout polling après ${maxAttempts} tentatives`);
-}
+  // Validation JWT avec jsonwebtoken (décodage sans vérification de signature)
+  try {
+    const decoded = jwt.decode(apiKey, { complete: true });
+    
+    if (!decoded || !decoded.header || !decoded.payload) {
+      throw new Error('JWT structure is invalid (could not decode header or payload)');
+    }
+    
+    // Vérification optionnelle : format header standard
+    if (!decoded.header.typ || !decoded.header.alg) {
+      throw new Error('JWT header missing required fields (typ, alg)');
+    }
+    
+  } catch (error) {
+    throw new Error('API key format is invalid. Script stopped.', { cause: error });
+  }
+  
+  return apiKey;
+};
 
 // Fonction pour résoudre récursivement les $ref dans un schéma JSON et les inclure dans le schéma principal
 function resolveJSONSchemaRefs(schema, baseDir, visitedFiles = new Set()) {
@@ -247,296 +142,245 @@ function resolveJSONSchemaRefs(schema, baseDir, visitedFiles = new Set()) {
   return resolved;
 }
 
-  // Fonction pour lire les instructions de transformation du template
-  // Extrait uniquement le contenu sous le heading ciblé pour éviter de polluer l'API
-  function loadInstructions() {
-    const instFile = GLOBAL_CONFIG?.nuextract?.templateTransformationInstructionFile || 'hermes2022-concepts-site-extraction/config/instructions-template-nuextract.md';
-    const instPath = resolveFromRepoRoot(instFile);
-    try {
-      const fullContent = fs.readFileSync(instPath, 'utf8');
-      
-      // Extraire uniquement le contenu sous le heading ciblé
-      const targetHeading = '## Instructions complémentaires pour /api/infer-template /api/infer-template-async de NuExtract';
-      const lines = fullContent.split('\n');
-      const startIdx = lines.findIndex(line => line.trim() === targetHeading);
-      
-      if (startIdx === -1) {
-        console.warn(`⚠️  Heading "${targetHeading}" non trouvé, utilisation fichier complet`);
-        return fullContent;
-      }
-      
-      // Extraire du heading jusqu'au prochain heading de niveau 1 ou 2, ou fin de fichier
-      const contentLines = [];
-      for (let i = startIdx + 1; i < lines.length; i++) {
-        const line = lines[i];
-        // Arrêter si on rencontre un autre heading de niveau 1 ou 2
-        if (line.match(/^#{1,2}\s+/)) break;
-        contentLines.push(line);
-      }
-      
-      return contentLines.join('\n').trim();
-    } catch (error) {
-      console.warn(`⚠️  Impossible de lire les instructions: ${error.message}`);
-      return '';
+// Fonction pour lire les instructions de transformation du template
+// Extrait uniquement le contenu sous le heading ciblé pour éviter de polluer l'API
+function loadInstructions(config) {
+  const instFile = config?.nuextract?.templateTransformationInstructionFile || 'hermes2022-concepts-site-extraction/config/instructions-template-nuextract.md';
+  const instPath = resolveFromRepoRoot(instFile);
+  try {
+    const fullContent = fs.readFileSync(instPath, 'utf8');
+    
+    // Extraire uniquement le contenu sous le heading ciblé
+    const targetHeading = '## Instructions complémentaires pour /api/infer-template /api/infer-template-async de NuExtract';
+    const lines = fullContent.split('\n');
+    const startIdx = lines.findIndex(line => line.trim() === targetHeading);
+    
+    if (startIdx === -1) {
+      console.warn(`⚠️  Heading "${targetHeading}" non trouvé, utilisation fichier complet`);
+      return fullContent;
     }
+    
+    // Extraire du heading jusqu'au prochain heading de niveau 1 ou 2, ou fin de fichier
+    const contentLines = [];
+    for (let i = startIdx + 1; i < lines.length; i++) {
+      const line = lines[i];
+      // Arrêter si on rencontre un autre heading de niveau 1 ou 2
+      if (line.match(/^#{1,2}\s+/)) break;
+      contentLines.push(line);
+    }
+    
+    return contentLines.join('\n').trim();
+  } catch (error) {
+    console.warn(`⚠️  Impossible de lire les instructions: ${error.message}`);
+    return '';
+  }
+}
+
+// Fonction pour charger et résoudre les schémas JSON
+function loadAndResolveSchemas(config) {
+  const mainSchemaFileName = config?.nuextract?.mainJSONConfigurationFile || 'shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts.json';
+  const mainSchemaFile = resolveFromRepoRoot(mainSchemaFileName);
+  const schemaDir = path.dirname(mainSchemaFile);
+
+  let rawSchema = '';
+
+  try {
+    rawSchema = JSON.parse(fs.readFileSync(mainSchemaFile, 'utf8'));
+  } catch (error) {
+    console.error(`Erreur critique: Impossible de lire le schéma JSON principal: ${error.message}`);
+    throw new Error('Main JSON schema file not found. Script stopped.');
   }
 
-  // Fonction pour charger et résoudre les schémas JSON
-  function loadAndResolveSchemas() {
-    const mainSchemaFileName = GLOBAL_CONFIG?.nuextract?.mainJSONConfigurationFile || 'shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts.json';
-    const mainSchemaFile = resolveFromRepoRoot(mainSchemaFileName);
-    const schemaDir = path.dirname(mainSchemaFile);
-
-    let rawSchema = '';
-
-    try {
-      rawSchema = JSON.parse(fs.readFileSync(mainSchemaFile, 'utf8'));
-    } catch (error) {
-      console.error(`Erreur critique: Impossible de lire le schéma JSON principal: ${error.message}`);
-      throw new Error('Main JSON schema file not found. Script stopped.');
-    }
-
-    try {
-      const resolvedSchema = resolveJSONSchemaRefs(rawSchema, schemaDir);
-      return JSON.stringify(resolvedSchema, null, 2);
-    } catch (error) {
-      console.warn(`Avertissement: Impossible de résoudre les références JSON: ${error.message}`);
-      // Retourner le schéma brut sans résolution des références
-      return JSON.stringify(rawSchema, null, 2);
-    }
+  try {
+    const resolvedSchema = resolveJSONSchemaRefs(rawSchema, schemaDir);
+    return JSON.stringify(resolvedSchema, null, 2);
+  } catch (error) {
+    console.warn(`Avertissement: Impossible de résoudre les références JSON: ${error.message}`);
+    // Retourner le schéma brut sans résolution des références
+    return JSON.stringify(rawSchema, null, 2);
   }
+}
 
-  // Fonction pour construire la description du template
-  // Format : schéma JSON en premier, puis instructions (sans headers inutiles)
-  // Utilisation de trim() sur chaque argument et sur le résultat final pour garantir aucun espace parasite
-  function buildTemplateDescription(instructions, mainSchema) {
-    return [mainSchema.trim(), instructions.trim()].join('\n').trim();
-  }
+// Fonction pour construire la description du template
+// Format : schéma JSON en premier, puis instructions (sans headers inutiles)
+// Utilisation de trim() sur chaque argument et sur le résultat final pour garantir aucun espace parasite
+function buildTemplateDescription(instructions, mainSchema) {
+  return mainSchema + '\n\n' + instructions;
+}
 
-  // Générer un template via /api/infer-template (sync) ou /api/infer-template-async (async)
-  async function generateTemplate(config, apiKey) {
-    try {
-      const instructions = loadInstructions();
-      const mainSchema = loadAndResolveSchemas();
-      const description = buildTemplateDescription(instructions, mainSchema);
+// Générer un template via /api/infer-template (sync) ou /api/infer-template-async (async)
+async function generateTemplate(config, apiKey) {
+  try {
+    const instructions = loadInstructions(config);
+    const mainSchema = loadAndResolveSchemas(config);
+    const description = buildTemplateDescription(instructions, mainSchema);
 
-      // Déterminer le mode (sync par défaut)
-      const templateMode = config?.nuextract?.templateMode || 'sync';
+    // Déterminer le mode (sync par défaut)
+    const templateMode = config?.nuextract?.templateMode || 'sync';
+    
+    // Validation du mode
+    if (templateMode !== 'sync' && templateMode !== 'async') {
+      throw new Error(`templateMode invalide: "${templateMode}". Valeurs acceptées: "sync", "async"`);
+    }
+    
+    // Récupérer templateGenerationDuration (défaut 30000ms)
+    const templateGenerationDuration = config?.nuextract?.templateGenerationDuration || 30000;
+    
+    // Gestion des fallbacks de configuration (Dependency Injection)
+    const hostname = config?.nuextract?.baseUrl || 'nuextract.ai';
+    const port = config?.nuextract?.port || 443;
+    
+    let template;
+    
+    if (templateMode === 'async') {
+      // Mode async
+      const pathAsync = config?.nuextract?.['infer-templateAsyncPath'] || '/api/infer-template-async';
+      const pathJobs = '/api/jobs';
       
-      // Validation du mode
-      if (templateMode !== 'sync' && templateMode !== 'async') {
-        throw new Error(`templateMode invalide: "${templateMode}". Valeurs acceptées: "sync", "async"`);
+      console.log(`Mode async: Lancement génération template asynchrone (timeout API: 60s, sleep initial: ${templateGenerationDuration}ms)...`);
+      
+      // Appel API avec tous les paramètres explicites
+      const asyncResponse = await nuextractApi.inferTemplateFromDescriptionAsync(
+        hostname, port, pathAsync, apiKey, description, 60
+      );
+      
+      const jobId = asyncResponse.jobId;
+      
+      if (!jobId) {
+        throw new Error('Pas de jobId reçu de l\'API async');
       }
       
-      // Récupérer templateGenerationDuration (défaut 30000ms)
-      const templateGenerationDuration = config?.nuextract?.templateGenerationDuration || 30000;
+      console.log(`Job lancé avec ID: ${jobId}`);
       
-      let template;
+      // Polling avec tous les paramètres explicites
+      const templateData = await nuextractApi.pollJobUntilComplete(
+        hostname, port, pathJobs, apiKey, jobId, 20, 3000, templateGenerationDuration
+      );
       
-      if (templateMode === 'async') {
-        // Mode async
-        console.log(`Mode async: Lancement génération template asynchrone (timeout API: 60s, sleep initial: ${templateGenerationDuration}ms)...`);
-        const asyncResponse = await inferTemplateFromDescriptionAsync(apiKey, description, 60);
-        const jobId = asyncResponse.jobId;
-        
-        if (!jobId) {
-          throw new Error('Pas de jobId reçu de l\'API async');
-        }
-        
-        console.log(`Job lancé avec ID: ${jobId}`);
-        
-        // Polling avec sleep initial = templateGenerationDuration puis tentatives toutes les 3s
-        const templateData = await pollJobUntilComplete(apiKey, jobId, 20, 3000, templateGenerationDuration);
-        
-        // Vérifier si templateData est une string JSON à parser
-        if (typeof templateData === 'string') {
+      // Vérifier et valider le type de templateData
+      if (typeof templateData === 'string') {
+        try {
           template = JSON.parse(templateData);
-        } else {
-          template = templateData;
+        } catch (error) {
+          throw new Error('Invalid JSON in template data returned by async API. Script stopped.', { cause: error });
         }
+      } else if (templateData && typeof templateData === 'object' && !Array.isArray(templateData)) {
+        template = templateData;
       } else {
-        // Mode sync
-        const syncTimeout = templateGenerationDuration + 5000; // Marge de sécurité +5s
-        console.log(`Mode sync: Génération template synchrone (timeout HTTP: ${syncTimeout}ms)...`);
-        template = await inferTemplateFromDescription(apiKey, description, syncTimeout);
+        const actualType = templateData === null ? 'null' : Array.isArray(templateData) ? 'array' : typeof templateData;
+        throw new Error(`Invalid template data type: expected object or JSON string, got ${actualType}. Script stopped.`);
       }
+    } else {
+      // Mode sync
+      const pathSync = config?.nuextract?.['infer-templatePath'] || '/api/infer-template';
+      const syncTimeout = templateGenerationDuration + 5000; // Marge de sécurité +5s
       
-      // Sauvegarder le template généré
-      const templateDirConfig = config?.nuextract?.templateOutputDirectory || 'shared/hermes2022-extraction-files/config/nuextract-template-generated';
-      const templateDir = resolveFromRepoRoot(templateDirConfig);
-      if (!fs.existsSync(templateDir)) {
-        fs.mkdirSync(templateDir, { recursive: true });
-      }
-      const templatePath = path.join(templateDir, 'nuextract-template.json');
-      fs.writeFileSync(templatePath, JSON.stringify(template, null, 2), 'utf8');
-      console.log(`Template sauvegardé dans : ${templatePath}`);
+      console.log(`Mode sync: Génération template synchrone (timeout HTTP: ${syncTimeout}ms)...`);
       
-      console.log('Template NuExtract généré avec succès');
-      return template;
-    } catch (error) {
-      console.error(`Erreur lors de la génération du template: ${error.message}`);
-      throw new Error('Template generation failed. Script stopped.');
+      // Appel API avec tous les paramètres explicites
+      template = await nuextractApi.inferTemplateFromDescription(
+        hostname, port, pathSync, apiKey, description, syncTimeout
+      );
     }
+    
+    // Sauvegarder le template généré
+    const templateDirConfig = config?.nuextract?.templateOutputDirectory || 'shared/hermes2022-extraction-files/config/nuextract-template-generated';
+    const templateDir = resolveFromRepoRoot(templateDirConfig);
+    if (!fs.existsSync(templateDir)) {
+      fs.mkdirSync(templateDir, { recursive: true });
+    }
+    const templatePath = path.join(templateDir, 'nuextract-template.json');
+    fs.writeFileSync(templatePath, JSON.stringify(template, null, 2), 'utf8');
+    console.log(`Template sauvegardé dans : ${templatePath}`);
+    
+    console.log('Template NuExtract généré avec succès');
+    return template;
+  } catch (error) {
+    console.error(`Erreur lors de la génération du template: ${error.message}`);
+    throw error;
   }
-
-  // Fonction pour rechercher les projets NuExtract avec l'API GET /api/projects
-async function getNuExtractProjects(apiKey) {
-  return new Promise((resolve, reject) => {
-    // Utiliser la configuration avec fallbacks
-    const hostname = GLOBAL_CONFIG?.nuextract?.baseUrl || 'nuextract.ai';
-    const port = GLOBAL_CONFIG?.nuextract?.port || 443;
-    const path = GLOBAL_CONFIG?.nuextract?.projectsPath || '/api/projects';
-
-    const options = {
-      hostname: hostname,
-      port: port,
-      path: path,
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    };
-
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        if (res.statusCode !== 200) {
-          reject(new Error(`Erreur API projets: ${res.statusCode} - ${data}`));
-          return;
-        }
-        try {
-          resolve(JSON.parse(data));
-        } catch (err) {
-          reject(new Error(`Réponse JSON invalide: ${err.message}`));
-        }
-      });
-    });
-
-    req.setTimeout(10000, () => {
-      req.destroy();
-      reject(new Error('Timeout: La requête GET /api/projects a dépassé 10 secondes'));
-    });
-    req.on('error', reject);
-    req.end();
-  });
-}
-
-// Fonction pour Créer un projet NuExtract avec l'API POST /api/projects
-async function createNuExtractProject(apiKey, body) {
-  return new Promise((resolve, reject) => {
-    const options = {
-      // Utiliser la configuration avec fallbacks
-      hostname: GLOBAL_CONFIG?.nuextract?.baseUrl || 'nuextract.ai',
-      port: GLOBAL_CONFIG?.nuextract?.port || 443,
-      path: GLOBAL_CONFIG?.nuextract?.projectsPath || '/api/projects',
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    };
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => (data += chunk));
-      res.on('end', () => {
-        if (res.statusCode !== 200) {
-          reject(new Error(`Erreur création projet: ${res.statusCode} - ${data}`));
-          return;
-        }
-        try {
-          resolve(JSON.parse(data));
-        } catch (err) {
-          reject(new Error(`Réponse JSON invalide: ${err.message}`));
-        }
-      });
-    });
-    req.setTimeout(10000, () => {
-      req.destroy();
-      reject(new Error('Timeout: La requête POST /api/projects a dépassé 10 secondes'));
-    });
-    req.on('error', reject);
-    req.write(JSON.stringify(body));
-    req.end();
-  });
-}
-
-// Fonction pour Mettre à jour le template d'un projet NuExtract avec l'API PUT /api/projects/{projectId}/template
-async function putProjectTemplate(apiKey, projectId, template) {
-  return new Promise((resolve, reject) => {
-    const options = {
-      // Utiliser la configuration avec fallbacks
-      hostname: GLOBAL_CONFIG?.nuextract?.baseUrl || 'nuextract.ai',
-      port: GLOBAL_CONFIG?.nuextract?.port || 443,
-      path: `${GLOBAL_CONFIG?.nuextract?.projectsPath || '/api/projects'}/${projectId}/template`,
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    };
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => (data += chunk));
-      res.on('end', () => {
-        if (res.statusCode !== 200) {
-          reject(new Error(`Erreur mise à jour template: ${res.statusCode} - ${data}`));
-          return;
-        }
-        try {
-          resolve(JSON.parse(data));
-        } catch (err) {
-          reject(new Error(`Réponse JSON invalide: ${err.message}`));
-        }
-      });
-    });
-    req.setTimeout(10000, () => {
-      req.destroy();
-      reject(new Error('Timeout: La requête PUT /api/projects/{projectId}/template a dépassé 10 secondes'));
-    });
-    req.on('error', reject);
-    req.write(JSON.stringify({ template }));
-    req.end();
-  });
 }
 
 // Gestion du projet NuExtract, il est recherché et mis à jour avec le template si le projet existe déjà ou créé avec le template généré si le projet n'existe pas encore
-async function findOrCreateProject(apiKey, projectName, projectDescription, templateObj = null) {
+async function findOrCreateProject(apiKey, projectName, projectDescription, templateObj, templateReset, hostname, port, pathProjects) {
   try {
-    const projects = await getNuExtractProjects(apiKey);
+    // Appel API avec tous les paramètres explicites
+    const projects = await nuextractApi.getNuExtractProjects(hostname, port, pathProjects, apiKey);
     const existingProject = projects.find((p) => p.name === projectName);
-    let projectId;
+    
     if (existingProject) {
-      // Projet existant - le mettre à jour avec le template si fourni
-      if (templateObj) {
-        await putProjectTemplate(apiKey, existingProject.id, templateObj);
+      // Projet existant
+      if (templateReset && templateObj) {
+        console.log(`Mise à jour du template pour le projet existant ${projectName} (ID: ${existingProject.id})`);
+        
+        // Appel API avec tous les paramètres explicites
+        await nuextractApi.putProjectTemplate(
+          hostname, port, pathProjects, apiKey, existingProject.id, templateObj
+        );
+        
+        return { id: existingProject.id, name: projectName, updated: true };
+      } else {
+        console.log(`Projet ${projectName} trouvé (ID: ${existingProject.id}), aucune mise à jour (templateReset=${templateReset})`);
+        return { id: existingProject.id, name: projectName, updated: false };
       }
-      projectId = existingProject.id;
     } else {
-      // Créer le projet avec le template généré si fourni, sinon vide
-      const created = await createNuExtractProject(apiKey, {
-        name: projectName,
-        description: projectDescription,
-        template: templateObj || {}
-      });
-      projectId = created?.id;
+      // Créer le projet - le template est obligatoire pour un nouveau projet
+      if (!templateObj) {
+        throw new Error('Template is required for project creation. Cannot create a NuExtract project without a template.');
+      }
+      
+      console.log(`Création du projet ${projectName} avec template`);
+      
+      // Appel API avec tous les paramètres explicites
+      const created = await nuextractApi.createNuExtractProject(
+        hostname, port, pathProjects, apiKey, {
+          name: projectName,
+          description: projectDescription,
+          template: templateObj
+        }
+      );
+      
+      return { id: created?.id, name: projectName, created: true };
     }
-    console.log(`Projet ${projectName} avec ID: ${projectId}, le projet a été ${existingProject ? 'mis à jour' : 'créé'} avec le template généré `);
-    return projectId;
   } catch (error) {
     console.error(`Erreur lors de la gestion du projet NuExtract: ${error.message}`);
-    throw new Error('Project management failed. Script stopped.');
+    throw error;
   }
 }
 
 // Point d'entrée du script qui exécute les fonctions séquentiellement
 async function main() {
   try {
-    GLOBAL_CONFIG = await loadGlobalConfig();
-    API_KEY = await loadApiKey(GLOBAL_CONFIG);
-    TEMPLATE = await generateTemplate(GLOBAL_CONFIG, API_KEY);
-    PROJECT_ID = await findOrCreateProject(API_KEY, GLOBAL_CONFIG?.nuextract?.projectName || 'HERMES2022', GLOBAL_CONFIG?.nuextract?.projectDescription || 'Project for HERMES2022 concepts extraction', TEMPLATE);
+    const config = await loadGlobalConfig();
+    const apiKey = await loadApiKey(config);
+    const template = await generateTemplate(config, apiKey);
+    
+    // Récupérer les paramètres pour findOrCreateProject avec fallbacks
+    const templateReset = config?.nuextract?.templateReset ?? false;
+    const projectName = config?.nuextract?.projectName || 'HERMES2022';
+    const projectDescription = config?.nuextract?.projectDescription || 'Project for HERMES2022 concepts extraction';
+    
+    // Extraire les valeurs de configuration pour les appels API (Dependency Injection)
+    const hostname = config?.nuextract?.baseUrl || 'nuextract.ai';
+    const port = config?.nuextract?.port || 443;
+    const pathProjects = config?.nuextract?.projectsPath || '/api/projects';
+    
+    // Appel avec valeurs concrètes injectées (pas de config !)
+    const projectResult = await findOrCreateProject(
+      apiKey, 
+      projectName, 
+      projectDescription, 
+      template,
+      templateReset,
+      hostname,   // Valeur concrète
+      port,       // Valeur concrète
+      pathProjects // Valeur concrète
+    );
+    
+    // Affecter aux variables globales pour compatibilité
+    TEMPLATE = template;
+    PROJECT_ID = projectResult;
+    
     console.log('Extraction terminée avec succès');
   } catch (error) {
     console.error('Extraction a échoué:', error.message);
@@ -549,10 +393,10 @@ if (require.main === module) {
   main();
 }
 
-// Exports nécessaires pour les tests
+// Exports pour tests uniquement (logique métier)
 module.exports = {
-  loadGlobalConfig,
-  loadApiKey,
-  generateTemplate,
-  findOrCreateProject
+  _testOnly_loadGlobalConfig: loadGlobalConfig,
+  _testOnly_loadApiKey: loadApiKey,
+  _testOnly_generateTemplate: generateTemplate,
+  _testOnly_findOrCreateProject: findOrCreateProject
 };

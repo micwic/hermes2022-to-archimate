@@ -8,7 +8,7 @@ alwaysApply: true
 Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rules/
 
 > Créé le : 2025-08-16
-> Dernière mise à jour : 2025-10-24
+> Dernière mise à jour : 2025-10-25
 
 ## Description générale
 
@@ -188,6 +188,108 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 🚧 Intégration dans l'agent JS en cours
 
+### Validation de la clé API avec jsonwebtoken
+
+#### Description détaillée pour la validation de la clé API
+
+- [2025-10-25] La clé API NuExtract est validée avec la bibliothèque `jsonwebtoken` pour s'assurer qu'elle respecte le format JWT standard attendu par l'API
+- [2025-10-25] La validation utilise `jwt.decode()` avec l'option `{ complete: true }` pour décoder le JWT sans vérifier la signature (pas besoin de la clé publique de NuExtract)
+- [2025-10-25] La validation vérifie :
+  - Que le JWT contient bien 3 parties (header, payload, signature)
+  - Que le header et le payload sont décodables en JSON valide
+  - Que le header contient les champs requis `typ` et `alg`
+- [2025-10-25] Cette validation est effectuée après le trim de la clé et avant toute utilisation pour appel API
+- [2025-10-25] En cas d'erreur de validation, un message explicite est retourné : `API key format is invalid: {détail erreur}. Script stopped.`
+
+#### Justification pour la validation de la clé API
+
+- **Validation robuste** : Détecte les JWT mal formés avant l'appel API (évite les requêtes inutiles avec clés invalides comme `"1234"` ou `"a.b.c"`)
+- **Standard de l'industrie** : `jsonwebtoken` est la bibliothèque de référence pour JWT en Node.js (50M téléchargements/semaine)
+- **Pas de clé publique nécessaire** : Le décodage sans vérification de signature suffit pour valider la structure
+- **Sécurité** : Détection précoce des erreurs de configuration (clé corrompue, fichier mal formaté)
+- **Taille acceptable** : ~50KB de dépendance, négligeable comparé à Jest/Babel déjà présents
+
+#### Patterns validés pour la validation de la clé API
+
+- **Décodage sans vérification** : Utilisation de `jwt.decode(apiKey, { complete: true })` au lieu de `jwt.verify()`
+- **Validation structurelle** : Vérification que `decoded.header` et `decoded.payload` existent
+- **Validation des champs requis** : Vérification que `decoded.header.typ` et `decoded.header.alg` sont présents
+- **Gestion d'erreur** : Encapsulation dans try-catch avec message explicite
+- **Séquence de validation** :
+  1. Chargement de la clé (env var ou fichier)
+  2. Trim des espaces
+  3. Vérification non vide
+  4. Validation format JWT avec `jsonwebtoken`
+
+#### Anti-Patterns pour la validation de la clé API à éviter
+
+- **Validation simple par split** : Éviter `apiKey.split('.').length === 3` qui accepte `"a.b.c"` → **Solution** : Utiliser `jsonwebtoken` → **Règle à adopter** : Validation structurelle complète
+- **Vérification de signature** : Éviter `jwt.verify()` qui nécessite la clé publique → **Solution** : Utiliser `jwt.decode()` → **Règle à adopter** : Décodage sans vérification suffit
+- **Validation manuelle base64** : Éviter de réinventer la roue avec Buffer.from() → **Solution** : Utiliser `jsonwebtoken` → **Règle à adopter** : Utiliser bibliothèque standard
+- **Hardcodage JWT test** : Éviter les JWT de test codés en dur dans le code → **Solution** : Mocks dans les tests uniquement → **Règle à adopter** : Configuration externe pour production
+
+#### État d'implémentation pour la validation de la clé API
+
+✅ [Fonctionnalité réalisée]
+
+- ✅ **Installation** : `jsonwebtoken` 9.0.2 ajouté aux devDependencies
+- ✅ **Implémentation** : Validation dans `loadApiKey()` de `nuextract-client.js`
+- ✅ **Tests BDD** : 4 scénarios passent (clé absente, clé vide, JWT invalide, chargement réussi)
+
+### Séparation module API selon principes SOLID et Dependency Injection
+
+#### Description détaillée pour la séparation module API
+
+- [2025-10-26] Application des principes SOLID (Single Responsibility, Dependency Inversion) et Separation of Concerns
+- [2025-10-26] Création d'un module `nuextract-api.js` dédié exclusivement aux appels HTTP vers les APIs NuExtract
+- [2025-10-26] Élimination des variables globales : toutes les dépendances passées en paramètres (Dependency Injection)
+- [2025-10-26] Le module API expose des fonctions pures avec paramètres explicites et exports normaux (interface publique)
+- [2025-10-26] Le module `nuextract-client.js` conserve uniquement la logique métier (orchestration, validation, transformation, fallbacks config)
+- [2025-10-26] Cette séparation améliore testabilité (mocking), maintenabilité (isolation des changements) et réutilisabilité
+- [2025-10-26] Les fonctions déplacées dans `nuextract-api.js` (couche API/I/O) avec signatures refactorisées :
+  - `inferTemplateFromDescription(hostname, port, path, apiKey, description, timeoutMs)` - Appel synchrone
+  - `inferTemplateFromDescriptionAsync(hostname, port, pathPrefix, apiKey, description, timeout)` - Appel asynchrone
+  - `getJobStatus(hostname, port, pathPrefix, apiKey, jobId)` - Récupération statut job
+  - `pollJobUntilComplete(hostname, port, pathPrefix, apiKey, jobId, maxAttempts, interval, initialSleepMs)` - Polling
+  - `getNuExtractProjects(hostname, port, pathPrefix, apiKey)` - Liste des projets
+  - `createNuExtractProject(hostname, port, pathPrefix, apiKey, body)` - Création projet
+  - `putProjectTemplate(hostname, port, pathPrefix, apiKey, projectId, template)` - Mise à jour template
+
+#### Justification pour la séparation module API
+
+- **Single Responsibility Principle (SRP)** : Chaque module a une responsabilité unique et claire
+- **Dependency Inversion Principle (DIP)** : Fonctions dépendent de paramètres, pas d'implémentations globales
+- **Dependency Injection** : Élimination du couplage fort via variables globales
+- **Separation of Concerns** : API/I/O séparé de la logique métier et des fallbacks de configuration
+- **High Cohesion** : Toutes les fonctions API regroupées dans un module cohésif
+- **Low Coupling** : Interface claire entre modules via imports/exports
+- **Testabilité** : Logique métier testable avec API mockée, fonctions pures facilement testables
+- **Maintenabilité** : Changements API isolés sans impact sur logique métier
+- **Réutilisabilité** : Module API réutilisable dans d'autres contextes (pas de dépendance à une config spécifique)
+- **Standard Jest** : Approche recommandée pour mocker des modules ES6/CommonJS
+
+#### Patterns validés pour la séparation module API
+
+- **Fonctions pures** : `async function inferTemplateAsync(hostname, port, path, apiKey, description, timeout) { ... }`
+- **Exports normaux** : `module.exports = { inferTemplateAsync, getJobStatus, ... }` (interface publique)
+- **Import module API** : `const nuextractApi = require('./nuextract-api.js')`
+- **Appels avec DI** : `await nuextractApi.inferTemplateAsync(hostname, port, path, apiKey, description, 60)`
+- **Fallbacks dans client** : `const hostname = config?.nuextract?.baseUrl || 'nuextract.ai'`
+- **Mock module complet** : `jest.mock('../../src/nuextract-api.js', () => ({ inferTemplateAsync: jest.fn() }))`
+- **Mock fonction spécifique** : `jest.spyOn(nuextractApi, 'inferTemplateAsync').mockResolvedValue(...)`
+
+#### Anti-Patterns pour la séparation module API à éviter
+
+- **Variables globales** : Éviter GLOBAL_CONFIG dans nuextract-api.js → **Solution** : Paramètres explicites → **Règle** : Dependency Injection
+- **Appels internes directs** : Éviter `await inferTemplateAsync(...)` dans le même module → **Solution** : Import depuis module API → **Règle** : Séparation obligatoire selon SRP
+- **Logique métier dans API** : Éviter la logique de transformation ou fallbacks dans nuextract-api.js → **Solution** : API = HTTP uniquement → **Règle** : Separation of Concerns
+- **Exports _testOnly_ dans API** : Éviter dans nuextract-api.js → **Solution** : Exports normaux → **Règle** : Interface publique claire
+- **God Module** : Éviter d'ajouter d'autres responsabilités (parsing, validation) dans nuextract-api.js → **Solution** : Créer modules dédiés → **Règle** : Single Responsibility
+
+#### État d'implémentation pour la séparation module API
+
+✅ [Fonctionnalité réalisée - 2025-10-26]
+
 ### Gestion des modes de génération de template (sync/async)
 
 #### Description détaillée pour la gestion des modes
@@ -273,6 +375,47 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 #### État d'implémentation pour le parsing des instructions complémentaires
 
 ✅ [Fonctionnalité réalisée]
+
+### Cycle de vie de projet NuExtract
+
+#### Description détaillée pour le cycle de vie de projet NuExtract
+
+- 2025-10-24 Un projet est créé automatiquement par l'agent spécialisé Javascript si il n'existe pas encore sur la plateforme SaaS NuExtract pour le compte qui correspond à la clé API configurée
+- 2025-10-24 Le projet existant sur la plateforme SaaS NuExtract pour le compte qui correspond à la clé API configurée qui correspond à la définition configurée est réutilisé
+- 2025-10-24 Le paramètre `templateReset` dans `extraction-config.json` contrôle si le template d'un projet existant doit être mis à jour :
+  - `templateReset: true` → Le template est mis à jour avec `putProjectTemplate` si le projet existe déjà
+  - `templateReset: false` → Aucune mise à jour, le projet existant est retourné tel quel
+- 2025-10-24 La suppression de projet s'effectue sur la plateforme SaaS NuExtract pour le compte qui correspond à la clé API configurée, elle n'est pas intégrée dans l'agent spécialisé Javascript
+
+#### Justification pour le cycle de vie de projet NuExtract
+
+- **Automatisation** : Évite la création manuelle de projets sur la plateforme SaaS
+- **Réutilisabilité** : Permet de réutiliser un projet existant avec son template et ses exemples
+- **Simplicité** : Centralise la gestion dans l'agent JavaScript
+- **Sécurité** : La suppression reste une opération manuelle pour éviter les pertes de données accidentelles
+
+#### Patterns validés pour le cycle de vie de projet NuExtract
+
+- **Recherche avant création** : Utiliser `getNuExtractProjects()` pour vérifier l'existence avant création
+- **Fonction unifiée** : `findOrCreateProject(apiKey, projectName, projectDescription, templateObj, templateReset)` gère automatiquement la recherche, création et mise à jour
+- **Paramètres configurables** : `projectName`, `projectDescription` et `templateReset` définis dans `extraction-config.json`
+- **Template obligatoire** : Un template est obligatoire pour la création d'un nouveau projet, une erreur est levée si `templateObj` est `null`
+- **Contrôle mise à jour** : Le paramètre `templateReset` (boolean) détermine si le template d'un projet existant doit être mis à jour
+- **Mise à jour template** : `putProjectTemplate(apiKey, projectId, template)` appelé automatiquement si `templateReset=true` et projet existant
+- **Correspondance par nom** : Le projet est identifié par son nom (`projectName`) sur la plateforme
+- **Retour structuré** : La fonction retourne un objet `{ id, name, created?, updated? }` indiquant l'action effectuée
+
+#### Anti-Patterns pour le cycle de vie de projet NuExtract à éviter
+
+- **Création sans vérification** : Éviter de créer un projet sans vérifier son existence → **Solution** : Utiliser `findOrCreateProject()` → **Règle à adopter** : Recherche systématique avant création
+- **Création sans template** : Éviter de créer un projet sans template → **Solution** : Toujours fournir un template valide → **Règle à adopter** : Template obligatoire pour création
+- **Suppression automatique** : Éviter la suppression programmatique de projets → **Solution** : Suppression manuelle uniquement → **Règle à adopter** : Préserver les projets et leurs exemples sur la plateforme
+- **Hardcodage du nom** : Éviter de coder en dur le nom du projet → **Solution** : Paramétrer dans configuration → **Règle à adopter** : Utiliser `extraction-config.json`
+- **Ignorer templateReset** : Éviter de toujours mettre à jour ou jamais mettre à jour → **Solution** : Respecter le paramètre `templateReset` → **Règle à adopter** : Contrôle explicite via configuration
+
+#### État d'implémentation pour le cycle de vie de projet NuExtract
+
+🚧 [Fonctions implémentées, tests BDD à compléter]
 
 ### Structure et format des instructions d'extraction
 

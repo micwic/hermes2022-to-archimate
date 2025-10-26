@@ -8,7 +8,7 @@
   "nuextract": {
     "apiKeyFile": "hermes2022-concepts-site-extraction/config/nuextract-api-key.key",
     "projectName": "HERMES2022",
-    "projectDescription": "Project for HERMES2022 concepts extraction by using NuExtact",
+    "projectDescription": "Project for HERMES2022 concepts extraction by using NuExtact LLM AI",
     "templateTransformationInstructionFile": "hermes2022-concepts-site-extraction/config/instructions-template-nuextract.md",
     "mainJSONConfigurationFile": "shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts-resolved.json",
     "templateOutputDirectory": "shared/hermes2022-extraction-files/config/nuextract-template-generated",
