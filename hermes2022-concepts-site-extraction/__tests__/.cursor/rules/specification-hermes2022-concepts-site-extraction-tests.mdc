@@ -64,8 +64,10 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/__tests__/.
 | `/__tests__/integration/` | Répertoire | Tests d'intégration avec appels API réels (template-generation, nuextract-project-management) |
 | `/__tests__/fixtures/` | Répertoire | Données de test réutilisables (templates valides, configurations) |
 | `/__tests__/support/` | Répertoire | Configuration partagée Jest-Cucumber (jest-cucumber-setup.js) |
-| `/error-handling.feature` | Feature Gherkin | Scénarios de gestion d'erreur (unit/) |
-| `/error-handling.steps.ts` | Step definitions | Implémentation steps error-handling (unit/) |
+| `/nuextract-client-error-handling.feature` | Feature Gherkin | Scénarios gestion d'erreur nuextract-client (unit/) |
+| `/nuextract-client-error-handling.steps.ts` | Step definitions | Implémentation steps nuextract-client (unit/) |
+| `/nuextract-api-error-handling.feature` | Feature Gherkin | Scénarios gestion d'erreur nuextract-api (unit/) |
+| `/nuextract-api-error-handling.steps.ts` | Step definitions | Implémentation steps nuextract-api (unit/) |
 | `/template-generation.feature` | Feature Gherkin | Scénarios génération templates (integration/) |
 | `/template-generation.steps.ts` | Step definitions | Implémentation steps template-generation (integration/) |
 | `/nuextract-project-management.feature` | Feature Gherkin | Scénarios gestion projets (integration/) |
@@ -209,7 +211,34 @@ and('le processus s\'arrête proprement', () => {
 
 #### État d'implémentation pour Tests loadInstructions
 
-✅ [Fonctionnalité réalisée - 2025-10-29] - 3 scénarios BDD dans error-handling.feature
+✅ [Fonctionnalité réalisée - 2025-10-29] - 3 scénarios BDD dans nuextract-client-error-handling.feature
+
+### Tests de validation nuextract-api (module nuextract-api.js)
+
+#### Description détaillée pour Tests nuextract-api
+
+[2025-10-29] Les tests unitaires du module `nuextract-api.js` valident la gestion d'erreur robuste des 7 fonctions d'appel HTTP vers l'API NuExtract avec simulation des cas d'erreur réseau, timeout, codes HTTP non-200, et JSON invalide.
+
+#### Justification pour Tests nuextract-api
+
+- **Couche critique** : Module API/I/O isolant tous les appels HTTP externes
+- **Gestion d'erreur stricte** : Conformité @error-handling-governance avec Error Cause
+- **Testabilité améliorée** : Mocking du module https pour simuler tous les cas d'erreur
+- **Couverture exhaustive** : Tous les chemins d'erreur de chaque fonction testés
+
+#### Patterns validés pour Tests nuextract-api
+
+- **Mock https.request** : Simulation EventEmitter pour req et res
+- **Error Cause préservée** : Validation que error.cause contient l'erreur originale
+- **Messages explicites** : Conformité messages d'erreur avec code nuextract-api.js
+
+#### Anti-Patterns pour Tests nuextract-api à éviter
+
+- **Tests d'intégration dans unit/** : Éviter appels API réels → **Solution** : Mocking complet → **Règle** : Séparation stricte unit/integration
+
+#### État d'implémentation pour Tests nuextract-api
+
+✅ [Fonctionnalité réalisée - 2025-10-29] - 16 scénarios BDD dans nuextract-api-error-handling.feature
 
 ### Mocking pour tests unitaires
 
@@ -377,8 +406,10 @@ testMatch: [
 ```text
 __tests__/
 ├── unit/
-│   ├── error-handling.feature
-│   └── error-handling.steps.ts
+│   ├── nuextract-client-error-handling.feature
+│   ├── nuextract-client-error-handling.steps.ts
+│   ├── nuextract-api-error-handling.feature
+│   └── nuextract-api-error-handling.steps.ts
 ├── integration/
 │   ├── template-generation.feature
 │   ├── template-generation.steps.ts
@@ -393,7 +424,7 @@ __tests__/
 - **Imports relatifs adaptés** :
 
 ```typescript
-// Dans __tests__/unit/error-handling.steps.ts
+// Dans __tests__/unit/nuextract-client-error-handling.steps.ts
 require('../../../src/nuextract-client.js')  // Remonte 3 niveaux
 
 // Dans __tests__/integration/template-generation.steps.ts
