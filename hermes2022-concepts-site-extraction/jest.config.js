@@ -1,8 +1,7 @@
-// Configuration Jest-Cucumber pour hermes2022-concepts-site-extraction
+// Configuration Jest BDD (jest-cucumber) pour hermes2022-concepts-site-extraction
 module.exports = {
   testMatch: [
-    '**/__tests__/integration/**/*.steps.{js,ts}',
-    '**/__tests__/e2e/**/*.steps.{js,ts}'
+    '**/__tests__/{unit,integration,e2e}/**/*.steps.{js,ts}'
   ],
   transform: {
     '^.+\\.ts$': ['ts-jest', { tsconfig: { esModuleInterop: true } }],

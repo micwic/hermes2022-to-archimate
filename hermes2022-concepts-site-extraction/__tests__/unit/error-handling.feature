@@ -1,5 +1,6 @@
 # language: fr
 Fonctionnalité: Gestion d'erreur robuste
+  #
   # === Gestion des erreurs de configuration (fonction loadGlobalConfig) ===
 
   Scénario: Erreur générée et gérée en cas de fichier de configuration général extraction-config.json manquant
@@ -25,6 +26,7 @@ Fonctionnalité: Gestion d'erreur robuste
     Quand on tente de charger la configuration
     Alors une erreur "Invalid JSON minimal content for nuextract-client.js in configuration" est générée
     Et le processus s'arrête proprement
+  #
   # === Gestion du chargement de la clé API (fonction loadApiKey) ===
 
   Scénario: Erreur si variable d'environnement et fichier tous deux absents
@@ -51,8 +53,8 @@ Fonctionnalité: Gestion d'erreur robuste
     Quand on tente de charger la clé API
     Alors la clé est chargée avec succès
     Et les espaces ont été supprimés
+  #
   # === Gestion des erreurs de génération de template (fonction generateTemplate) ===
-  # Sous-section: Validation des paramètres internes
 
   Scénario: Erreur templateMode invalide
     Etant donné une configuration avec templateMode "invalid"
@@ -80,26 +82,34 @@ Fonctionnalité: Gestion d'erreur robuste
     Quand on tente de valider le type de templateData
     Alors une erreur "Invalid template data type" est générée
     Et le message indique le type attendu et le type reçu
-  # Sous-section: Erreurs de schéma JSON
+  #
+  # === Gestion des erreurs de chargement et résolution des schémas JSON (fonction loadAndResolveSchemas) ===
 
   Scénario: Erreur schéma JSON manquant
     Etant donné un fichier de schéma JSON inexistant
-    Quand on tente de générer un template
-    Alors une erreur "Schema file not found" est générée
+    Quand on tente de charger et résoudre le schéma JSON
+    Alors une erreur contenant "ENOENT" est générée
     Et le processus s'arrête proprement
 
-  Scénario: Erreur schéma JSON malformé
-    Etant donné un fichier de schéma avec JSON invalide
-    Quand on tente de générer un template
-    Alors une erreur "Invalid JSON in schema" est générée
+  Scénario: Erreur fichier $ref manquant
+    Etant donné un schéma JSON valide avec une référence $ref vers un fichier inexistant
+    Quand on tente de charger et résoudre le schéma JSON
+    Alors une erreur contenant "fichier-inexistant-qui-provoque-erreur" est générée
     Et le processus s'arrête proprement
 
-  Scénario: Erreur schéma JSON invalide selon JSON Schema
-    Etant donné un schéma JSON qui ne respecte pas la spec JSON Schema
-    Quand on tente de valider le schéma
-    Alors une erreur "Invalid JSON Schema structure" est générée
+  Scénario: Erreur JSON malformé
+    Etant donné un fichier avec syntaxe JSON invalide
+    Quand on tente de charger et résoudre le schéma JSON
+    Alors une erreur contenant "Error parsing" est générée
     Et le processus s'arrête proprement
-  # Sous-section: Erreurs de template NuExtract et appels API
+
+  Scénario: Erreur schéma JSON non conforme à JSON Schema Draft-07
+    Etant donné un JSON valide mais non conforme à JSON Schema Draft-07
+    Quand on tente de charger et résoudre le schéma JSON
+    Alors une erreur contenant "Schema validation failed" est générée
+    Et le processus s'arrête proprement
+  #
+  # === Gestion des erreurs de template NuExtract et appels API ===
 
   Scénario: Erreur template vide retourné par l'API
     Etant donné une configuration valide

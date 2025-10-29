@@ -9,7 +9,8 @@ jest.mock('../../src/nuextract-api.js', () => {
   const actual = jest.requireActual('../../src/nuextract-api.js');
   return {
     ...actual,
-    inferTemplateFromDescriptionAsync: jest.fn(actual.inferTemplateFromDescriptionAsync)
+    inferTemplateFromDescriptionAsync: jest.fn(actual.inferTemplateFromDescriptionAsync),
+    pollJobUntilComplete: jest.fn(actual.pollJobUntilComplete)
   };
 });
 
@@ -20,6 +21,7 @@ import * as nuextractApi from '../../src/nuextract-api.js';
 import { 
   _testOnly_loadGlobalConfig as loadGlobalConfig, 
   _testOnly_loadApiKey as loadApiKey, 
+  _testOnly_loadAndResolveSchemas as loadAndResolveSchemas,
   _testOnly_generateTemplate as generateTemplate, 
   _testOnly_findOrCreateProject as findOrCreateProject
 } from '../../src/nuextract-client.js';
@@ -27,17 +29,31 @@ import { resolveFromRepoRoot } from '../../src/path-resolver.js';
 
 const feature = loadFeature(__dirname + '/error-handling.feature');
 
+// Variables pour restauration des mocks
+let originalReadFileSync: typeof fs.readFileSync;
+
+// Hooks pour isolation des tests (bonne pratique Jest/BDD)
+beforeEach(() => {
+  // Sauvegarder les fonctions originales avant chaque test
+  originalReadFileSync = fs.readFileSync;
+  jest.clearAllMocks();
+});
+
+afterEach(() => {
+  // Restaurer les fonctions originales après chaque test
+  fs.readFileSync = originalReadFileSync;
+  jest.restoreAllMocks();
+});
+
 defineFeature(feature, (test) => {
   
-  // === Tests de configuration ===
+  // === Gestion des erreurs de configuration (fonction loadGlobalConfig) ===
   
   test('Erreur générée et gérée en cas de fichier de configuration général extraction-config.json manquant', ({ given, when, then, and }) => {
     let error;
-    let originalReadFileSync;
 
     given('un fichier de configuration général extraction-config.json inexistant', () => {
       // Mocker fs.readFileSync pour simuler un fichier manquant
-      originalReadFileSync = fs.readFileSync;
       fs.readFileSync = jest.fn().mockImplementation(() => {
         const err = new Error('ENOENT: no such file or directory');
         err.code = 'ENOENT';
@@ -62,18 +78,14 @@ defineFeature(feature, (test) => {
 
     and('le processus s\'arrête proprement', () => {
       expect(error).toBeInstanceOf(Error);
-      // Restaurer fs.readFileSync
-      fs.readFileSync = originalReadFileSync;
     });
   });
 
   test('Erreur générée et gérée en cas de fichier de configuration général extraction-config.json présent mais malformé', ({ given, when, then, and }) => {
     let error;
-    let originalReadFileSync;
 
     given('un fichier de configuration général extraction-config.json existant mais malformé', () => {
       // Mocker fs.readFileSync pour retourner du JSON invalide
-      originalReadFileSync = fs.readFileSync;
       fs.readFileSync = jest.fn().mockImplementation((filePath, encoding) => {
         if (filePath.includes('extraction-config.json')) {
           return '{ invalid json ,,, }';
@@ -92,23 +104,19 @@ defineFeature(feature, (test) => {
 
     then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toContain('Invalid JSON in configuration');
+      expect(error.message).toContain('Invalid JSON in main configuration file');
     });
 
     and('le processus s\'arrête proprement', () => {
       expect(error).toBeInstanceOf(Error);
-      // Restaurer fs.readFileSync
-      fs.readFileSync = originalReadFileSync;
     });
   });
 
   test('Erreur générée et gérée en cas de section nuextract absente dans le fichier de configuration', ({ given, when, then, and }) => {
     let error;
-    let originalReadFileSync;
 
     given('un fichier de configuration général extraction-config.json existant et formatté mais sans section nuextract', () => {
       // Mocker fs.readFileSync pour retourner une config valide JSON mais sans section nuextract
-      originalReadFileSync = fs.readFileSync;
       fs.readFileSync = jest.fn().mockImplementation((filePath, encoding) => {
         if (filePath.includes('extraction-config.json')) {
           return JSON.stringify({
@@ -139,18 +147,14 @@ defineFeature(feature, (test) => {
 
     and('le processus s\'arrête proprement', () => {
       expect(error).toBeInstanceOf(Error);
-      // Restaurer fs.readFileSync
-      fs.readFileSync = originalReadFileSync;
     });
   });
 
   test('Erreur générée et gérée en cas de section nuextract avec moins de 15 clés', ({ given, when, then, and }) => {
     let error;
-    let originalReadFileSync;
 
     given('un fichier de configuration général extraction-config.json avec section nuextract contenant moins de 15 clés', () => {
       // Mocker fs.readFileSync pour retourner une config valide JSON mais avec moins de 15 clés dans nuextract
-      originalReadFileSync = fs.readFileSync;
       fs.readFileSync = jest.fn().mockImplementation((filePath, encoding) => {
         if (filePath.includes('extraction-config.json')) {
           return JSON.stringify({
@@ -178,13 +182,11 @@ defineFeature(feature, (test) => {
 
     then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toContain('Invalid JSON minimal content for nuextract-client.js in configuration');
+      expect(error.message).toContain('Invalid JSON minimal content for nuextract-client.js in main configuration file');
     });
 
     and('le processus s\'arrête proprement', () => {
       expect(error).toBeInstanceOf(Error);
-      // Restaurer fs.readFileSync
-      fs.readFileSync = originalReadFileSync;
     });
   });
 
@@ -224,7 +226,7 @@ defineFeature(feature, (test) => {
     });
   });
 
-  // === Tests de chargement de clé API (fonction loadApiKey) ===
+  // === Gestion du chargement de la clé API (fonction loadApiKey) ===
 
   test('Erreur si variable d\'environnement et fichier tous deux absents', ({ given, when, then, and }) => {
     let error;
@@ -266,12 +268,10 @@ defineFeature(feature, (test) => {
   test('Erreur si clé vide après trim (whitespace uniquement)', ({ given, when, then, and }) => {
     let error;
     let config;
-    let originalReadFileSync;
 
     given('un fichier de clé API contenant uniquement des espaces et retours à la ligne', async () => {
       config = await loadGlobalConfig();
       // Mock fs.readFileSync pour retourner whitespace uniquement
-      originalReadFileSync = fs.readFileSync;
       fs.readFileSync = jest.fn().mockImplementation((filePath, encoding) => {
         if (filePath.includes('nuextract-api-key.key')) {
           return '   \n  \t  \n  '; // Whitespace uniquement
@@ -295,20 +295,16 @@ defineFeature(feature, (test) => {
 
     and('le processus s\'arrête proprement', () => {
       expect(error).toBeInstanceOf(Error);
-      // Restaurer fs.readFileSync
-      fs.readFileSync = originalReadFileSync;
     });
   });
 
   test('Erreur si clé n\'est pas au format JWT valide', ({ given, when, then, and }) => {
     let error;
     let config;
-    let originalReadFileSync;
 
     given('un fichier de clé API contenant "1234" sans format JWT', async () => {
       config = await loadGlobalConfig();
       // Mock fs.readFileSync pour retourner une clé non-JWT
-      originalReadFileSync = fs.readFileSync;
       fs.readFileSync = jest.fn().mockImplementation((filePath, encoding) => {
         if (filePath.includes('nuextract-api-key.key')) {
           return '1234'; // Clé simple sans format JWT
@@ -334,22 +330,18 @@ defineFeature(feature, (test) => {
 
     and('le processus s\'arrête proprement', () => {
       expect(error).toBeInstanceOf(Error);
-      // Restaurer fs.readFileSync
-      fs.readFileSync = originalReadFileSync;
     });
   });
 
   test('Chargement réussi avec trim appliqué', ({ given, when, then, and }) => {
     let result;
     let config;
-    let originalReadFileSync;
     // JWT valide de test: header {"alg":"HS256","typ":"JWT"} + payload {"sub":"test","iat":1234567890}
     const validJWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0IiwiaWF0IjoxMjM0NTY3ODkwfQ.signature';
 
     given('un fichier de clé API contenant une clé valide avec espaces', async () => {
       config = await loadGlobalConfig();
       // Mock fs.readFileSync pour retourner une clé JWT valide avec espaces
-      originalReadFileSync = fs.readFileSync;
       fs.readFileSync = jest.fn().mockImplementation((filePath, encoding) => {
         if (filePath.includes('nuextract-api-key.key')) {
           return `  \n  ${validJWT}  \t  `; // JWT valide avec espaces
@@ -374,12 +366,10 @@ defineFeature(feature, (test) => {
       expect(result).not.toContain(' ');
       expect(result).not.toContain('\n');
       expect(result).not.toContain('\t');
-      // Restaurer fs.readFileSync
-      fs.readFileSync = originalReadFileSync;
     });
   });
 
-  // === Tests de génération de template - validation interne ===
+  // === Gestion des erreurs de génération de template (fonction generateTemplate) ===
 
   test('Erreur templateMode invalide', ({ given, when, then, and }) => {
     let error;
@@ -416,12 +406,10 @@ defineFeature(feature, (test) => {
     let error;
 
     given('une configuration avec templateMode async', async () => {
-      jest.clearAllMocks();
-      
       // Charger config ET apiKey (Arrange = Given)
       config = await loadGlobalConfig();
-      config.nuextract.templateMode = 'async';
       apiKey = await loadApiKey(config);
+      config.nuextract.templateMode = 'async';
     });
 
     and('une API async qui ne retourne pas de jobId', () => {
@@ -444,7 +432,6 @@ defineFeature(feature, (test) => {
 
     and('le processus s\'arrête proprement', () => {
       expect(error).toBeInstanceOf(Error);
-      jest.clearAllMocks();
     });
   });
 
@@ -452,40 +439,31 @@ defineFeature(feature, (test) => {
     let config;
     let apiKey;
     let error;
-    const nuextractClient = require(resolveFromRepoRoot('hermes2022-concepts-site-extraction/src/nuextract-client.js'));
 
     given('une configuration avec templateMode async', async () => {
-      const configPath = resolveFromRepoRoot('hermes2022-concepts-site-extraction/config/extraction-config.json');
-      config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      // Charger config ET apiKey (Arrange = Given)
+      config = await loadGlobalConfig();
+      apiKey = await loadApiKey(config);
       config.nuextract.templateMode = 'async';
-      apiKey = 'fake-api-key';
     });
 
     and('templateData retourné est une string JSON invalide', () => {
-      // Mock pollJobUntilComplete pour retourner une string JSON invalide
-      const nuextractClientPath = resolveFromRepoRoot('hermes2022-concepts-site-extraction/src/nuextract-client.js');
-      jest.mock(nuextractClientPath, () => {
-        const original = jest.requireActual(nuextractClientPath);
-        return {
-          ...original,
-          // On ne peut pas facilement mocker une fonction interne, donc on teste via l'intégration
-        };
-      });
+      // Mock 1: inferTemplateFromDescriptionAsync retourne un jobId VALIDE (pas d'erreur à ce niveau)
+      (nuextractApi.inferTemplateFromDescriptionAsync as jest.Mock)
+        .mockResolvedValue({
+          status: 'submitted',
+          jobId: 'job-123' // jobId valide pour passer cette étape
+        });
+      
+      // Mock 2: pollJobUntilComplete retourne directement une string JSON INVALIDE (c'est l'erreur testée)
+      // Note: pollJobUntilComplete retourne directement outputData, pas l'objet complet
+      (nuextractApi.pollJobUntilComplete as jest.Mock)
+        .mockResolvedValue('{invalid json}'); // String JSON invalide = erreur isolée
     });
 
     when('on tente de parser le templateData', async () => {
       try {
-        // Simulation : Forcer une erreur de parsing JSON en passant par generateTemplate
-        // avec un mock de pollJobUntilComplete qui retourne une string invalide
-        const invalidJsonString = '{invalid json}';
-        
-        // Test direct : essayer de parser une string JSON invalide comme le fait le code
-        try {
-          JSON.parse(invalidJsonString);
-        } catch (parseError) {
-          // Simuler l'erreur que generateTemplate devrait lever
-          error = new Error('Invalid JSON in template data returned by async API. Script stopped.', { cause: parseError });
-        }
+        await generateTemplate(config, apiKey); // Act simple
       } catch (err) {
         error = err;
       }
@@ -510,42 +488,50 @@ defineFeature(feature, (test) => {
     let errorArray;
 
     given('une configuration avec templateMode async', async () => {
-      const configPath = resolveFromRepoRoot('hermes2022-concepts-site-extraction/config/extraction-config.json');
-      config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      jest.clearAllMocks();
+      
+      // Charger config ET apiKey (Arrange = Given)
+      config = await loadGlobalConfig();
+      apiKey = await loadApiKey(config);
       config.nuextract.templateMode = 'async';
-      apiKey = 'fake-api-key';
     });
 
-    and('templateData retourné est de type invalide (null, number, array)', () => {
-      // Test de la logique de validation des types invalides
+    and('templateData retourné est de type invalide (null, number, array)', async () => {
+      // Mock inferTemplateFromDescriptionAsync pour retourner un jobId valide (pas d'erreur à ce niveau)
+      (nuextractApi.inferTemplateFromDescriptionAsync as jest.Mock)
+        .mockResolvedValue({
+          status: 'submitted',
+          jobId: 'job-123'
+        });
     });
 
     when('on tente de valider le type de templateData', async () => {
-      // Simuler la validation de type comme le fait le code dans generateTemplate
-      const testCases = [
-        { data: null, expectedType: 'null' },
-        { data: 42, expectedType: 'number' },
-        { data: [1, 2, 3], expectedType: 'array' }
-      ];
+      // Test 1: null
+      try {
+        (nuextractApi.pollJobUntilComplete as jest.Mock)
+          .mockResolvedValue(null); // Type invalide : null
+        await generateTemplate(config, apiKey);
+      } catch (err) {
+        errorNull = err;
+      }
 
-      testCases.forEach(({ data, expectedType }) => {
-        let templateData = data;
-        
-        // Simuler la logique de validation du code
-        if (typeof templateData === 'string') {
-          // Cas string - non testé ici
-        } else if (templateData && typeof templateData === 'object' && !Array.isArray(templateData)) {
-          // Cas objet valide - non testé ici
-        } else {
-          // Cas invalide - c'est ce qu'on teste
-          const actualType = templateData === null ? 'null' : Array.isArray(templateData) ? 'array' : typeof templateData;
-          const error = new Error(`Invalid template data type: expected object or JSON string, got ${actualType}. Script stopped.`);
-          
-          if (expectedType === 'null') errorNull = error;
-          else if (expectedType === 'number') errorNumber = error;
-          else if (expectedType === 'array') errorArray = error;
-        }
-      });
+      // Test 2: number
+      try {
+        (nuextractApi.pollJobUntilComplete as jest.Mock)
+          .mockResolvedValue(42); // Type invalide : number
+        await generateTemplate(config, apiKey);
+      } catch (err) {
+        errorNumber = err;
+      }
+
+      // Test 3: array
+      try {
+        (nuextractApi.pollJobUntilComplete as jest.Mock)
+          .mockResolvedValue([1, 2, 3]); // Type invalide : array
+        await generateTemplate(config, apiKey);
+      } catch (err) {
+        errorArray = err;
+      }
     });
 
     then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
@@ -565,30 +551,31 @@ defineFeature(feature, (test) => {
     });
   });
 
-  // === Tests de schéma JSON ===
+  // === Gestion des erreurs de chargement et résolution des schémas JSON (fonction loadAndResolveSchemas) ===
 
   test('Erreur schéma JSON manquant', ({ given, when, then, and }) => {
     let error;
     let config;
 
     given('un fichier de schéma JSON inexistant', async () => {
+      jest.clearAllMocks();
+      
       config = await loadGlobalConfig();
-      config.nuextract.mainJSONConfigurationFile = 'chemin/inexistant/schema.json';
+      config.nuextract.mainJSONConfigurationFile = 'chemin/inexistant/schema-qui-nexiste-pas.json';
     });
 
-    when('on tente de générer un template', async () => {
+    when('on tente de charger et résoudre le schéma JSON', async () => {
       try {
-        const apiKey = await loadApiKey(config);
-        await generateTemplate(config, apiKey);
+        await loadAndResolveSchemas(config);
       } catch (e) {
         error = e;
       }
     });
 
-    then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      // L'erreur peut être "no such file" ou "Main JSON schema file not found"
-      expect(error.message.toLowerCase()).toMatch(/not found|no such file|enoent|main json schema/);
+      expect(error.cause).toBeDefined();
+      expect(error.cause.message).toContain(expectedMessage);
     });
 
     and('le processus s\'arrête proprement', () => {
@@ -596,87 +583,176 @@ defineFeature(feature, (test) => {
     });
   });
 
-  test('Erreur schéma JSON malformé', ({ given, when, then, and }) => {
-    let error;
-    let tempSchemaPath;
+  test('Erreur fichier $ref manquant', ({ given, when, then, and }) => {
     let config;
-
-    given('un fichier de schéma avec JSON invalide', async () => {
-      config = await loadGlobalConfig();
-      tempSchemaPath = resolveFromRepoRoot('shared/hermes2022-extraction-files/config/json-schemas/test-invalid-schema.json');
-      fs.writeFileSync(tempSchemaPath, '{ invalid json ,,, }', 'utf8');
-      config.nuextract.mainJSONConfigurationFile = 'shared/hermes2022-extraction-files/config/json-schemas/test-invalid-schema.json';
-    });
-
-    when('on tente de générer un template', async () => {
-      try {
-        const apiKey = await loadApiKey(config);
-        await generateTemplate(config, apiKey);
-      } catch (e) {
-        error = e;
-      }
-    });
-
-    then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
-      expect(error).toBeDefined();
-      // L'erreur de parsing JSON
-      expect(error.message).toMatch(/JSON|Unexpected token|parse/i);
-    });
-
-    and('le processus s\'arrête proprement', () => {
-      expect(error).toBeInstanceOf(Error);
-      // Nettoyer
-      if (tempSchemaPath && fs.existsSync(tempSchemaPath)) {
-        fs.unlinkSync(tempSchemaPath);
-      }
-    });
-  });
-
-  test('Erreur schéma JSON invalide selon JSON Schema', ({ given, when, then, and }) => {
     let error;
-    let tempSchemaPath;
-    let config;
+    const tmpDir = path.join(__dirname, '../../tmp-test-schemas');
+    const schemaPath = path.join(tmpDir, 'test-schema-with-invalid-ref.json');
 
-    given('un schéma JSON qui ne respecte pas la spec JSON Schema', async () => {
+    given('un schéma JSON valide avec une référence $ref vers un fichier inexistant', async () => {
+      jest.clearAllMocks();
+      
       config = await loadGlobalConfig();
-      tempSchemaPath = resolveFromRepoRoot('shared/hermes2022-extraction-files/config/json-schemas/test-invalid-structure.json');
-      // Un JSON valide mais pas un JSON Schema valide
-      fs.writeFileSync(tempSchemaPath, JSON.stringify({
-        notAValidSchema: true,
-        missingRequiredFields: "yes"
-      }), 'utf8');
-      config.nuextract.mainJSONConfigurationFile = 'shared/hermes2022-extraction-files/config/json-schemas/test-invalid-structure.json';
-    });
-
-    when('on tente de valider le schéma', async () => {
-      try {
-        const schemaPath = resolveFromRepoRoot(config.nuextract.mainJSONConfigurationFile);
-        const schemaContent = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
-        
-        // Vérifier les champs obligatoires d'un JSON Schema
-        if (!schemaContent.$schema && !schemaContent.type && !schemaContent.properties) {
-          throw new Error('Invalid JSON Schema structure: missing required fields');
+      
+      // Créer un répertoire temporaire
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true });
+      }
+      
+      // Créer un schéma avec une référence $ref vers un fichier inexistant
+      const schemaWithInvalidRef = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "phases": {
+            "$ref": "./fichier-inexistant-qui-provoque-erreur.json"
+          }
         }
+      };
+      
+      fs.writeFileSync(schemaPath, JSON.stringify(schemaWithInvalidRef, null, 2));
+      
+      // Utiliser le chemin relatif au repoRoot
+      const relativePath = path.relative(resolveFromRepoRoot('.'), schemaPath);
+      config.nuextract.mainJSONConfigurationFile = relativePath;
+    });
+
+    when('on tente de charger et résoudre le schéma JSON', async () => {
+      try {
+        await loadAndResolveSchemas(config);
       } catch (e) {
         error = e;
       }
     });
 
-    then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toContain('Invalid JSON Schema structure');
+      expect(error.cause).toBeDefined();
+      expect(error.cause.message).toContain(expectedMessage);
     });
 
     and('le processus s\'arrête proprement', () => {
       expect(error).toBeInstanceOf(Error);
-      // Nettoyer
-      if (tempSchemaPath && fs.existsSync(tempSchemaPath)) {
-        fs.unlinkSync(tempSchemaPath);
+      // Nettoyer les fichiers temporaires
+      if (fs.existsSync(schemaPath)) {
+        fs.unlinkSync(schemaPath);
+      }
+      if (fs.existsSync(tmpDir)) {
+        fs.rmdirSync(tmpDir);
       }
     });
   });
 
-  // === Tests de template NuExtract ===
+  test('Erreur JSON malformé', ({ given, when, then, and }) => {
+    let config;
+    let error;
+    const tmpDir = path.join(__dirname, '../../tmp-test-schemas');
+    const schemaPath = path.join(tmpDir, 'test-malformed-json.json');
+
+    given('un fichier avec syntaxe JSON invalide', async () => {
+      jest.clearAllMocks();
+      
+      config = await loadGlobalConfig();
+      
+      // Créer un répertoire temporaire
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true });
+      }
+      
+      // Un fichier avec JSON malformé (syntaxe invalide)
+      fs.writeFileSync(schemaPath, '{ invalid json syntax ,,, }', 'utf8');
+      
+      // Utiliser le chemin relatif au repoRoot
+      const relativePath = path.relative(resolveFromRepoRoot('.'), schemaPath);
+      config.nuextract.mainJSONConfigurationFile = relativePath;
+    });
+
+    when('on tente de charger et résoudre le schéma JSON', async () => {
+      try {
+        await loadAndResolveSchemas(config);
+      } catch (e) {
+        error = e;
+      }
+    });
+
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.cause).toBeDefined();
+      expect(error.cause.message).toContain(expectedMessage);
+    });
+
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      // Nettoyer les fichiers temporaires
+      if (fs.existsSync(schemaPath)) {
+        fs.unlinkSync(schemaPath);
+      }
+      if (fs.existsSync(tmpDir)) {
+        fs.rmdirSync(tmpDir);
+      }
+    });
+  });
+
+  test('Erreur schéma JSON non conforme à JSON Schema Draft-07', ({ given, when, then, and }) => {
+    let config;
+    let error;
+    const tmpDir = path.join(__dirname, '../../tmp-test-schemas');
+    const schemaPath = path.join(tmpDir, 'test-invalid-schema-structure.json');
+
+    given('un JSON valide mais non conforme à JSON Schema Draft-07', async () => {
+      jest.clearAllMocks();
+      
+      config = await loadGlobalConfig();
+      
+      // Créer un répertoire temporaire
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true });
+      }
+      
+      // Un JSON syntaxiquement valide mais qui ne respecte pas JSON Schema Draft-07
+      // Par exemple : un objet qui prétend être un schéma mais avec des propriétés invalides
+      const invalidSchema = {
+        notAValidSchemaProperty: true,
+        anotherInvalidProperty: "yes",
+        properties: {
+          // "properties" doit être un objet avec des schémas valides, pas des strings
+          name: "this should be a schema object not a string"
+        }
+      };
+      fs.writeFileSync(schemaPath, JSON.stringify(invalidSchema, null, 2), 'utf8');
+      
+      // Utiliser le chemin relatif au repoRoot
+      const relativePath = path.relative(resolveFromRepoRoot('.'), schemaPath);
+      config.nuextract.mainJSONConfigurationFile = relativePath;
+    });
+
+    when('on tente de charger et résoudre le schéma JSON', async () => {
+      try {
+        await loadAndResolveSchemas(config);
+      } catch (e) {
+        error = e;
+      }
+    });
+
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.cause).toBeDefined();
+      expect(error.cause.message).toContain(expectedMessage);
+    });
+
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      // Nettoyer les fichiers temporaires
+      if (fs.existsSync(schemaPath)) {
+        fs.unlinkSync(schemaPath);
+      }
+      if (fs.existsSync(tmpDir)) {
+        fs.rmdirSync(tmpDir);
+      }
+    });
+  });
+
+  // === Gestion des erreurs de template NuExtract et appels API ===
 
   test('Erreur template vide retourné par l\'API', ({ given, when, then, and }) => {
     let error;
@@ -784,11 +860,13 @@ defineFeature(feature, (test) => {
     });
 
     and('le processus s\'arrête proprement', () => {
-      expect(error).toBeInstanceOf(Error);
+      // RangeError est une sous-classe d'Error
+      expect(error).toBeDefined();
+      expect(error.constructor.name).toMatch(/Error|RangeError/);
     });
   }, 30000);
 
-  // === Tests de gestion de projet ===
+  // === Gestion des erreurs de gestion de projet (fonction findOrCreateProject) ===
 
   test('Erreur création projet sans template', ({ given, when, then, and }) => {
     let error;

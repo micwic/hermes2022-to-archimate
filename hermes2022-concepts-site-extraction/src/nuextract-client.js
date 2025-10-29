@@ -7,6 +7,9 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const { resolveFromRepoRoot } = require('./path-resolver.js');
 const nuextractApi = require('./nuextract-api.js');
+const $RefParser = require('@apidevtools/json-schema-ref-parser');
+const Ajv = require('ajv');
+const addFormats = require('ajv-formats');
 
 // Variables globales pour compatibilité avec l'exécution séquentielle de main()
 let TEMPLATE = null;
@@ -32,25 +35,25 @@ async function loadGlobalConfig() {
     config = JSON.parse(configContent);
   } catch (error) {
     console.error(`Erreur lors du parsing JSON de la configuration : ${error.message}`);
-    throw new Error('Invalid JSON in configuration file. Script stopped');
+    throw new Error('Invalid JSON in main configuration file. Script stopped');
   }
   
   // Étape 3: Validation structurelle minimale
   if (!config || typeof config !== 'object' || Array.isArray(config)) {
     console.error('Erreur: la configuration doit être un objet JSON');
-    throw new Error('Invalid configuration structure: expected an object. Script stopped');
+    throw new Error('Invalid main configuration file structure: expected an object. Script stopped');
   }
   
   if (!config.nuextract || typeof config.nuextract !== 'object') {
     console.error('Erreur: la section "nuextract" est manquante ou invalide dans la configuration');
-    throw new Error('Invalid configuration structure: missing "nuextract" section. Script stopped');
+    throw new Error('Invalid main configuration structure: missing "nuextract" section. Script stopped');
   }
   
   // Vérifier que la section nuextract contient au moins 15 clés définies
   const nuextractKeys = Object.keys(config.nuextract);
   if (nuextractKeys.length < 15) {
     console.error(`Erreur: la section "nuextract" doit contenir au moins 15 clés, mais contient seulement ${nuextractKeys.length} clés`);
-    throw new Error('Invalid JSON minimal content for nuextract-client.js in configuration file. Script stopped');
+    throw new Error('Invalid JSON minimal content for nuextract-client.js in main configuration file. Script stopped');
   }
   
   console.log('[info] Configuration chargée avec succès');
@@ -60,6 +63,7 @@ async function loadGlobalConfig() {
 // Lire la clé API depuis un fichier externe si elle n'est pas déjà dans l'environnement
 async function loadApiKey(config) {
   let apiKey = null;
+  console.log(`[info] Chargement de la clé API NuExtract à partir de : ${config.nuextract.apiKeyFile}`);
   
   // Priorité 1 : Variable d'environnement
   if (process.env.NUEXTRACT_API_KEY) {
@@ -101,46 +105,9 @@ async function loadApiKey(config) {
     throw new Error('API key format is invalid. Script stopped.', { cause: error });
   }
   
+  console.log(`[info] Clé API NuExtract chargée avec succès`);
   return apiKey;
 };
-
-// Fonction pour résoudre récursivement les $ref dans un schéma JSON et les inclure dans le schéma principal
-function resolveJSONSchemaRefs(schema, baseDir, visitedFiles = new Set()) {
-  if (typeof schema !== 'object' || schema === null) {
-    return schema;
-  }
-  if (Array.isArray(schema)) {
-    return schema.map(item => resolveJSONSchemaRefs(item, baseDir, visitedFiles));
-  }
-  
-  const resolved = { ...schema };
-  
-  // Traiter les $ref
-  if (resolved.$ref) {
-    const refPath = path.resolve(baseDir, resolved.$ref);
-    if (visitedFiles.has(refPath)) {
-      console.warn(`[warn] Référence circulaire détectée pour $ref ${resolved.$ref}, référence ignorée`);
-      return resolved;
-    }
-    visitedFiles.add(refPath);
-    try {
-      const refContent = JSON.parse(fs.readFileSync(refPath, 'utf8'));
-      const resolvedRef = resolveJSONSchemaRefs(refContent, baseDir, visitedFiles);
-      delete resolved.$ref;
-      return { ...resolved, ...resolvedRef };
-    } catch (error) {
-      console.warn(`[warn] Impossible de résoudre $ref ${resolved.$ref} : ${error.message}`);
-      return resolved; // Retourner la référence non résolue si échec
-    }
-  }
-  
-  // Résoudre récursivement pour tous les objets
-  for (const key in resolved) {
-    resolved[key] = resolveJSONSchemaRefs(resolved[key], baseDir, visitedFiles);
-  }
-  
-  return resolved;
-}
 
 // Fonction pour lire les instructions de transformation du template
 // Extrait uniquement le contenu sous le heading ciblé pour éviter de polluer l'API
@@ -177,28 +144,55 @@ function loadInstructions(config) {
 }
 
 // Fonction pour charger et résoudre les schémas JSON
-function loadAndResolveSchemas(config) {
+async function loadAndResolveSchemas(config) {
   const mainSchemaFileName = config?.nuextract?.mainJSONConfigurationFile || 'shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts.json';
   const mainSchemaFile = resolveFromRepoRoot(mainSchemaFileName);
-  const schemaDir = path.dirname(mainSchemaFile);
-
-  let rawSchema = '';
-
+  
+  console.log(`[info] Chargement et résolution du schéma JSON à partir de : ${mainSchemaFile}`);
+  
+  let resolvedSchema;
+  
+  // Bloc 1: Résolution des $ref avec $RefParser
   try {
-    rawSchema = JSON.parse(fs.readFileSync(mainSchemaFile, 'utf8'));
+    resolvedSchema = await $RefParser.dereference(mainSchemaFile, {
+      dereference: {
+        circular: 'ignore'
+      }
+    });
   } catch (error) {
-    console.error(`Erreur critique: Impossible de lire le schéma JSON principal: ${error.message}`);
-    throw new Error('Main JSON schema file not found. Script stopped.');
+    console.error(`Erreur critique : Échec du chargement ou de la résolution des références du schéma JSON: ${error.message}`);
+    throw new Error('Invalid JSON schema structure or content. Script stopped.', { cause: error });
   }
-
+  
+  // Bloc 2: Validation de conformité JSON Schema avec Ajv
   try {
-    const resolvedSchema = resolveJSONSchemaRefs(rawSchema, schemaDir);
-    return JSON.stringify(resolvedSchema, null, 2);
+    const ajv = new Ajv({ strict: false, allErrors: true });
+    addFormats(ajv);
+    
+    // Méta-schéma JSON Schema Draft-07 (standard utilisé dans le projet)
+    const metaSchema = require('ajv/dist/refs/json-schema-draft-07.json');
+    
+    const validate = ajv.compile(metaSchema);
+    const valid = validate(resolvedSchema);
+    
+    if (!valid) {
+      const errorMessages = validate.errors.map(err => `${err.instancePath} ${err.message}`).join('; ');
+      const validationError = new Error(`Schema validation failed: ${errorMessages}`);
+      console.error(`Erreur critique : Le schéma résolu n'est pas conforme à JSON Schema Draft-07: ${errorMessages}`);
+      throw new Error('Invalid JSON schema structure or content. Script stopped.', { cause: validationError });
+    }
   } catch (error) {
-    console.warn(`Avertissement: Impossible de résoudre les références JSON: ${error.message}`);
-    // Retourner le schéma brut sans résolution des références
-    return JSON.stringify(rawSchema, null, 2);
+    // Si l'erreur vient déjà du bloc de validation ci-dessus, la relancer
+    if (error.message === 'Invalid JSON schema structure or content. Script stopped.') {
+      throw error;
+    }
+    // Sinon, c'est une erreur inattendue dans Ajv lui-même
+    console.error(`Erreur critique : Échec de la validation du schéma avec Ajv: ${error.message}`);
+    throw new Error('Invalid JSON schema structure or content. Script stopped.', { cause: error });
   }
+  
+  console.log(`[info] Schéma JSON chargé, résolu et validé avec succès`);
+  return JSON.stringify(resolvedSchema, null, 2);
 }
 
 // Fonction pour construire la description du template
@@ -212,7 +206,7 @@ function buildTemplateDescription(instructions, mainSchema) {
 async function generateTemplate(config, apiKey) {
   try {
     const instructions = loadInstructions(config);
-    const mainSchema = loadAndResolveSchemas(config);
+    const mainSchema = await loadAndResolveSchemas(config);
     const description = buildTemplateDescription(instructions, mainSchema);
 
     // Déterminer le mode (sync par défaut)
@@ -397,6 +391,8 @@ if (require.main === module) {
 module.exports = {
   _testOnly_loadGlobalConfig: loadGlobalConfig,
   _testOnly_loadApiKey: loadApiKey,
+  _testOnly_loadInstructions: loadInstructions,
+  _testOnly_loadAndResolveSchemas: loadAndResolveSchemas,
   _testOnly_generateTemplate: generateTemplate,
   _testOnly_findOrCreateProject: findOrCreateProject
 };
