@@ -111,39 +111,50 @@ async function loadApiKey(config) {
 
 // Fonction pour lire les instructions de transformation du template
 // Extrait uniquement le contenu sous le heading ciblé pour éviter de polluer l'API
-function loadInstructions(config) {
+async function loadInstructions(config) {
   const instFile = config?.nuextract?.templateTransformationInstructionFile || 'hermes2022-concepts-site-extraction/config/instructions-template-nuextract.md';
   const instPath = resolveFromRepoRoot(instFile);
 
   console.log(`[info] Chargement des instructions de transformation du template à partir de : ${instPath}`);
   
+  // Étape 1: Lire le fichier
+  let fullContent;
   try {
-    const fullContent = fs.readFileSync(instPath, 'utf8');
-    
-    // Extraire uniquement le contenu sous le heading ciblé
-    const targetHeading = '## Instructions complémentaires pour /api/infer-template /api/infer-template-async de NuExtract';
-    const lines = fullContent.split('\n');
-    const startIdx = lines.findIndex(line => line.trim() === targetHeading);
-    
-    if (startIdx === -1) {
-      console.warn(`⚠️  Heading "${targetHeading}" non trouvé, utilisation fichier complet`);
-      return fullContent;
-    }
-    
-    // Extraire du heading jusqu'au prochain heading de niveau 1 ou 2, ou fin de fichier
-    const contentLines = [];
-    for (let i = startIdx + 1; i < lines.length; i++) {
-      const line = lines[i];
-      // Arrêter si on rencontre un autre heading de niveau 1 ou 2
-      if (line.match(/^#{1,2}\s+/)) break;
-      contentLines.push(line);
-    }
-    
-    return contentLines.join('\n').trim();
+    fullContent = fs.readFileSync(instPath, 'utf8');
   } catch (error) {
-    console.warn(`⚠️  Impossible de lire les instructions: ${error.message}`);
-    return '';
+    console.error(`Erreur lors de la lecture du fichier d'instructions : ${error.message}`);
+    throw new Error('Instructions file not found. Script stopped.', { cause: error });
   }
+  
+  // Étape 2: Extraire uniquement le contenu sous le heading ciblé
+  const targetHeading = '## Instructions complémentaires pour /api/infer-template /api/infer-template-async de NuExtract';
+  const lines = fullContent.split('\n');
+  const startIdx = lines.findIndex(line => line.trim() === targetHeading);
+  
+  if (startIdx === -1) {
+    console.error(`Erreur: Heading "${targetHeading}" non trouvé dans le fichier d'instructions`);
+    throw new Error('Instructions heading not found in file. Script stopped.');
+  }
+  
+  // Extraire du heading jusqu'au prochain heading de niveau 1 ou 2, ou fin de fichier
+  const contentLines = [];
+  for (let i = startIdx + 1; i < lines.length; i++) {
+    const line = lines[i];
+    // Arrêter si on rencontre un autre heading de niveau 1 ou 2
+    if (line.match(/^#{1,2}\s+/)) break;
+    contentLines.push(line);
+  }
+  
+  const extractedContent = contentLines.join('\n').trim();
+  
+  // Étape 3: Valider que le contenu extrait n'est pas vide
+  if (!extractedContent || extractedContent.length === 0) {
+    console.error('Erreur: Le contenu des instructions est vide après extraction');
+    throw new Error('Instructions content is empty after extraction. Script stopped.');
+  }
+  
+  console.log(`[info] Instructions chargées avec succès`);
+  return extractedContent;
 }
 
 // Fonction pour charger et résoudre les schémas JSON
@@ -201,7 +212,7 @@ async function loadAndResolveSchemas(config) {
 // Générer un template via /api/infer-template (sync) ou /api/infer-template-async (async)
 async function generateTemplate(config, apiKey) {
   try {
-    const instructions = loadInstructions(config);
+    const instructions = await loadInstructions(config);
     const mainSchema = await loadAndResolveSchemas(config);
     const description = mainSchema + '\n' + instructions;
 
