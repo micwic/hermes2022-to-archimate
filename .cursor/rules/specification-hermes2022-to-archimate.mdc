@@ -6,7 +6,7 @@ alwaysApply: true
 # hermes2022-to-archimate/.cursor/rules/specification-hermes2022-to-archimate.mdc: Spécification générale du projet hermes2022-to-archimate
 
 > Créé le : 2025-08-15  
-> Dernière mise à jour : 2025-10-24
+> Dernière mise à jour : 2025-10-29
 
 ## Description générale
 
@@ -73,6 +73,8 @@ alwaysApply: true
 
 | Élément | Type | Description |
 |:--------|:-----|:------------|
+| `/.cursor/executed-plans/` | Répertoire | Plans exécutés sauvegardés post-génération pour traçabilité (selon @agent-ai-generation-governance) |
+| `/.cursor/rules/` | Répertoire | Règles de gouvernance et spécifications du projet |
 | `/hermes2022-concepts-site-extraction/` | Répertoire | Module d'extraction des concepts HERMES2022 à partir du site internet |
 | `/archimate-model-loader/` | Répertoire | Chargement initial ou mis à jour dans un modèle Archimate des éléments et relations correspondant aux concepts HERMES2022 |
 | `/hermes2022-ia-loader` | Répertoire | Chargement des concepts HERMES2022 dans Neo4j |
