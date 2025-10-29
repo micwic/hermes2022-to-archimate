@@ -10,7 +10,9 @@ jest.mock('../../src/nuextract-api.js', () => {
   return {
     ...actual,
     inferTemplateFromDescriptionAsync: jest.fn(actual.inferTemplateFromDescriptionAsync),
-    pollJobUntilComplete: jest.fn(actual.pollJobUntilComplete)
+    pollJobUntilComplete: jest.fn(actual.pollJobUntilComplete),
+    getNuExtractProjects: jest.fn(actual.getNuExtractProjects),
+    putProjectTemplate: jest.fn(actual.putProjectTemplate)
   };
 });
 
@@ -190,43 +192,6 @@ defineFeature(feature, (test) => {
       expect(error).toBeInstanceOf(Error);
     });
   });
-
-  test('Erreur paramètres obligatoires manquants', ({ given, when, then, and }) => {
-    let error;
-    let config;
-
-    given('une configuration sans projectName', async () => {
-      config = await loadGlobalConfig();
-      // Supprimer projectName
-      delete config.nuextract.projectName;
-    });
-
-    when('on tente de gérer un projet', async () => {
-      try {
-        const apiKey = await loadApiKey(config);
-        await findOrCreateProject(
-          apiKey,
-          null, // projectName manquant
-          config.nuextract.projectDescription,
-          null,
-          false
-        );
-      } catch (e) {
-        error = e;
-      }
-    });
-
-    then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
-      expect(error).toBeDefined();
-      // L'API devrait rejeter une requête sans nom de projet
-      expect(error.message).toBeDefined();
-    });
-
-    and('le processus s\'arrête proprement', () => {
-      expect(error).toBeInstanceOf(Error);
-    });
-  });
-
   // === Gestion du chargement de la clé API (fonction loadApiKey) ===
 
   test('Erreur si variable d\'environnement et fichier tous deux absents', ({ given, when, then, and }) => {
@@ -992,30 +957,25 @@ defineFeature(feature, (test) => {
 
   // === Gestion des erreurs de gestion de projet (fonction findOrCreateProject) ===
 
-  test('Erreur création projet sans template', ({ given, when, then, and }) => {
+  test('Erreur paramètre projectName manquant ou vide', ({ given, when, then, and }) => {
     let error;
-    let config;
-    let uniqueProjectName;
 
-    given('une configuration valide', async () => {
-      config = await loadGlobalConfig();
-      // Générer un nom unique pour garantir que le projet n'existe pas
-      uniqueProjectName = `test-no-template-${Date.now()}`;
+    given('un projectName null ou vide', () => {
+      // projectName sera null ou vide
     });
 
-    and('un template null', () => {
-      // Template sera null
-    });
-
-    when('on tente de créer un nouveau projet', async () => {
+    when('on tente de gérer un projet', async () => {
       try {
-        const apiKey = await loadApiKey(config);
+        // Appel direct avec projectName null (erreur levée avant appels API)
         await findOrCreateProject(
-          apiKey,
-          uniqueProjectName,
-          'Test project without template',
-          null, // template null
-          false
+          'fake-api-key',
+          null, // projectName null
+          'Test project',
+          { test: 'template' },
+          false,
+          'nuextract.ai',
+          443,
+          '/api/projects'
         );
       } catch (e) {
         error = e;
@@ -1024,27 +984,40 @@ defineFeature(feature, (test) => {
 
     then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toMatch(/Template is required|template/i);
+      expect(error.message).toContain(expectedMessage);
     });
 
     and('le processus s\'arrête proprement', () => {
       expect(error).toBeInstanceOf(Error);
+      jest.clearAllMocks();
     });
-  }, 60000);
+  });
 
-  test('Erreur mise à jour projet inexistant', ({ given, when, then, and }) => {
+  test('Erreur création nouveau projet sans template', ({ given, when, then, and }) => {
     let error;
-    let config;
 
-    given('un projectId invalide', async () => {
-      config = await loadGlobalConfig();
+    given('aucun projet existant avec le nom configuré', () => {
+      // Mock getNuExtractProjects retournant liste vide (aucun projet existant)
+      jest.spyOn(nuextractApi, 'getNuExtractProjects')
+        .mockResolvedValue([]);
     });
 
-    when('on tente de mettre à jour le template', async () => {
+    and('un template null ou vide', () => {
+      // Template sera null
+    });
+
+    when('on tente de créer un nouveau projet', async () => {
       try {
-        const apiKey = await loadApiKey(config);
-        const template = await generateTemplate(config, apiKey);
-        await putProjectTemplate(apiKey, 'project-id-inexistant-12345', template);
+        await findOrCreateProject(
+          'fake-api-key',
+          'test-project',
+          'Test project without template',
+          null, // template null
+          false,
+          'nuextract.ai',
+          443,
+          '/api/projects'
+        );
       } catch (e) {
         error = e;
       }
@@ -1052,12 +1025,57 @@ defineFeature(feature, (test) => {
 
     then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      // L'API devrait retourner une erreur 404 ou similaire
-      expect(error.message).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
     });
 
     and('le processus s\'arrête proprement', () => {
       expect(error).toBeInstanceOf(Error);
+      jest.clearAllMocks();
     });
-  }, 60000);
+  });
+
+  test('Erreur mise à jour projet existant avec mise à jour demandée sans template fourni', ({ given, when, then, and }) => {
+    let error;
+
+    given('un projet existant sur la plateforme', () => {
+      // Mock getNuExtractProjects retournant un projet existant
+      jest.spyOn(nuextractApi, 'getNuExtractProjects')
+        .mockResolvedValue([{ id: 'proj-123', name: 'test-project' }]);
+    });
+
+    and('templateReset configuré à true', () => {
+      // templateReset sera true dans l'appel
+    });
+
+    and('un template null ou vide', () => {
+      // Template sera null
+    });
+
+    when('on tente de mettre à jour le projet', async () => {
+      try {
+        await findOrCreateProject(
+          'fake-api-key',
+          'test-project',
+          'Test project',
+          null, // template null
+          true, // templateReset = true
+          'nuextract.ai',
+          443,
+          '/api/projects'
+        );
+      } catch (e) {
+        error = e;
+      }
+    });
+
+    then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      jest.clearAllMocks();
+    });
+  });
 });

@@ -74,6 +74,32 @@ Fonctionnalité: Gestion d'erreur robuste
     Alors une erreur "Instructions content is empty after extraction" est générée
     Et le processus s'arrête proprement
   #
+  # === Gestion des erreurs de chargement et résolution des schémas JSON (fonction loadAndResolveSchemas) ===
+
+  Scénario: Erreur schéma JSON manquant
+    Etant donné un fichier de schéma JSON inexistant
+    Quand on tente de charger et résoudre le schéma JSON
+    Alors une erreur contenant "ENOENT" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: Erreur fichier $ref manquant
+    Etant donné un schéma JSON valide avec une référence $ref vers un fichier inexistant
+    Quand on tente de charger et résoudre le schéma JSON
+    Alors une erreur contenant "fichier-inexistant-qui-provoque-erreur" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: Erreur JSON malformé
+    Etant donné un fichier avec syntaxe JSON invalide
+    Quand on tente de charger et résoudre le schéma JSON
+    Alors une erreur contenant "Error parsing" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: Erreur schéma JSON non conforme à JSON Schema Draft-07
+    Etant donné un JSON valide mais non conforme à JSON Schema Draft-07
+    Quand on tente de charger et résoudre le schéma JSON
+    Alors une erreur contenant "Schema validation failed" est générée
+    Et le processus s'arrête proprement
+  #
   # === Gestion des erreurs de génération de template (fonction generateTemplate) ===
 
   Scénario: Erreur templateMode invalide
@@ -103,30 +129,27 @@ Fonctionnalité: Gestion d'erreur robuste
     Alors une erreur "Invalid template data type" est générée
     Et le message indique le type attendu et le type reçu
   #
-  # === Gestion des erreurs de chargement et résolution des schémas JSON (fonction loadAndResolveSchemas) ===
+  # === Gestion des erreurs de gestion de projet (fonction findOrCreateProject) ===
 
-  Scénario: Erreur schéma JSON manquant
-    Etant donné un fichier de schéma JSON inexistant
-    Quand on tente de charger et résoudre le schéma JSON
-    Alors une erreur contenant "ENOENT" est générée
+  Scénario: Erreur paramètre projectName manquant ou vide
+    Etant donné un projectName null ou vide
+    Quand on tente de gérer un projet
+    Alors une erreur "Missing required valid parameter: projectName" est générée
     Et le processus s'arrête proprement
 
-  Scénario: Erreur fichier $ref manquant
-    Etant donné un schéma JSON valide avec une référence $ref vers un fichier inexistant
-    Quand on tente de charger et résoudre le schéma JSON
-    Alors une erreur contenant "fichier-inexistant-qui-provoque-erreur" est générée
+  Scénario: Erreur création nouveau projet sans template
+    Etant donné aucun projet existant avec le nom configuré
+    Et un template null ou vide
+    Quand on tente de créer un nouveau projet
+    Alors une erreur "A valid NuExtractTemplate is required for project creation" est générée
     Et le processus s'arrête proprement
 
-  Scénario: Erreur JSON malformé
-    Etant donné un fichier avec syntaxe JSON invalide
-    Quand on tente de charger et résoudre le schéma JSON
-    Alors une erreur contenant "Error parsing" est générée
-    Et le processus s'arrête proprement
-
-  Scénario: Erreur schéma JSON non conforme à JSON Schema Draft-07
-    Etant donné un JSON valide mais non conforme à JSON Schema Draft-07
-    Quand on tente de charger et résoudre le schéma JSON
-    Alors une erreur contenant "Schema validation failed" est générée
+  Scénario: Erreur mise à jour projet existant avec mise à jour demandée sans template fourni
+    Etant donné un projet existant sur la plateforme
+    Et templateReset configuré à true
+    Et un template null ou vide
+    Quand on tente de mettre à jour le projet
+    Alors une erreur "A valid NuExtractTemplate is required for template update" est générée
     Et le processus s'arrête proprement
   #
   # === Gestion des erreurs de template NuExtract et appels API ===
@@ -151,23 +174,3 @@ Fonctionnalité: Gestion d'erreur robuste
     Alors une erreur de connexion est générée
     Et le processus s'arrête proprement
   #
-  # === Gestion des erreurs de gestion de projet (fonction findOrCreateProject) ===
-
-  Scénario: Erreur paramètres obligatoires manquants
-    Etant donné une configuration sans projectName
-    Quand on tente de gérer un projet
-    Alors une erreur "Missing required parameter: projectName" est générée
-    Et le processus s'arrête proprement
-
-  Scénario: Erreur création projet sans template
-    Etant donné une configuration valide
-    Et un template null
-    Quand on tente de créer un nouveau projet
-    Alors une erreur "Template is required for project creation" est générée
-    Et le processus s'arrête proprement
-
-  Scénario: Erreur mise à jour projet inexistant
-    Etant donné un projectId invalide
-    Quand on tente de mettre à jour le template
-    Alors une erreur "Project not found" est générée
-    Et le processus s'arrête proprement

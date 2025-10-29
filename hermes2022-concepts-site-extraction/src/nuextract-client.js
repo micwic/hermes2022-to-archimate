@@ -306,33 +306,29 @@ async function generateTemplate(config, apiKey) {
 
 // Gestion du projet NuExtract, il est recherché et mis à jour avec le template si le projet existe déjà ou créé avec le template généré si le projet n'existe pas encore
 async function findOrCreateProject(apiKey, projectName, projectDescription, templateObj, templateReset, hostname, port, pathProjects) {
+  
+  console.log(`[info] Gestion du projet NuExtract avec les paramètres : projectName=${projectName}, projectDescription=${projectDescription}, templateObj=${templateObj}, templateReset=${templateReset}, hostname=${hostname}, port=${port}, pathProjects=${pathProjects}`);
+  
   try {
+    // Validation projectName
+    if (!projectName || typeof projectName !== 'string' || projectName.trim() === '') {
+      throw new Error('Missing required valid parameter: projectName. Script stopped.');
+    }
+
+    console.log(`[info] Recherche du projet ${projectName} sur la plateforme NuExtract`);
+
     // Appel API avec tous les paramètres explicites
     const projects = await nuextractApi.getNuExtractProjects(hostname, port, pathProjects, apiKey);
     const existingProject = projects.find((p) => p.name === projectName);
     
-    if (existingProject) {
-      // Projet existant
-      if (templateReset && templateObj) {
-        console.log(`Mise à jour du template pour le projet existant ${projectName} (ID: ${existingProject.id})`);
-        
-        // Appel API avec tous les paramètres explicites
-        await nuextractApi.putProjectTemplate(
-          hostname, port, pathProjects, apiKey, existingProject.id, templateObj
-        );
-        
-        return { id: existingProject.id, name: projectName, updated: true };
-      } else {
-        console.log(`Projet ${projectName} trouvé (ID: ${existingProject.id}), aucune mise à jour (templateReset=${templateReset})`);
-        return { id: existingProject.id, name: projectName, updated: false };
-      }
-    } else {
+    if (!existingProject) {
+      console.log(`[info] Pas de projet existant trouvé sur la plateforme NuExtract : ${projectName}`);
       // Créer le projet - le template est obligatoire pour un nouveau projet
       if (!templateObj) {
-        throw new Error('Template is required for project creation. Cannot create a NuExtract project without a template.');
+        throw new Error('A valid NuExtractTemplate is required for project creation. Script stopped.');
       }
       
-      console.log(`Création du projet ${projectName} avec template`);
+      console.log(`Création du projet ${projectName} avec template ${templateObj}`);
       
       // Appel API avec tous les paramètres explicites
       const created = await nuextractApi.createNuExtractProject(
@@ -344,6 +340,24 @@ async function findOrCreateProject(apiKey, projectName, projectDescription, temp
       );
       
       return { id: created?.id, name: projectName, created: true };
+    }
+    
+    if (existingProject) {
+      console.log(`[info] Projet existant trouvé sur la plateforme NuExtract : ${projectName} (id: ${existingProject.id})`);
+      
+      if (templateReset) {
+        // Mise à jour du template demandée
+        if (!templateObj) {
+          throw new Error('A valid NuExtractTemplate is required for template update. Script stopped.');
+        }
+        await nuextractApi.putProjectTemplate(hostname, port, pathProjects, apiKey, existingProject.id, templateObj);
+        console.log(`[info] Template mis à jour pour le projet ${projectName} (id: ${existingProject.id})`);
+        return { id: existingProject.id, name: projectName, updated: true };
+      } else {
+        // Réutilisation du projet existant sans modification
+        console.log(`Projet ${projectName} trouvé, réutilisation sans modification`);
+        return { id: existingProject.id, name: projectName, existing: true };
+      }
     }
   } catch (error) {
     console.error(`Erreur lors de la gestion du projet NuExtract: ${error.message}`);
