@@ -30,7 +30,7 @@ import {
 } from '../../src/nuextract-client.js';
 import { resolveFromRepoRoot } from '../../src/path-resolver.js';
 
-const feature = loadFeature(__dirname + '/error-handling.feature');
+const feature = loadFeature(__dirname + '/nuextract-client-error-handling.feature');
 
 // Variables pour restauration des mocks
 let originalReadFileSync: typeof fs.readFileSync;
