@@ -54,6 +54,26 @@ Fonctionnalité: Gestion d'erreur robuste
     Alors la clé est chargée avec succès
     Et les espaces ont été supprimés
   #
+  # === Gestion des erreurs de chargement des instructions (fonction loadInstructions) ===
+
+  Scénario: Erreur fichier instructions manquant
+    Etant donné un fichier d'instructions inexistant
+    Quand on tente de charger les instructions
+    Alors une erreur "Instructions file not found" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: Erreur heading absent dans le fichier d'instructions
+    Etant donné un fichier d'instructions sans le heading requis
+    Quand on tente de charger les instructions
+    Alors une erreur "Instructions heading not found in file" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: Erreur contenu vide après extraction du heading
+    Etant donné un fichier d'instructions avec heading mais contenu vide
+    Quand on tente de charger les instructions
+    Alors une erreur "Instructions content is empty after extraction" est générée
+    Et le processus s'arrête proprement
+  #
   # === Gestion des erreurs de génération de template (fonction generateTemplate) ===
 
   Scénario: Erreur templateMode invalide

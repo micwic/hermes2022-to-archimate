@@ -20,7 +20,8 @@ import * as nuextractApi from '../../src/nuextract-api.js';
 // Import des fonctions du script refactorisé
 import { 
   _testOnly_loadGlobalConfig as loadGlobalConfig, 
-  _testOnly_loadApiKey as loadApiKey, 
+  _testOnly_loadApiKey as loadApiKey,
+  _testOnly_loadInstructions as loadInstructions,
   _testOnly_loadAndResolveSchemas as loadAndResolveSchemas,
   _testOnly_generateTemplate as generateTemplate, 
   _testOnly_findOrCreateProject as findOrCreateProject
@@ -366,6 +367,129 @@ defineFeature(feature, (test) => {
       expect(result).not.toContain(' ');
       expect(result).not.toContain('\n');
       expect(result).not.toContain('\t');
+    });
+  });
+
+  // === Gestion des erreurs de chargement des instructions (fonction loadInstructions) ===
+
+  test('Erreur fichier instructions manquant', ({ given, when, then, and }) => {
+    let error;
+    let config;
+
+    given('un fichier d\'instructions inexistant', async () => {
+      config = await loadGlobalConfig();
+      // Mock fs.readFileSync pour simuler un fichier manquant
+      fs.readFileSync = jest.fn().mockImplementation((filePath, encoding) => {
+        if (filePath.includes('instructions-template-nuextract.md')) {
+          const err = new Error('ENOENT: no such file or directory');
+          err.code = 'ENOENT';
+          throw err;
+        }
+        return originalReadFileSync(filePath, encoding);
+      });
+    });
+
+    when('on tente de charger les instructions', async () => {
+      try {
+        await loadInstructions(config);
+      } catch (e) {
+        error = e;
+      }
+    });
+
+    then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain('Instructions file not found');
+      expect(error.message).toContain('Script stopped');
+    });
+
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      // Vérifier Error Cause
+      expect(error.cause).toBeDefined();
+      expect(error.cause.code).toBe('ENOENT');
+    });
+  });
+
+  test('Erreur heading absent dans le fichier d\'instructions', ({ given, when, then, and }) => {
+    let error;
+    let config;
+
+    given('un fichier d\'instructions sans le heading requis', async () => {
+      config = await loadGlobalConfig();
+      // Mock fs.readFileSync pour retourner un fichier sans le heading attendu
+      fs.readFileSync = jest.fn().mockImplementation((filePath, encoding) => {
+        if (filePath.includes('instructions-template-nuextract.md')) {
+          // Fichier avec un contenu mais sans le heading correct
+          return `# Prompt génération de template NuExtract
+
+## Autres instructions non pertinentes
+
+- instruction 1
+- instruction 2
+`;
+        }
+        return originalReadFileSync(filePath, encoding);
+      });
+    });
+
+    when('on tente de charger les instructions', async () => {
+      try {
+        await loadInstructions(config);
+      } catch (e) {
+        error = e;
+      }
+    });
+
+    then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain('Instructions heading not found in file');
+      expect(error.message).toContain('Script stopped');
+    });
+
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+    });
+  });
+
+  test('Erreur contenu vide après extraction du heading', ({ given, when, then, and }) => {
+    let error;
+    let config;
+
+    given('un fichier d\'instructions avec heading mais contenu vide', async () => {
+      config = await loadGlobalConfig();
+      // Mock fs.readFileSync pour retourner un fichier avec heading mais lignes vides
+      fs.readFileSync = jest.fn().mockImplementation((filePath, encoding) => {
+        if (filePath.includes('instructions-template-nuextract.md')) {
+          // Fichier avec le heading correct mais uniquement des lignes vides après
+          return `# Prompt génération de template NuExtract
+
+## Instructions complémentaires pour /api/infer-template /api/infer-template-async de NuExtract
+
+   
+   
+`;
+        }
+        return originalReadFileSync(filePath, encoding);
+      });
+    });
+
+    when('on tente de charger les instructions', async () => {
+      try {
+        await loadInstructions(config);
+      } catch (e) {
+        error = e;
+      }
+    });
+
+    then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain('Instructions content is empty after extraction');
+      expect(error.message).toContain('Script stopped');
+    });
+
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
     });
   });
 

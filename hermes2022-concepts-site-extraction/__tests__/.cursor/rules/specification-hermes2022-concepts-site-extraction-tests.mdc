@@ -8,7 +8,7 @@ alwaysApply: true
 Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/__tests__/.cursor/rules/
 
 > Créé le : 2025-10-26
-> Dernière mise à jour : 2025-10-26
+> Dernière mise à jour : 2025-10-29
 
 ## Description générale
 
@@ -31,6 +31,22 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/__tests__/.
 - Assurer la validation de la structure des templates NuExtract (énumérations converties, types NuExtract, résolution des $ref)
 - Vérifier la gestion du cycle de vie des projets NuExtract (création, mise à jour, recherche)
 - Maintenir une séparation claire entre tests unitaires (comportement isolé) et tests d'intégration (workflow complet)
+
+## Principe : Spécifications générales vs spécifications détaillées
+
+**Spécifications générales** (ce document) :
+
+- Décisions architecturales et techniques justifiées
+- Patterns validés avec exemples minimalistes
+- Anti-patterns avec solutions recommandées
+- État d'implémentation
+
+**Spécifications détaillées** (fichiers BDD) :
+
+- `.feature` : Scénarios Gherkin exhaustifs (Given/When/Then)
+- `.steps.ts` : Implémentation complète des steps avec mocking et assertions
+
+**Règle** : Éviter la redondance en documentant uniquement les décisions et patterns dans les spécifications générales, pas les scénarios détaillés déjà présents dans `.feature` et `.steps.ts`
 
 ## Conception générale
 
@@ -168,6 +184,32 @@ and('le processus s\'arrête proprement', () => {
 #### État d'implémentation pour Patterns Gherkin
 
 ✅ [Fonctionnalité réalisée - 2025-10-26]
+
+### Tests de validation loadInstructions (fonction loadInstructions)
+
+#### Description détaillée pour Tests loadInstructions
+
+[2025-10-29] Les tests unitaires de `loadInstructions()` valident 3 cas d'erreur correspondant aux 3 étapes de traitement : lecture fichier (ENOENT), recherche heading, validation contenu extrait.
+
+#### Justification pour Tests loadInstructions
+
+- **Criticité des instructions** : Essentielles pour transformation correcte des énumérations JSON Schema vers format NuExtract
+- **Détection précoce** : Erreurs détectées avant appel API (économie quota)
+- **Exhaustivité** : Couverture complète des 3 étapes de traitement
+
+#### Patterns validés pour Tests loadInstructions
+
+- **Mocking fs.readFileSync** : Simulation fichier manquant (ENOENT), heading absent, contenu vide
+- **Error Cause** : Préservation de l'erreur originale pour ENOENT
+- **Messages explicites** : Conformité @error-handling-governance
+
+#### Anti-Patterns pour Tests loadInstructions à éviter
+
+- **Validation laxiste** : Éviter retour `''` en cas d'erreur → **Solution** : Lever erreur explicite → **Règle** : Gestion stricte selon @error-handling-governance
+
+#### État d'implémentation pour Tests loadInstructions
+
+✅ [Fonctionnalité réalisée - 2025-10-29] - 3 scénarios BDD dans error-handling.feature
 
 ### Mocking pour tests unitaires
 
