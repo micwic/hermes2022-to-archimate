@@ -130,6 +130,7 @@ Fonctionnalité: Gestion d'erreur robuste
     Quand on tente d'appeler l'API NuExtract
     Alors une erreur de connexion est générée
     Et le processus s'arrête proprement
+  #
   # === Gestion des erreurs de gestion de projet (fonction findOrCreateProject) ===
 
   Scénario: Erreur paramètres obligatoires manquants

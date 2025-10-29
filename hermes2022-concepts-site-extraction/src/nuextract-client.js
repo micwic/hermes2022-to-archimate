@@ -114,6 +114,9 @@ async function loadApiKey(config) {
 function loadInstructions(config) {
   const instFile = config?.nuextract?.templateTransformationInstructionFile || 'hermes2022-concepts-site-extraction/config/instructions-template-nuextract.md';
   const instPath = resolveFromRepoRoot(instFile);
+
+  console.log(`[info] Chargement des instructions de transformation du template à partir de : ${instPath}`);
+  
   try {
     const fullContent = fs.readFileSync(instPath, 'utf8');
     
@@ -195,19 +198,14 @@ async function loadAndResolveSchemas(config) {
   return JSON.stringify(resolvedSchema, null, 2);
 }
 
-// Fonction pour construire la description du template
-// Format : schéma JSON en premier, puis instructions (sans headers inutiles)
-// Utilisation de trim() sur chaque argument et sur le résultat final pour garantir aucun espace parasite
-function buildTemplateDescription(instructions, mainSchema) {
-  return mainSchema + '\n\n' + instructions;
-}
-
 // Générer un template via /api/infer-template (sync) ou /api/infer-template-async (async)
 async function generateTemplate(config, apiKey) {
   try {
     const instructions = loadInstructions(config);
     const mainSchema = await loadAndResolveSchemas(config);
-    const description = buildTemplateDescription(instructions, mainSchema);
+    const description = mainSchema + '\n' + instructions;
+
+    console.log(`[info] Génération du template avec la description NuExtract suivante : ${description}`);
 
     // Déterminer le mode (sync par défaut)
     const templateMode = config?.nuextract?.templateMode || 'sync';
