@@ -1,5 +1,5 @@
 # language: fr
-Fonctionnalité: Génération de templates NuExtract
+Fonctionnalité: Génération de templates NuExtract (système externe réel)
 
   Scénario: Génération de template NuExtract avec infer-template-async
     Etant donné des paramètres de configuration NuExtract pour la génération du template
@@ -20,3 +20,5 @@ Fonctionnalité: Génération de templates NuExtract
     Alors le template est créé avec succès dans le répertoire de sortie des templates NuExtract
     Et le template contient les champs principaux attendus
     Et le template respecte le format NuExtract
+
+

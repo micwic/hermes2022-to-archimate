@@ -1,5 +1,5 @@
 # language: fr
-Fonctionnalité: Gestion des projets NuExtract
+Fonctionnalité: Gestion des projets NuExtract (système externe réel)
 
   Scénario: Création d'un nouveau projet avec template sans qu'il existe préalablement sur la plateforme SaaS NuExtract
     Etant donné des paramètres de configuration NuExtract pour la gestion de projet
@@ -28,3 +28,5 @@ Fonctionnalité: Gestion des projets NuExtract
     Quand on recherche le projet avec findOrCreateProject sans nouveau template
     Alors Ne rien faire
     Et l'ID du projet existant est retourné
+
+

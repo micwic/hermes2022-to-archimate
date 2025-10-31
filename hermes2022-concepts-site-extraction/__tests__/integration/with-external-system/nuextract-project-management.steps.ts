@@ -4,20 +4,29 @@ import { Given, When, Then } from 'jest-cucumber';
 import fs from 'fs';
 import path from 'path';
 
-// Import des fonctions du script refactorisé
+// Import des fonctions du script refactorisé (métier)
 import { 
   _testOnly_loadGlobalConfig as loadGlobalConfig, 
   _testOnly_loadApiKey as loadApiKey, 
   _testOnly_generateTemplate as generateTemplate, 
-  _testOnly_findOrCreateProject as findOrCreateProject,
-  _testOnly_putProjectTemplate as putProjectTemplate,
-  _testOnly_getNuExtractProjects as getNuExtractProjects 
-} from '../../src/nuextract-client.js';
-import { resolveFromRepoRoot } from '../../src/path-resolver.js';
+  _testOnly_findOrCreateProject as findOrCreateProject
+} from '../../../src/nuextract-client.js';
+import { resolveFromRepoRoot } from '../../../src/path-resolver.js';
+
+// Import API (exports normaux)
+import { getNuExtractProjects, putProjectTemplate } from '../../../src/nuextract-api.js';
 
 const feature = loadFeature(__dirname + '/nuextract-project-management.feature');
 
 defineFeature(feature, (test) => {
+  // Hooks d'isolation pour les tests d'intégration
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   // Scénario 1 : Création d'un nouveau projet
   test('Création d\'un nouveau projet avec template sans qu\'il existe préalablement sur la plateforme SaaS NuExtract', ({ given, when, then, and }) => {
     let config;
@@ -46,12 +55,13 @@ defineFeature(feature, (test) => {
     });
 
     and('le projet "HERMES2022" n\'existe pas sur la plateforme', async () => {
-      // Vérifier que le projet n'existe pas en listant les projets
-      const projects = await getNuExtractProjects(apiKey);
+      const projects = await getNuExtractProjects(
+        config?.nuextract?.baseUrl || 'nuextract.ai',
+        config?.nuextract?.port || 443,
+        config?.nuextract?.projectsPath || '/api/projects',
+        apiKey
+      );
       const existingProject = projects.find(p => p.name === config.nuextract.projectName);
-      
-      // Si le projet existe, on suppose qu'il sera réutilisé par findOrCreateProject
-      // Ce step valide simplement la précondition initiale
       if (existingProject) {
         console.warn(`⚠️  Le projet "${config.nuextract.projectName}" existe déjà - le test testera la réutilisation au lieu de la création`);
       }
@@ -63,7 +73,10 @@ defineFeature(feature, (test) => {
         config.nuextract.projectName,
         config.nuextract.projectDescription,
         template,
-        config.nuextract.templateReset // Utiliser le paramètre de configuration
+        config.nuextract.templateReset,
+        config?.nuextract?.baseUrl || 'nuextract.ai',
+        config?.nuextract?.port || 443,
+        config?.nuextract?.projectsPath || '/api/projects'
       );
     });
 
@@ -73,7 +86,6 @@ defineFeature(feature, (test) => {
     });
 
     and('le projet contient le template fourni', () => {
-      // Le template a été fourni lors de la création
       expect(template).toBeDefined();
     });
 
@@ -81,7 +93,7 @@ defineFeature(feature, (test) => {
       expect(projectResult.id).toBeDefined();
       expect(typeof projectResult.id).toBe('string');
     });
-  }, 120000); // Timeout 2 minutes pour appels API
+  }, 120000);
 
   // Scénario 2 : Mise à jour d'un projet existant avec templateReset=true
   test('Recherche d\'un projet existant et mise à jour avec un nouveau template pour un projet qui existe déjà sur la plateforme SaaS NuExtract', ({ given, when, then, and }) => {
@@ -95,8 +107,6 @@ defineFeature(feature, (test) => {
       config = await loadGlobalConfig();
       expect(config).toBeDefined();
       expect(config.nuextract).toBeDefined();
-      
-      // S'assurer que templateReset est à true pour ce test
       config.nuextract.templateReset = true;
     });
 
@@ -106,39 +116,42 @@ defineFeature(feature, (test) => {
     });
 
     and('un projet "HERMES2022" existant sur la plateforme', async () => {
-      // Rechercher ou créer le projet pour s'assurer qu'il existe
       const template = await generateTemplate(config, apiKey);
       existingProject = await findOrCreateProject(
         apiKey,
         config.nuextract.projectName,
         config.nuextract.projectDescription,
         template,
-        false // Ne pas mettre à jour lors de la création/recherche initiale
+        false,
+        config?.nuextract?.baseUrl || 'nuextract.ai',
+        config?.nuextract?.port || 443,
+        config?.nuextract?.projectsPath || '/api/projects'
       );
       expect(existingProject).toBeDefined();
       expect(existingProject.id).toBeDefined();
     });
 
     and('un nouveau template NuExtract valide', async () => {
-      // Générer un nouveau template (modifié pour le test)
       newTemplate = await generateTemplate(config, apiKey);
       expect(newTemplate).toBeDefined();
     });
 
     when('on met à jour le template du projet avec putProjectTemplate', async () => {
-      // Utiliser findOrCreateProject avec templateReset=true pour mettre à jour
       updateResult = await findOrCreateProject(
         apiKey,
         config.nuextract.projectName,
         config.nuextract.projectDescription,
         newTemplate,
-        true // templateReset=true pour forcer la mise à jour
+        true,
+        config?.nuextract?.baseUrl || 'nuextract.ai',
+        config?.nuextract?.port || 443,
+        config?.nuextract?.projectsPath || '/api/projects'
       );
     });
 
     then('le template est mis à jour avec succès', () => {
       expect(updateResult).toBeDefined();
-      expect(updateResult.updated).toBe(true); // Vérifier que le flag 'updated' est présent
+      expect(updateResult.updated).toBe(true);
     });
 
     and('le projet contient le nouveau template', () => {
@@ -161,8 +174,6 @@ defineFeature(feature, (test) => {
       config = await loadGlobalConfig();
       expect(config).toBeDefined();
       expect(config.nuextract).toBeDefined();
-      
-      // S'assurer que templateReset est à false pour ce test
       config.nuextract.templateReset = false;
     });
 
@@ -172,35 +183,37 @@ defineFeature(feature, (test) => {
     });
 
     and('un projet "HERMES2022" existant sur la plateforme', async () => {
-      // S'assurer que le projet existe
       const template = await generateTemplate(config, apiKey);
       existingProject = await findOrCreateProject(
         apiKey,
         config.nuextract.projectName,
         config.nuextract.projectDescription,
         template,
-        false // Ne pas mettre à jour lors de la création initiale
+        false,
+        config?.nuextract?.baseUrl || 'nuextract.ai',
+        config?.nuextract?.port || 443,
+        config?.nuextract?.projectsPath || '/api/projects'
       );
       expect(existingProject).toBeDefined();
     });
 
     when('on recherche le projet avec findOrCreateProject sans nouveau template', async () => {
-      // Appeler findOrCreateProject avec template mais templateReset=false
       const template = await generateTemplate(config, apiKey);
       searchResult = await findOrCreateProject(
         apiKey,
         config.nuextract.projectName,
         config.nuextract.projectDescription,
         template,
-        false // templateReset=false : ne pas mettre à jour
+        false,
+        config?.nuextract?.baseUrl || 'nuextract.ai',
+        config?.nuextract?.port || 443,
+        config?.nuextract?.projectsPath || '/api/projects'
       );
     });
 
     then('Ne rien faire', () => {
-      // Ce step valide simplement qu'aucune erreur n'est levée
-      // Le comportement attendu est que la fonction retourne le projet existant sans modification
       expect(searchResult).toBeDefined();
-      expect(searchResult.updated).toBe(false); // Vérifier qu'aucune mise à jour n'a été faite
+      expect(searchResult.existing).toBe(true);
     });
 
     and('l\'ID du projet existant est retourné', () => {
@@ -210,3 +223,5 @@ defineFeature(feature, (test) => {
     });
   }, 120000);
 });
+
+
