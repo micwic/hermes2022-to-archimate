@@ -1,0 +1,53 @@
+---
+description: Gouvernance BDD (structure d’intégration et portée des mocks)
+alwaysApply: true
+---
+
+## Objet
+
+Préciser la structure des tests d’intégration et la portée des mocks pour le module `hermes2022-concepts-site-extraction` afin d’assurer lisibilité, robustesse et cohérence avec les principes BDD en vigueur.
+
+## Structure des répertoires d’intégration
+
+- with-external-system/ (appels réels)
+  - Contient les scénarios d’intégration exécutant les appels réseau réels (NuExtract).
+  - Paires `.feature` et `.steps.ts` juxtaposées dans ce répertoire.
+
+- with-external-system-mocked/ (système externe mocké)
+  - Contient les scénarios d’intégration focalisés produit sans réseau (mocks du système externe).
+  - Paires `.feature` et `.steps.ts` juxtaposées, avec suffixe obligatoire `-mocked` pour les fichiers:
+    - Exemple: `template-generation-mocked.feature`, `template-generation-mocked.steps.ts`.
+
+## Portée des mocks (règle)
+
+- Mocker uniquement les composants aux frontières du projet (systèmes externes: APIs NuExtract, réseau, I/O distants).
+- Ne pas mocker les modules internes entre eux (cela relève de la conception interne et doit être validé par intégration).
+- Exception documentée: tests de gestion d’erreurs (error-handling) peuvent mocker de manière ciblée pour valider les chemins d’erreurs et les messages, sans dériver vers des tests d’implémentation.
+
+## Timeouts
+
+- with-external-system/ (réel):
+  - Async: 120s
+  - Sync: 45s
+- with-external-system-mocked/ (mocké): délais ramenés au strict nécessaire (< 5s par scénario) pour des exécutions rapides et stables.
+
+## Bonnes pratiques BDD
+
+- `.feature` (Gherkin, FR) et `.steps.ts` (jest-cucumber) côte à côte.
+- Assertions sur fragments de messages avec `toContain()` pour préserver la robustesse face au contexte/formatage, conformément à la gouvernance de gestion d'erreurs.
+- Hooks d'isolation (`beforeEach`/`afterEach`) pour restaurer l'état et éviter les effets de bord entre scénarios.
+
+**Références pratiques :**
+
+- Voir `@jest-cucumber-governance.mdc` (workspace) pour les aspects pratiques : commandes d'exécution (`--testPathPatterns`), timeouts, structure détaillée.
+
+## Nommage et lisibilité
+
+- Les fichiers mockés portent systématiquement le suffixe `-mocked`.
+- Les répertoires `with-external-system/` et `with-external-system-mocked/` rendent explicite le périmètre (réel vs mocké).
+
+## Validation
+
+- Les scénarios réels doivent pouvoir s’exécuter sans modification des steps en présence d’une configuration valide (clé API, endpoints accessibles).
+- Les scénarios mockés doivent passer sans dépendance réseau et couvrir les erreurs clés (HTTP/timeout/JSON/propagation) ainsi que l’orchestration côté client.
+
