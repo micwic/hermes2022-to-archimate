@@ -28,5 +28,3 @@ Fonctionnalité: Gestion des projets NuExtract (système externe réel)
     Quand on recherche le projet avec findOrCreateProject sans nouveau template
     Alors Ne rien faire
     Et l'ID du projet existant est retourné
-
-

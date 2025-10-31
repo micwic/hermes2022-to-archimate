@@ -61,9 +61,20 @@ defineFeature(feature, (test) => {
         config?.nuextract?.projectsPath || '/api/projects',
         apiKey
       );
+      // Vérification explicite que l'appel API fonctionne correctement
+      expect(Array.isArray(projects)).toBe(true);
+      
       const existingProject = projects.find(p => p.name === config.nuextract.projectName);
       if (existingProject) {
-        console.warn(`⚠️  Le projet "${config.nuextract.projectName}" existe déjà - le test testera la réutilisation au lieu de la création`);
+        // Vérification explicite que la détection du projet existant fonctionne
+        expect(existingProject).toBeDefined();
+        expect(existingProject.id).toBeDefined();
+        expect(existingProject.name).toBe(config.nuextract.projectName);
+        console.warn(`⚠️  Le projet "${config.nuextract.projectName}" existe déjà (id: ${existingProject.id}) - le test testera la réutilisation au lieu de la création`);
+      } else {
+        // Vérification explicite que le projet n'existe pas
+        expect(existingProject).toBeUndefined();
+        console.log(`✓ Le projet "${config.nuextract.projectName}" n'existe pas - le test testera la création`);
       }
     });
 
