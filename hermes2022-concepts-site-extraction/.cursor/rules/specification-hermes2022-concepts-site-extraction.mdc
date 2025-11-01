@@ -8,7 +8,7 @@ alwaysApply: true
 Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rules/
 
 > Créé le : 2025-08-16
-> Dernière mise à jour : 2025-10-25
+> Dernière mise à jour : 2025-10-31
 
 ## Description générale
 
@@ -47,7 +47,9 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 | Élément | Type | Description |
 |:--------|:-----|:------------|
 | `/src/` | Répertoire | Code source de l'agent JavaScript pour l'extraction via APIs NuExtract |
-| `/src/nuextract-client.js` | Code | Client pour les requêtes HTTP vers APIs NuExtract et gestion des réponses JSON |
+| `/src/nuextract-client.js` | Code | Client logique métier (orchestration, validation, transformation, fallbacks config) - Exports `_testOnly_` pour tests |
+| `/src/nuextract-api.js` | Code | Module API (appels HTTP vers APIs NuExtract) - Fonctions pures avec Dependency Injection - Exports normaux |
+| `/src/path-resolver.js` | Code | Résolution robuste des chemins depuis la racine du repository selon @root-directory-governance |
 | `/config/` | Répertoire | Configuration de l'extraction et paramètres pour l'agent JS |
 | `/config/extraction-config.json` | Configuration | Paramètres de configuration pour l'extraction automatisée (clés API, URLs, etc.) |
 
@@ -123,33 +125,59 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 🚧 [En cours de conception et réalisation]
 
-### Utilisation d'un agent JavaScript pour l'extraction via APIs NuExtract
+### Architecture modulaire selon principes SOLID
 
-#### Description détaillée pour l'utilisation d'un agent JavaScript
+#### Description détaillée pour l'architecture modulaire
 
-- [2025-10-14] L'extraction des concepts HERMES2022 est réalisée par un agent JavaScript exécuté dans JArchi (plugin d'Archi), qui articule les requêtes HTTP vers les APIs de NuExtract dans le cloud pour analyser et résumer le contenu des pages HTML, puis générer des fichiers JSON structurés avec les synthèses opérées.
-- [2025-10-14] L'agent gère le cycle complet : récupération des pages via HTTP, appel à NuExtract pour extraction/synthèse, validation et écriture des templates générés.
-- [2025-10-14] L'agent est conçu pour être modulaire, réutilisable et intégré à l'écosystème JArchi de Archi sans dépendances externes inutiles.
+- [2025-10-26] L'extraction des concepts HERMES2022 est réalisée par un agent JavaScript modulaire exécuté dans JArchi (plugin d'Archi), qui articule les requêtes HTTP vers les APIs de NuExtract dans le cloud pour analyser et résumer le contenu des pages HTML, puis générer des fichiers JSON structurés avec les synthèses opérées.
+- [2025-10-26] L'agent est divisé en modules distincts selon les principes SOLID :
+  - **`nuextract-api.js`** : Couche API/I/O - Appels HTTP purs vers les APIs NuExtract (fonctions pures avec Dependency Injection)
+  - **`nuextract-client.js`** : Couche logique métier - Orchestration, validation, transformation, gestion des fallbacks de configuration
+  - **`path-resolver.js`** : Module utilitaire - Résolution robuste des chemins depuis la racine du repository
+- [2025-10-26] L'agent gère le cycle complet : chargement configuration, validation clé API, chargement instructions, résolution et validation schémas JSON, génération template, gestion projet NuExtract.
+- [2025-10-26] L'agent est conçu pour être modulaire, réutilisable et intégré à l'écosystème JArchi de Archi sans dépendances externes inutiles.
 
-#### Justification pour l'utilisation d'un agent JavaScript
+#### Justification pour l'architecture modulaire
 
+- **Separation of Concerns** : API/I/O séparé de la logique métier et des fallbacks de configuration
+- **Single Responsibility Principle (SRP)** : Chaque module a une responsabilité unique et claire
+- **Dependency Injection** : Élimination du couplage fort via variables globales, toutes les dépendances passées en paramètres
+- **Testabilité** : Logique métier testable avec API mockée, fonctions pures facilement testables
+- **Maintenabilité** : Changements API isolés sans impact sur logique métier
+- **Réutilisabilité** : Module API réutilisable dans d'autres contextes (pas de dépendance à une config spécifique)
 - **Simplicité et Intégration** : Langage de référence qui permet d'utiliser les APIs Java natives (java.net.http.HttpClient) pour les requêtes HTTP et les appels aux APIs de NuExtract, évitant les dépendances Node.js ou Axios, et permettant une exécution directe dans JArchi de Archi.
-- **Limitation plateforme SaaS** : L'utilisation d'un agent permet d'assurer une meilleure maitrise des templates NuExtract en contournant certaines limitations de l'assistant de transformation JSON->Template de la plateforme qui ne traite pas complètement les énumérations décrites dans les formats JSON par exemple
 
-#### Patterns validés pour l'utilisation d'un agent JavaScript
+#### Patterns validés pour l'architecture modulaire
 
-- **Requêtes HTTP natives** : Utilisation de java.net.http.HttpClient pour les extractions de pages internet et les appels vers NuExtract, avec gestion des timeouts et redirections.
-- **Gestion asynchrone** : Promesses JavaScript pour les requêtes non-bloquantes.
-- **Validation JSON** : Utilisation de Zod ou Ajv pour valider les réponses NuExtract contre les schémas JSON.
+- **Fonctions pures API** : `async function inferTemplateAsync(hostname, port, path, apiKey, description, timeout) { ... }`
+- **Exports normaux API** : `module.exports = { inferTemplateAsync, getJobStatus, ... }` (interface publique)
+- **Exports _testOnly_ client** : `module.exports = { _testOnly_loadGlobalConfig, _testOnly_generateTemplate, ... }` (logique métier pour tests)
+- **Import module API** : `const nuextractApi = require('./nuextract-api.js')`
+- **Appels avec DI** : `await nuextractApi.inferTemplateAsync(hostname, port, path, apiKey, description, 60)`
+- **Fallbacks dans client** : `const hostname = config?.nuextract?.baseUrl || 'nuextract.ai'`
+- **Résolution chemins** : `resolveFromRepoRoot(config.nuextract.apiKeyFile)` depuis `path-resolver.js`
+- **Requêtes HTTP natives** : Utilisation de `https` (Node.js) ou `java.net.http.HttpClient` (JArchi) pour les appels vers NuExtract
+- **Gestion asynchrone** : Promesses JavaScript pour les requêtes non-bloquantes
+- **Validation JSON Schema** : Utilisation de `@apidevtools/json-schema-ref-parser` pour résolution des `$ref` et `Ajv` pour validation conformité JSON Schema Draft-07
 
-#### Anti-Patterns pour l'utilisation d'un agent JavaScript à éviter
+#### Anti-Patterns pour l'architecture modulaire à éviter
 
-- **Dépendances externes lourdes** : Éviter Axios ou libs Node.js → **Solution** : APIs Java natives → **Règle à adopter** : Minimalisme pour intégration JArchi.
-- **Gestion d'erreurs insuffisante** : Éviter les timeouts infinis → **Solution** : Timeouts explicites → **Règle à adopter** : Robustesse et non-blocage de l'UI.
+- **Variables globales** : Éviter GLOBAL_CONFIG dans nuextract-api.js → **Solution** : Paramètres explicites → **Règle** : Dependency Injection
+- **Appels internes directs** : Éviter `await inferTemplateAsync(...)` dans le même module → **Solution** : Import depuis module API → **Règle** : Séparation obligatoire selon SRP
+- **Logique métier dans API** : Éviter la logique de transformation ou fallbacks dans nuextract-api.js → **Solution** : API = HTTP uniquement → **Règle** : Separation of Concerns
+- **Exports _testOnly_ dans API** : Éviter dans nuextract-api.js → **Solution** : Exports normaux → **Règle** : Interface publique claire
+- **God Module** : Éviter d'ajouter d'autres responsabilités (parsing, validation) dans nuextract-api.js → **Solution** : Créer modules dédiés → **Règle** : Single Responsibility
+- **Dépendances externes lourdes** : Éviter Axios ou libs Node.js inutiles → **Solution** : APIs Java natives pour JArchi → **Règle à adopter** : Minimalisme pour intégration JArchi
+- **Gestion d'erreurs insuffisante** : Éviter les timeouts infinis → **Solution** : Timeouts explicites → **Règle à adopter** : Robustesse et non-blocage de l'UI
 
-#### État d'implémentation pour l'utilisation d'un agent JavaScript
+#### État d'implémentation pour l'architecture modulaire
 
-🚧 [En cours de conception et réalisation]
+✅ [Fonctionnalité réalisée - 2025-10-26]
+
+- ✅ **Module API** : `nuextract-api.js` créé avec 7 fonctions pures (exports normaux)
+- ✅ **Module client** : `nuextract-client.js` refactorisé (logique métier uniquement, exports `_testOnly_`)
+- ✅ **Module path-resolver** : `path-resolver.js` créé selon @root-directory-governance
+- ✅ **Résolution schémas** : Intégration `@apidevtools/json-schema-ref-parser` et `Ajv` pour résolution/validation JSON Schema Draft-07
 
 ### Intégration des APIs NuExtract pour l'extraction structurée
 
@@ -186,7 +214,12 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 #### État d'implémentation pour l'intégration des APIs NuExtract
 
-🚧 Intégration dans l'agent JS en cours
+✅ [Intégration réalisée dans nuextract-api.js - 2025-10-26]
+
+- ✅ **7 fonctions API** : inferTemplateFromDescription, inferTemplateFromDescriptionAsync, getJobStatus, pollJobUntilComplete, getNuExtractProjects, createNuExtractProject, putProjectTemplate
+- ✅ **Gestion timeouts** : Timeouts explicites pour toutes les requêtes HTTP (sync: 35s, async: 10s, jobs: 5s, projects: 10s)
+- ✅ **Authentification Bearer** : En-tête `Authorization: Bearer <clé JWT>` sur toutes les requêtes
+- ✅ **Gestion erreurs** : Messages d'erreur contextualisés avec Error Cause (ES2022) pour préserver stack trace
 
 ### Validation de la clé API avec jsonwebtoken
 
@@ -236,59 +269,45 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 - ✅ **Implémentation** : Validation dans `loadApiKey()` de `nuextract-client.js`
 - ✅ **Tests BDD** : 4 scénarios passent (clé absente, clé vide, JWT invalide, chargement réussi)
 
-### Séparation module API selon principes SOLID et Dependency Injection
+### Résolution et validation des schémas JSON
 
-#### Description détaillée pour la séparation module API
+#### Description détaillée pour la résolution et validation des schémas
 
-- [2025-10-26] Application des principes SOLID (Single Responsibility, Dependency Inversion) et Separation of Concerns
-- [2025-10-26] Création d'un module `nuextract-api.js` dédié exclusivement aux appels HTTP vers les APIs NuExtract
-- [2025-10-26] Élimination des variables globales : toutes les dépendances passées en paramètres (Dependency Injection)
-- [2025-10-26] Le module API expose des fonctions pures avec paramètres explicites et exports normaux (interface publique)
-- [2025-10-26] Le module `nuextract-client.js` conserve uniquement la logique métier (orchestration, validation, transformation, fallbacks config)
-- [2025-10-26] Cette séparation améliore testabilité (mocking), maintenabilité (isolation des changements) et réutilisabilité
-- [2025-10-26] Les fonctions déplacées dans `nuextract-api.js` (couche API/I/O) avec signatures refactorisées :
-  - `inferTemplateFromDescription(hostname, port, path, apiKey, description, timeoutMs)` - Appel synchrone
-  - `inferTemplateFromDescriptionAsync(hostname, port, pathPrefix, apiKey, description, timeout)` - Appel asynchrone
-  - `getJobStatus(hostname, port, pathPrefix, apiKey, jobId)` - Récupération statut job
-  - `pollJobUntilComplete(hostname, port, pathPrefix, apiKey, jobId, maxAttempts, interval, initialSleepMs)` - Polling
-  - `getNuExtractProjects(hostname, port, pathPrefix, apiKey)` - Liste des projets
-  - `createNuExtractProject(hostname, port, pathPrefix, apiKey, body)` - Création projet
-  - `putProjectTemplate(hostname, port, pathPrefix, apiKey, projectId, template)` - Mise à jour template
+- [2025-10-28] Les schémas JSON avec références `$ref` sont résolus et validés avant utilisation pour génération de template
+- [2025-10-28] **Résolution des références** : Utilisation de `@apidevtools/json-schema-ref-parser` pour résoudre automatiquement toutes les références `$ref` dans un schéma JSON monolithique
+- [2025-10-28] **Validation conformité** : Utilisation de `Ajv` (avec `ajv-formats`) pour valider que le schéma résolu est conforme à JSON Schema Draft-07 (standard utilisé dans le projet)
+- [2025-10-28] Le schéma résolu et validé est ensuite fusionné avec les instructions textuelles pour créer la description envoyée à l'API NuExtract
+- [2025-10-28] Les erreurs de résolution ou validation sont contextualisées avec Error Cause (ES2022) pour préserver la traçabilité
 
-#### Justification pour la séparation module API
+#### Justification pour la résolution et validation des schémas
 
-- **Single Responsibility Principle (SRP)** : Chaque module a une responsabilité unique et claire
-- **Dependency Inversion Principle (DIP)** : Fonctions dépendent de paramètres, pas d'implémentations globales
-- **Dependency Injection** : Élimination du couplage fort via variables globales
-- **Separation of Concerns** : API/I/O séparé de la logique métier et des fallbacks de configuration
-- **High Cohesion** : Toutes les fonctions API regroupées dans un module cohésif
-- **Low Coupling** : Interface claire entre modules via imports/exports
-- **Testabilité** : Logique métier testable avec API mockée, fonctions pures facilement testables
-- **Maintenabilité** : Changements API isolés sans impact sur logique métier
-- **Réutilisabilité** : Module API réutilisable dans d'autres contextes (pas de dépendance à une config spécifique)
-- **Standard Jest** : Approche recommandée pour mocker des modules ES6/CommonJS
+- **Modularité** : Permet de séparer les schémas en fichiers distincts avec références `$ref` pour faciliter la maintenance
+- **Validation stricte** : Garantit que le schéma respecte le standard JSON Schema Draft-07 avant utilisation
+- **Traçabilité** : Erreurs contextualisées avec Error Cause pour faciliter le débogage
+- **Standard reconnu** : `@apidevtools/json-schema-ref-parser` est la bibliothèque standard pour résolution de références JSON Schema
+- **Validation robuste** : `Ajv` est la bibliothèque de référence pour validation JSON Schema en JavaScript
 
-#### Patterns validés pour la séparation module API
+#### Patterns validés pour la résolution et validation des schémas
 
-- **Fonctions pures** : `async function inferTemplateAsync(hostname, port, path, apiKey, description, timeout) { ... }`
-- **Exports normaux** : `module.exports = { inferTemplateAsync, getJobStatus, ... }` (interface publique)
-- **Import module API** : `const nuextractApi = require('./nuextract-api.js')`
-- **Appels avec DI** : `await nuextractApi.inferTemplateAsync(hostname, port, path, apiKey, description, 60)`
-- **Fallbacks dans client** : `const hostname = config?.nuextract?.baseUrl || 'nuextract.ai'`
-- **Mock module complet** : `jest.mock('../../src/nuextract-api.js', () => ({ inferTemplateAsync: jest.fn() }))`
-- **Mock fonction spécifique** : `jest.spyOn(nuextractApi, 'inferTemplateAsync').mockResolvedValue(...)`
+- **Résolution références** : `const resolvedSchema = await $RefParser.dereference(mainSchemaFile, { dereference: { circular: 'ignore' } })`
+- **Validation Draft-07** : `const metaSchema = require('ajv/dist/refs/json-schema-draft-07.json')` puis `ajv.compile(metaSchema)`
+- **Gestion erreurs** : `throw new Error('Invalid JSON schema structure or content. Script stopped.', { cause: error })`
+- **Séquence** : Résolution `$ref` → Validation conformité → Stringify pour fusion avec instructions
 
-#### Anti-Patterns pour la séparation module API à éviter
+#### Anti-Patterns pour la résolution et validation des schémas à éviter
 
-- **Variables globales** : Éviter GLOBAL_CONFIG dans nuextract-api.js → **Solution** : Paramètres explicites → **Règle** : Dependency Injection
-- **Appels internes directs** : Éviter `await inferTemplateAsync(...)` dans le même module → **Solution** : Import depuis module API → **Règle** : Séparation obligatoire selon SRP
-- **Logique métier dans API** : Éviter la logique de transformation ou fallbacks dans nuextract-api.js → **Solution** : API = HTTP uniquement → **Règle** : Separation of Concerns
-- **Exports _testOnly_ dans API** : Éviter dans nuextract-api.js → **Solution** : Exports normaux → **Règle** : Interface publique claire
-- **God Module** : Éviter d'ajouter d'autres responsabilités (parsing, validation) dans nuextract-api.js → **Solution** : Créer modules dédiés → **Règle** : Single Responsibility
+- **Résolution manuelle** : Éviter de résoudre manuellement les `$ref` avec boucles custom → **Solution** : Utiliser `@apidevtools/json-schema-ref-parser` → **Règle à adopter** : Bibliothèque standard
+- **Validation absente** : Éviter d'utiliser un schéma non validé → **Solution** : Toujours valider avec Ajv → **Règle à adopter** : Validation obligatoire
+- **Perte traçabilité** : Éviter `throw new Error(error.message)` qui perd la stack → **Solution** : Utiliser Error Cause → **Règle à adopter** : Error Cause pour wrapping
 
-#### État d'implémentation pour la séparation module API
+#### État d'implémentation pour la résolution et validation des schémas
 
-✅ [Fonctionnalité réalisée - 2025-10-26]
+✅ [Fonctionnalité réalisée - 2025-10-28]
+
+- ✅ **Bibliothèque résolution** : `@apidevtools/json-schema-ref-parser` installée et intégrée
+- ✅ **Bibliothèque validation** : `Ajv` + `ajv-formats` installées et intégrées
+- ✅ **Fonction loadAndResolveSchemas** : Refactorisée dans `nuextract-client.js` avec résolution et validation
+- ✅ **Tests BDD** : 4 scénarios passent (schéma manquant, `$ref` manquant, JSON malformé, schéma non conforme)
 
 ### Gestion des modes de génération de template (sync/async)
 
