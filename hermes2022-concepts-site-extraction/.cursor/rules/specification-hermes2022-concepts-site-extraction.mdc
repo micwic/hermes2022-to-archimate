@@ -8,7 +8,7 @@ alwaysApply: true
 Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rules/
 
 > Créé le : 2025-08-16
-> Dernière mise à jour : 2025-10-31
+> Dernière mise à jour : 2025-11-01
 
 ## Description générale
 
@@ -51,7 +51,7 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 | `/src/nuextract-api.js` | Code | Module API (appels HTTP vers APIs NuExtract) - Fonctions pures avec Dependency Injection - Exports normaux |
 | `/src/path-resolver.js` | Code | Résolution robuste des chemins depuis la racine du repository selon @root-directory-governance |
 | `/config/` | Répertoire | Configuration de l'extraction et paramètres pour l'agent JS |
-| `/config/extraction-config.json` | Configuration | Paramètres de configuration pour l'extraction automatisée (clés API, URLs, etc.) |
+| `/config/extraction-config.schema.json` | Schéma | Schéma JSON Schema Draft-07 source de paramétrage avec pattern enum pour configuration technique |
 
 ## Décisions architecturales et techniques
 
@@ -361,39 +361,53 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 ✅ [Fonctionnalité réalisée]
 
-### Parsing des instructions complémentaires depuis fichier Markdown
+### Génération de template depuis configuration JSON centralisée
 
-#### Description détaillée pour le parsing des instructions complémentaires
+#### Description détaillée pour la génération de template depuis configuration JSON centralisée
 
-- [2025-10-21] Les instructions complémentaires pour l'API NuExtract sont stockées dans un fichier Markdown structuré avec documentation humaine et instructions opérationnelles séparées
-- [2025-10-21] Le parsing extrait uniquement le contenu sous le heading `## Instructions complémentaires pour /api/infer-template /api/infer-template-async de NuExtract`
-- [2025-10-21] La documentation (Objectif, Mode d'utilisation) est préservée pour la lisibilité humaine mais exclue de l'envoi à l'API
-- [2025-10-21] Le parsing s'arrête au prochain heading de niveau 1 ou 2 (ou fin de fichier) pour isoler uniquement les instructions pertinentes
+- [2025-11-01] Les instructions de génération de template NuExtract sont désormais centralisées dans `extraction-config.schema.json` sous `nuextract.templateTransformationInstructions`
+- [2025-11-01] Le schéma JSON Schema définit toutes les valeurs possibles via le pattern `enum` (propriétés simples) et `items.enum` (arrays)
+- [2025-11-01] La transformation schéma → config est réalisée par `transformSchemaToConfig()` qui extrait les valeurs par défaut depuis les `enum`
+- [2025-11-01] Le config transformé est validé avec Ajv avant utilisation pour garantir la conformité au schéma
+- [2025-11-01] Les instructions sont extraites directement depuis la config en mémoire (`config.nuextract.templateTransformationInstructions.instructions`)
+- [2025-11-01] SRP strict : Les instructions de génération de template font partie de l'implémentation technique NuExtract, donc dans `extraction-config.schema.json` sous `nuextract`, PAS dans le schéma conceptuel
 
-#### Justification pour le parsing des instructions complémentaires
+#### Justification pour la génération de template depuis configuration JSON centralisée
 
-- **Lisibilité préservée** : Le fichier reste documenté et compréhensible pour les humains
-- **API optimisée** : Seules les instructions pertinentes sont envoyées, évitant la pollution du contexte
-- **Maintenabilité** : Séparation claire entre documentation et instructions opérationnelles dans un fichier unique
-- **Robustesse** : Fallback sur le fichier complet si le heading n'est pas trouvé
+- **Centralisation** : Configuration technique centralisée dans un seul fichier schéma selon SRP
+- **Paramétrage structuré** : Pattern `enum` pour définir toutes les valeurs possibles sans duplication
+- **Type safety** : Validation JSON Schema avec Ajv garantit la conformité avant utilisation
+- **Simplicité** : Plus de parsing Markdown, extraction directe depuis config en mémoire
+- **Historisation** : Le fichier `extraction-config.json` sera créé dans le répertoire des données après extraction pour traçabilité
 
-#### Patterns validés pour le parsing des instructions complémentaires
+#### Patterns validés pour la génération de template depuis configuration JSON centralisée
 
-- **Heading standard** : `## Instructions complémentaires pour /api/infer-template /api/infer-template-async de NuExtract` comme marqueur de section
-- **Parsing par lignes** : Extraction ligne par ligne depuis le heading jusqu'au prochain heading de niveau 1-2
-- **Regex arrêt** : Pattern `/^#{1,2}\s+/` pour détecter les headings de niveau 1 ou 2
-- **Fallback documenté** : Warning si heading non trouvé, utilisation fichier complet
-- **Trim final** : Nettoyage des espaces/lignes vides avant/après
+- **Schéma source** : `extraction-config.schema.json` avec toutes les propriétés et leurs `enum` possibles
+- **Transformation** : `transformSchemaToConfig(schema)` qui parcourt récursivement les propriétés
+- **Pattern enum** :
+  - **Propriétés simples** : `property.enum[0]` = valeur par défaut
+  - **Arrays** : `property.items.enum` (array complet) = valeur par défaut
+- **Validation Ajv** : Config transformé validé avec le schéma avant utilisation
+- **Extraction instructions** : `config.nuextract.templateTransformationInstructions.instructions` (array joint avec `\n`)
+- **Localisation SRP** : `templateTransformationInstructions` dans `extraction-config.schema.json` sous `nuextract`, PAS dans schéma conceptuel
 
-#### Anti-Patterns pour le parsing des instructions complémentaires à éviter
+#### Anti-Patterns pour la génération de template depuis configuration JSON centralisée à éviter
 
-- **Fichiers séparés** : Éviter duplication doc/instructions → **Solution** : Fichier unique avec parsing → **Règle à adopter** : Documentation et instructions colocalisées
-- **Envoi complet** : Éviter d'envoyer toute la documentation à l'API → **Solution** : Extraction ciblée → **Règle à adopter** : Parser le Markdown pour isoler les instructions
-- **Heading variable** : Éviter des noms de heading changeants → **Solution** : Heading standard documenté → **Règle à adopter** : Convention de nommage stricte
+- **Instructions dans schéma conceptuel** : Éviter de placer `templateTransformationInstructions` dans `hermes2022-concepts.json` → **Solution** : Configuration technique dans `extraction-config.schema.json` → **Règle à adopter** : SRP strict
+- **Parsing Markdown** : Éviter de charger et parser `instructions-template-nuextract.md` → **Solution** : Extraction depuis config en mémoire → **Règle à adopter** : Pas de parsing inutile
+- **Default JSON Schema** : Éviter d'utiliser `default` dans le schéma → **Solution** : Pattern `enum` uniquement → **Règle à adopter** : Enum comme source unique
+- **Redondance enum** : Éviter de dupliquer les valeurs entre `enum` et `default` → **Solution** : Uniquement `enum`, transformation manuelle → **Règle à adopter** : DRY
 
-#### État d'implémentation pour le parsing des instructions complémentaires
+#### État d'implémentation pour la génération de template depuis configuration JSON centralisée
 
-✅ [Fonctionnalité réalisée]
+✅ [Migration réalisée - 2025-11-01]
+
+- ✅ **Schéma JSON Schema** : `extraction-config.schema.json` créé avec structure complète et instructions migrées
+- ✅ **Fonction transformation** : `transformSchemaToConfig()` implémentée avec logique enum[0] vs items.enum
+- ✅ **loadGlobalConfig()** : Modifié pour lire schéma, transformer et valider avec Ajv
+- ✅ **loadInstructions()** : Modifié pour extraire depuis config en mémoire (plus de parsing Markdown)
+- ✅ **Tests BDD** : Tous les tests unitaires et d'intégration passent (24/24 unitaires, 6/6 intégration)
+- ✅ **Nettoyage** : Fichiers obsolètes `instructions-template-nuextract.md` et `extraction-config.json` supprimés
 
 ### Cycle de vie de projet NuExtract
 

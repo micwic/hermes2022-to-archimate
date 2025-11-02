@@ -147,7 +147,7 @@ defineFeature(feature, (test) => {
       expect(newTemplate).toBeDefined();
     });
 
-    when('on met à jour le template du projet avec putProjectTemplate', async () => {
+    when('on met à jour le template du projet avec findOrCreateProject sur un projet existant (templateReset=true)', async () => {
       updateResult = await findOrCreateProject(
         apiKey,
         config.nuextract.projectName,

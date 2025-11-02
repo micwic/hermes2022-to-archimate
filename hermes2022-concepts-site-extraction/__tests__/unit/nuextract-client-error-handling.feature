@@ -3,28 +3,28 @@ Fonctionnalité: Gestion d'erreur robuste
   #
   # === Gestion des erreurs de configuration (fonction loadGlobalConfig) ===
 
-  Scénario: Erreur générée et gérée en cas de fichier de configuration général extraction-config.json manquant
-    Etant donné un fichier de configuration général extraction-config.json inexistant
-    Quand on tente de charger la configuration
-    Alors une erreur adhoc au fichier de configuration général extraction-config.json manquant générée
+  Scénario: Erreur schéma JSON Schema introuvable
+    Etant donné un schéma extraction-config.schema.json inexistant
+    Quand on tente de charger la configuration depuis le schéma
+    Alors une erreur "Schema file not found" est générée
     Et le processus s'arrête proprement
 
-  Scénario: Erreur générée et gérée en cas de fichier de configuration général extraction-config.json présent mais malformé
-    Etant donné un fichier de configuration général extraction-config.json existant mais malformé
-    Quand on tente de charger la configuration
-    Alors une erreur "Invalid JSON in configuration" est générée
+  Scénario: Erreur schéma JSON Schema malformé
+    Etant donné un fichier extraction-config.schema.json avec syntaxe JSON invalide
+    Quand on tente de charger la configuration depuis le schéma
+    Alors une erreur "Invalid JSON in schema file" est générée
     Et le processus s'arrête proprement
 
-  Scénario: Erreur générée et gérée en cas de section nuextract absente dans le fichier de configuration
-    Etant donné un fichier de configuration général extraction-config.json existant et formatté mais sans section nuextract
-    Quand on tente de charger la configuration
-    Alors une erreur "missing nuextract section" est générée
+  Scénario: Erreur structure config invalide après transformation
+    Etant donné un schéma JSON Schema avec structure invalide après transformation
+    Quand on tente de charger la configuration depuis le schéma
+    Alors une erreur "Invalid config structure: expected an object" est générée
     Et le processus s'arrête proprement
 
-  Scénario: Erreur générée et gérée en cas de section nuextract avec moins de 15 clés
-    Etant donné un fichier de configuration général extraction-config.json avec section nuextract contenant moins de 15 clés
-    Quand on tente de charger la configuration
-    Alors une erreur "Invalid JSON minimal content for nuextract-client.js in configuration" est générée
+  Scénario: Erreur section nuextract absente après transformation
+    Etant donné un schéma JSON Schema sans section nuextract après transformation
+    Quand on tente de charger la configuration depuis le schéma
+    Alors une erreur "Invalid config structure: missing \"nuextract\" section" est générée
     Et le processus s'arrête proprement
   #
   # === Gestion du chargement de la clé API (fonction loadApiKey) ===
@@ -56,22 +56,17 @@ Fonctionnalité: Gestion d'erreur robuste
   #
   # === Gestion des erreurs de chargement des instructions (fonction loadInstructions) ===
 
-  Scénario: Erreur fichier instructions manquant
-    Etant donné un fichier d'instructions inexistant
+  Scénario: Erreur templateTransformationInstructions.instructions absent de config
+    Etant donné une configuration sans templateTransformationInstructions.instructions
     Quand on tente de charger les instructions
-    Alors une erreur "Instructions file not found" est générée
+    Alors une erreur "templateTransformationInstructions.instructions non trouvé dans config.nuextract" est générée
     Et le processus s'arrête proprement
 
-  Scénario: Erreur heading absent dans le fichier d'instructions
-    Etant donné un fichier d'instructions sans le heading requis
+  Scénario: Erreur templateTransformationInstructions.instructions n'est pas un array
+    Etant donné une configuration avec templateTransformationInstructions.instructions de type string
     Quand on tente de charger les instructions
-    Alors une erreur "Instructions heading not found in file" est générée
-    Et le processus s'arrête proprement
-
-  Scénario: Erreur contenu vide après extraction du heading
-    Etant donné un fichier d'instructions avec heading mais contenu vide
-    Quand on tente de charger les instructions
-    Alors une erreur "Instructions content is empty after extraction" est générée
+    Alors une erreur contenant "instructions invalide: type" est générée
+    Et le message indique le format attendu "array de strings"
     Et le processus s'arrête proprement
   #
   # === Gestion des erreurs de chargement et résolution des schémas JSON (fonction loadAndResolveSchemas) ===

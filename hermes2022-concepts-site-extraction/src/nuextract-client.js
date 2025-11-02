@@ -1,5 +1,5 @@
 // nuextract-client.js - Script JavaScript pour extraire le HTML et exécuter les APIs NuExtract
-// Basé sur les fichiers de configuration extraction-config.json extraction-*.md et les schémas JSON de hermes2022-concepts.json et sous-jacents ($ref)
+// Basé sur extraction-config.schema.json (configuration technique NuExtract) et les schémas JSON de hermes2022-concepts.json et sous-jacents ($ref)
 
 const fs = require('fs');
 const https = require('https');
@@ -15,49 +15,129 @@ const addFormats = require('ajv-formats');
 let TEMPLATE = null;
 let PROJECT_ID = null;
 
-// Charger la configuration depuis le fichier
-async function loadGlobalConfig() {
-  const configPath = resolveFromRepoRoot('hermes2022-concepts-site-extraction/config/extraction-config.json');
-  console.log(`[info] Chargement de la configuration à partir de : ${configPath}`);
-  
-  // Étape 1: Lire le fichier
-  let configContent;
-  try {
-    configContent = fs.readFileSync(configPath, 'utf8');
-  } catch (error) {
-    console.error(`Erreur lors de la lecture du fichier de configuration général extraction-config.json : ${error.message}`);
-    throw new Error('Configuration file not found. Script stopped');
+// Fonction helper pour transformer schéma JSON Schema en objet config JSON
+function transformSchemaToConfig(schema) {
+  function extractValueFromProperty(property) {
+    // Pour propriété simple avec enum : utiliser enum[0]
+    if (property.enum && property.type !== 'array') {
+      return property.enum[0];
+    }
+    
+    // Pour array avec items.enum : utiliser items.enum (array complet)
+    if (property.type === 'array' && property.items?.enum) {
+      return property.items.enum;
+    }
+    
+    // Pour objet : construire récursivement
+    if (property.type === 'object' && property.properties) {
+      const obj = {};
+      for (const [key, value] of Object.entries(property.properties)) {
+        obj[key] = extractValueFromProperty(value);
+      }
+      return obj;
+    }
+    
+    // Pour array avec items object : construire array avec un élément
+    if (property.type === 'array' && property.items?.type === 'object' && property.items.properties) {
+      const obj = {};
+      for (const [key, value] of Object.entries(property.items.properties)) {
+        obj[key] = extractValueFromProperty(value);
+      }
+      return [obj];
+    }
+    
+    // Pour chaînes simples sans enum : retourner null
+    if (property.type === 'string' && !property.enum) {
+      return null;
+    }
+    
+    // Pour boolean : false par défaut
+    if (property.type === 'boolean') {
+      return false;
+    }
+    
+    // Pour number : null par défaut
+    if (property.type === 'number') {
+      return null;
+    }
+    
+    // Par défaut
+    return null;
   }
   
-  // Étape 2: Parser le JSON
-  let config;
-  try {
-    config = JSON.parse(configContent);
-  } catch (error) {
-    console.error(`Erreur lors du parsing JSON de la configuration : ${error.message}`);
-    throw new Error('Invalid JSON in main configuration file. Script stopped');
+  // Construire l'objet config à partir du schéma
+  const config = {};
+  if (schema.properties) {
+    for (const [key, property] of Object.entries(schema.properties)) {
+      config[key] = extractValueFromProperty(property);
+    }
   }
   
-  // Étape 3: Validation structurelle minimale
-  if (!config || typeof config !== 'object' || Array.isArray(config)) {
-    console.error('Erreur: la configuration doit être un objet JSON');
-    throw new Error('Invalid main configuration file structure: expected an object. Script stopped');
-  }
-  
-  if (!config.nuextract || typeof config.nuextract !== 'object') {
-    console.error('Erreur: la section "nuextract" est manquante ou invalide dans la configuration');
-    throw new Error('Invalid main configuration structure: missing "nuextract" section. Script stopped');
-  }
-  
-  // Vérifier que la section nuextract contient au moins 15 clés définies
-  const nuextractKeys = Object.keys(config.nuextract);
-  if (nuextractKeys.length < 15) {
-    console.error(`Erreur: la section "nuextract" doit contenir au moins 15 clés, mais contient seulement ${nuextractKeys.length} clés`);
-    throw new Error('Invalid JSON minimal content for nuextract-client.js in main configuration file. Script stopped');
-  }
-  
-  console.log('[info] Configuration chargée avec succès');
   return config;
+}
+
+// Charger la configuration depuis le schéma JSON Schema
+async function loadGlobalConfig() {
+  console.log(`[info] Chargement de la configuration à partir du schéma JSON Schema`);
+  
+  try {
+    // Étape 1: Lire le schéma JSON Schema
+    const schemaPath = resolveFromRepoRoot('hermes2022-concepts-site-extraction/config/extraction-config.schema.json');
+    let schemaContent;
+    try {
+      schemaContent = fs.readFileSync(schemaPath, 'utf8');
+    } catch (error) {
+      console.error(`Erreur lors de la lecture du schéma JSON Schema : ${error.message}`);
+      throw new Error('Schema file not found. Script stopped.', { cause: error });
+    }
+    
+    // Étape 2: Parser le schéma JSON Schema
+    let schema;
+    try {
+      schema = JSON.parse(schemaContent);
+    } catch (error) {
+      console.error(`Erreur lors du parsing JSON du schéma : ${error.message}`);
+      throw new Error('Invalid JSON in schema file. Script stopped.', { cause: error });
+    }
+    
+    // Étape 3: Transformer le schéma en objet config JSON
+    const config = transformSchemaToConfig(schema);
+    
+    // Étape 4: Valider l'objet config transformé avec Ajv
+    try {
+      const ajv = new Ajv({ strict: false, allErrors: true });
+      addFormats(ajv);
+      const validate = ajv.compile(schema);
+      const valid = validate(config);
+      
+      if (!valid) {
+        const errorMessages = validate.errors.map(err => `${err.instancePath} ${err.message}`).join('; ');
+        console.error(`Erreur critique : Le config transformé n'est pas conforme au schéma: ${errorMessages}`);
+        throw new Error('Config validation failed after transformation. Script stopped.');
+      }
+    } catch (error) {
+      if (error.message === 'Config validation failed after transformation. Script stopped.') {
+        throw error;
+      }
+      console.error(`Erreur critique : Échec de la validation du config avec Ajv: ${error.message}`);
+      throw new Error('Config validation failed after transformation. Script stopped.', { cause: error });
+    }
+    
+    // Étape 5: Validation structurelle minimale
+    if (!config || typeof config !== 'object' || Array.isArray(config)) {
+      throw new Error('Invalid config structure: expected an object. Script stopped.');
+    }
+    
+    if (!config.nuextract || typeof config.nuextract !== 'object') {
+      throw new Error('Invalid config structure: missing "nuextract" section. Script stopped.');
+    }
+    
+    console.log('[info] Configuration chargée avec succès depuis le schéma JSON Schema');
+    return config;
+  } catch (error) {
+    console.error(`Erreur lors du chargement de la configuration: ${error.message}`);
+    throw error;
+  }
 };
 
 // Lire la clé API depuis un fichier externe si elle n'est pas déjà dans l'environnement
@@ -110,51 +190,33 @@ async function loadApiKey(config) {
 };
 
 // Fonction pour lire les instructions de transformation du template
-// Extrait uniquement le contenu sous le heading ciblé pour éviter de polluer l'API
 async function loadInstructions(config) {
-  const instFile = config?.nuextract?.templateTransformationInstructionFile || 'hermes2022-concepts-site-extraction/config/instructions-template-nuextract.md';
-  const instPath = resolveFromRepoRoot(instFile);
-
-  console.log(`[info] Chargement des instructions de transformation du template à partir de : ${instPath}`);
+  console.log(`[info] Chargement des instructions depuis config.nuextract.templateTransformationInstructions.instructions`);
   
-  // Étape 1: Lire le fichier
-  let fullContent;
   try {
-    fullContent = fs.readFileSync(instPath, 'utf8');
+    // Instructions depuis config déjà chargée (SRP : extraction uniquement, pas de chargement fichier)
+    if (!config?.nuextract?.templateTransformationInstructions?.instructions) {
+      throw new Error('templateTransformationInstructions.instructions non trouvé dans config.nuextract. Script stopped.');
+    }
+    
+    const instructionsArray = config.nuextract.templateTransformationInstructions.instructions;
+    
+    // Valider que c'est un array (Pattern 1 : erreur de validation selon @error-handling-governance)
+    if (!Array.isArray(instructionsArray)) {
+      const actualType = typeof instructionsArray;
+      throw new Error(`templateTransformationInstructions.instructions invalide: type "${actualType}". Format attendu: array de strings. Script stopped.`);
+    }
+    
+    // Joindre les valeurs de l'array avec \n pour concaténation
+    const instructions = instructionsArray.join('\n');
+    console.log(`[info] Instructions chargées depuis config.nuextract.templateTransformationInstructions.instructions (${instructionsArray.length} instructions)`);
+    return instructions;
   } catch (error) {
-    console.error(`Erreur lors de la lecture du fichier d'instructions : ${error.message}`);
-    throw new Error('Instructions file not found. Script stopped.', { cause: error });
+    // Pattern 3 : Propagation d'erreur dans fonctions d'orchestration
+    // Message contextualisé pour identifier facilement la fonction (bonne pratique reconnue)
+    console.error(`Erreur lors du chargement des instructions: ${error.message}`);
+    throw error; // Propagation simple avec préservation de la stack trace
   }
-  
-  // Étape 2: Extraire uniquement le contenu sous le heading ciblé
-  const targetHeading = '## Instructions complémentaires pour /api/infer-template /api/infer-template-async de NuExtract';
-  const lines = fullContent.split('\n');
-  const startIdx = lines.findIndex(line => line.trim() === targetHeading);
-  
-  if (startIdx === -1) {
-    console.error(`Erreur: Heading "${targetHeading}" non trouvé dans le fichier d'instructions`);
-    throw new Error('Instructions heading not found in file. Script stopped.');
-  }
-  
-  // Extraire du heading jusqu'au prochain heading de niveau 1 ou 2, ou fin de fichier
-  const contentLines = [];
-  for (let i = startIdx + 1; i < lines.length; i++) {
-    const line = lines[i];
-    // Arrêter si on rencontre un autre heading de niveau 1 ou 2
-    if (line.match(/^#{1,2}\s+/)) break;
-    contentLines.push(line);
-  }
-  
-  const extractedContent = contentLines.join('\n').trim();
-  
-  // Étape 3: Valider que le contenu extrait n'est pas vide
-  if (!extractedContent || extractedContent.length === 0) {
-    console.error('Erreur: Le contenu des instructions est vide après extraction');
-    throw new Error('Instructions content is empty after extraction. Script stopped.');
-  }
-  
-  console.log(`[info] Instructions chargées avec succès`);
-  return extractedContent;
 }
 
 // Fonction pour charger et résoudre les schémas JSON
