@@ -51,11 +51,11 @@ afterEach(() => {
 defineFeature(feature, (test) => {
   
   // === Gestion des erreurs de configuration (fonction loadGlobalConfig) ===
-  
-  test('Erreur générée et gérée en cas de fichier de configuration général extraction-config.json manquant', ({ given, when, then, and }) => {
+
+  test('Erreur schéma JSON Schema introuvable', ({ given, when, then, and }) => {
     let error;
 
-    given('un fichier de configuration général extraction-config.json inexistant', () => {
+    given('un schéma extraction-config.schema.json inexistant', () => {
       // Mocker fs.readFileSync pour simuler un fichier manquant
       fs.readFileSync = jest.fn().mockImplementation(() => {
         const err = new Error('ENOENT: no such file or directory');
@@ -64,7 +64,7 @@ defineFeature(feature, (test) => {
       });
     });
 
-    when('on tente de charger la configuration', async () => {
+    when('on tente de charger la configuration depuis le schéma', async () => {
       try {
         await loadGlobalConfig();
       } catch (e) {
@@ -72,10 +72,9 @@ defineFeature(feature, (test) => {
       }
     });
 
-    then('une erreur adhoc au fichier de configuration général extraction-config.json manquant générée', () => {
+    then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      // Le code encapsule l'erreur système dans son propre message
-      expect(error.message).toContain('Configuration file not found');
+      expect(error.message).toContain('Schema file not found');
       expect(error.message).toContain('Script stopped');
     });
 
@@ -84,20 +83,20 @@ defineFeature(feature, (test) => {
     });
   });
 
-  test('Erreur générée et gérée en cas de fichier de configuration général extraction-config.json présent mais malformé', ({ given, when, then, and }) => {
+  test('Erreur schéma JSON Schema malformé', ({ given, when, then, and }) => {
     let error;
 
-    given('un fichier de configuration général extraction-config.json existant mais malformé', () => {
+    given('un fichier extraction-config.schema.json avec syntaxe JSON invalide', () => {
       // Mocker fs.readFileSync pour retourner du JSON invalide
       fs.readFileSync = jest.fn().mockImplementation((filePath, encoding) => {
-        if (filePath.includes('extraction-config.json')) {
+        if (filePath.includes('extraction-config.schema.json') || filePath.includes('extraction-config.json')) {
           return '{ invalid json ,,, }';
         }
         return originalReadFileSync(filePath, encoding);
       });
     });
 
-    when('on tente de charger la configuration', async () => {
+    when('on tente de charger la configuration depuis le schéma', async () => {
       try {
         await loadGlobalConfig();
       } catch (e) {
@@ -107,7 +106,7 @@ defineFeature(feature, (test) => {
 
     then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toContain('Invalid JSON in main configuration file');
+      expect(error.message).toContain('Invalid JSON');
     });
 
     and('le processus s\'arrête proprement', () => {
@@ -115,83 +114,48 @@ defineFeature(feature, (test) => {
     });
   });
 
-  test('Erreur générée et gérée en cas de section nuextract absente dans le fichier de configuration', ({ given, when, then, and }) => {
+  test('Erreur structure config invalide après transformation', ({ given, when, then, and }) => {
     let error;
 
-    given('un fichier de configuration général extraction-config.json existant et formatté mais sans section nuextract', () => {
-      // Mocker fs.readFileSync pour retourner une config valide JSON mais sans section nuextract
-      fs.readFileSync = jest.fn().mockImplementation((filePath, encoding) => {
-        if (filePath.includes('extraction-config.json')) {
-          return JSON.stringify({
-            hermesVersion: "2022",
-            extractionSource: {
-              baseUrl: "https://www.hermes.admin.ch/en",
-              language: "en"
-            }
-            // Section nuextract absente
-          });
-        }
-        return originalReadFileSync(filePath, encoding);
-      });
+    given('un schéma JSON Schema avec structure invalide après transformation', () => {
+      // TODO: À implémenter après création de transformSchemaToConfig()
+      // Ce test nécessitera un mock de transformSchemaToConfig() retournant une structure invalide
     });
 
-    when('on tente de charger la configuration', async () => {
-      try {
-        await loadGlobalConfig();
-      } catch (e) {
-        error = e;
-      }
+    when('on tente de charger la configuration depuis le schéma', async () => {
+      // TODO: À implémenter
     });
 
     then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
-      expect(error).toBeDefined();
-      expect(error.message).toContain('missing "nuextract" section');
+      // TODO: À implémenter
     });
 
     and('le processus s\'arrête proprement', () => {
-      expect(error).toBeInstanceOf(Error);
+      // TODO: À implémenter
     });
   });
 
-  test('Erreur générée et gérée en cas de section nuextract avec moins de 15 clés', ({ given, when, then, and }) => {
+  test('Erreur section nuextract absente après transformation', ({ given, when, then, and }) => {
     let error;
 
-    given('un fichier de configuration général extraction-config.json avec section nuextract contenant moins de 15 clés', () => {
-      // Mocker fs.readFileSync pour retourner une config valide JSON mais avec moins de 15 clés dans nuextract
-      fs.readFileSync = jest.fn().mockImplementation((filePath, encoding) => {
-        if (filePath.includes('extraction-config.json')) {
-          return JSON.stringify({
-            hermesVersion: "2022",
-            nuextract: {
-              apiKeyFile: "config/key.key",
-              projectName: "TEST",
-              baseUrl: "nuextract.ai",
-              port: 443
-              // Seulement 4 clés au lieu de 15 minimum
-            }
-          });
-        }
-        return originalReadFileSync(filePath, encoding);
-      });
+    given('un schéma JSON Schema sans section nuextract après transformation', () => {
+      // TODO: À implémenter après création de transformSchemaToConfig()
+      // Ce test nécessitera un mock de transformSchemaToConfig() retournant un config sans nuextract
     });
 
-    when('on tente de charger la configuration', async () => {
-      try {
-        await loadGlobalConfig();
-      } catch (e) {
-        error = e;
-      }
+    when('on tente de charger la configuration depuis le schéma', async () => {
+      // TODO: À implémenter
     });
 
     then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
-      expect(error).toBeDefined();
-      expect(error.message).toContain('Invalid JSON minimal content for nuextract-client.js in main configuration file');
+      // TODO: À implémenter
     });
 
     and('le processus s\'arrête proprement', () => {
-      expect(error).toBeInstanceOf(Error);
+      // TODO: À implémenter
     });
   });
+
   // === Gestion du chargement de la clé API (fonction loadApiKey) ===
 
   test('Erreur si variable d\'environnement et fichier tous deux absents', ({ given, when, then, and }) => {
@@ -337,21 +301,18 @@ defineFeature(feature, (test) => {
 
   // === Gestion des erreurs de chargement des instructions (fonction loadInstructions) ===
 
-  test('Erreur fichier instructions manquant', ({ given, when, then, and }) => {
+  test('Erreur templateTransformationInstructions.instructions absent de config', ({ given, when, then, and }) => {
     let error;
     let config;
 
-    given('un fichier d\'instructions inexistant', async () => {
+    given('une configuration sans templateTransformationInstructions.instructions', async () => {
       config = await loadGlobalConfig();
-      // Mock fs.readFileSync pour simuler un fichier manquant
-      fs.readFileSync = jest.fn().mockImplementation((filePath, encoding) => {
-        if (filePath.includes('instructions-template-nuextract.md')) {
-          const err = new Error('ENOENT: no such file or directory');
-          err.code = 'ENOENT';
-          throw err;
-        }
-        return originalReadFileSync(filePath, encoding);
-      });
+      // Supprimer templateTransformationInstructions ou instructions
+      if (config.nuextract.templateTransformationInstructions) {
+        delete config.nuextract.templateTransformationInstructions.instructions;
+      } else {
+        config.nuextract.templateTransformationInstructions = {};
+      }
     });
 
     when('on tente de charger les instructions', async () => {
@@ -364,52 +325,7 @@ defineFeature(feature, (test) => {
 
     then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toContain('Instructions file not found');
-      expect(error.message).toContain('Script stopped');
-    });
-
-    and('le processus s\'arrête proprement', () => {
-      expect(error).toBeInstanceOf(Error);
-      // Vérifier Error Cause
-      expect(error.cause).toBeDefined();
-      expect(error.cause.code).toBe('ENOENT');
-    });
-  });
-
-  test('Erreur heading absent dans le fichier d\'instructions', ({ given, when, then, and }) => {
-    let error;
-    let config;
-
-    given('un fichier d\'instructions sans le heading requis', async () => {
-      config = await loadGlobalConfig();
-      // Mock fs.readFileSync pour retourner un fichier sans le heading attendu
-      fs.readFileSync = jest.fn().mockImplementation((filePath, encoding) => {
-        if (filePath.includes('instructions-template-nuextract.md')) {
-          // Fichier avec un contenu mais sans le heading correct
-          return `# Prompt génération de template NuExtract
-
-## Autres instructions non pertinentes
-
-- instruction 1
-- instruction 2
-`;
-        }
-        return originalReadFileSync(filePath, encoding);
-      });
-    });
-
-    when('on tente de charger les instructions', async () => {
-      try {
-        await loadInstructions(config);
-      } catch (e) {
-        error = e;
-      }
-    });
-
-    then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
-      expect(error).toBeDefined();
-      expect(error.message).toContain('Instructions heading not found in file');
-      expect(error.message).toContain('Script stopped');
+      expect(error.message).toContain('templateTransformationInstructions.instructions non trouvé');
     });
 
     and('le processus s\'arrête proprement', () => {
@@ -417,26 +333,16 @@ defineFeature(feature, (test) => {
     });
   });
 
-  test('Erreur contenu vide après extraction du heading', ({ given, when, then, and }) => {
+  test('Erreur templateTransformationInstructions.instructions n\'est pas un array', ({ given, when, then, and }) => {
     let error;
     let config;
 
-    given('un fichier d\'instructions avec heading mais contenu vide', async () => {
+    given('une configuration avec templateTransformationInstructions.instructions de type string', async () => {
       config = await loadGlobalConfig();
-      // Mock fs.readFileSync pour retourner un fichier avec heading mais lignes vides
-      fs.readFileSync = jest.fn().mockImplementation((filePath, encoding) => {
-        if (filePath.includes('instructions-template-nuextract.md')) {
-          // Fichier avec le heading correct mais uniquement des lignes vides après
-          return `# Prompt génération de template NuExtract
-
-## Instructions complémentaires pour /api/infer-template /api/infer-template-async de NuExtract
-
-   
-   
-`;
-        }
-        return originalReadFileSync(filePath, encoding);
-      });
+      // Forcer instructions comme string au lieu d'array
+      config.nuextract.templateTransformationInstructions = {
+        instructions: 'not an array'
+      };
     });
 
     when('on tente de charger les instructions', async () => {
@@ -447,10 +353,13 @@ defineFeature(feature, (test) => {
       }
     });
 
-    then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toContain('Instructions content is empty after extraction');
-      expect(error.message).toContain('Script stopped');
+      expect(error.message).toContain('instructions invalide: type');
+    });
+
+    and('le message indique le format attendu "array de strings"', () => {
+      expect(error.message).toContain('array de strings');
     });
 
     and('le processus s\'arrête proprement', () => {

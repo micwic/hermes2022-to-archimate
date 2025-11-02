@@ -36,7 +36,9 @@ defineFeature(feature, (test) => {
       expect(config).toBeDefined();
       expect(config.nuextract).toBeDefined();
       expect(config.nuextract.templateMode).toBe('async');
-      expect(config.nuextract.templateTransformationInstructionFile).toBeDefined();
+      expect(config.nuextract.templateTransformationInstructions).toBeDefined();
+      expect(config.nuextract.templateTransformationInstructions.instructions).toBeDefined();
+      expect(Array.isArray(config.nuextract.templateTransformationInstructions.instructions)).toBe(true);
       expect(config.nuextract.mainJSONConfigurationFile).toBeDefined();
       expect(config.nuextract.templateOutputDirectory).toBeDefined();
       expect(config.nuextract.apiKeyFile).toBeDefined();
@@ -48,9 +50,8 @@ defineFeature(feature, (test) => {
       expect(apiKey).not.toBe('');
     });
 
-    and('des instructions de transformation markdown', () => {
-      const instPath = resolveFromRepoRoot(config.nuextract.templateTransformationInstructionFile);
-      expect(fs.existsSync(instPath)).toBe(true);
+    and('des instructions de transformation depuis config', () => {
+      expect(config.nuextract.templateTransformationInstructions.instructions.length).toBeGreaterThan(0);
     });
 
     and('un schéma JSON de concepts HERMES2022', () => {
@@ -101,7 +102,9 @@ defineFeature(feature, (test) => {
       expect(config).toBeDefined();
       expect(config.nuextract).toBeDefined();
       expect(config.nuextract.templateMode).toBe('sync');
-      expect(config.nuextract.templateTransformationInstructionFile).toBeDefined();
+      expect(config.nuextract.templateTransformationInstructions).toBeDefined();
+      expect(config.nuextract.templateTransformationInstructions.instructions).toBeDefined();
+      expect(Array.isArray(config.nuextract.templateTransformationInstructions.instructions)).toBe(true);
       expect(config.nuextract.mainJSONConfigurationFile).toBeDefined();
       expect(config.nuextract.templateOutputDirectory).toBeDefined();
       expect(config.nuextract.apiKeyFile).toBeDefined();
@@ -113,9 +116,8 @@ defineFeature(feature, (test) => {
       expect(apiKey).not.toBe('');
     });
 
-    and('des instructions de transformation markdown', () => {
-      const instPath = resolveFromRepoRoot(config.nuextract.templateTransformationInstructionFile);
-      expect(fs.existsSync(instPath)).toBe(true);
+    and('des instructions de transformation depuis config', () => {
+      expect(config.nuextract.templateTransformationInstructions.instructions.length).toBeGreaterThan(0);
     });
 
     and('un schéma JSON de concepts HERMES2022', () => {

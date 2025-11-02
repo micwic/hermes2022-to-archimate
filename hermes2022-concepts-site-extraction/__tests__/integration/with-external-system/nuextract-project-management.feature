@@ -16,7 +16,7 @@ Fonctionnalité: Gestion des projets NuExtract (système externe réel)
     Et une clé API NuExtract
     Et un projet "HERMES2022" existant sur la plateforme
     Et un nouveau template NuExtract valide
-    Quand on met à jour le template du projet avec putProjectTemplate
+    Quand on met à jour le template du projet avec findOrCreateProject sur un projet existant (templateReset=true)
     Alors le template est mis à jour avec succès
     Et le projet contient le nouveau template
     Et l'ID du projet reste inchangé
