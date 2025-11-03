@@ -987,4 +987,169 @@ defineFeature(feature, (test) => {
       jest.clearAllMocks();
     });
   });
+
+  test('Erreur validation conformité projet existant sans template fourni', ({ given, when, then, and }) => {
+    let error;
+
+    given('un projet existant sur la plateforme', () => {
+      // Mock getNuExtractProjects retournant un projet existant
+      jest.spyOn(nuextractApi, 'getNuExtractProjects')
+        .mockResolvedValue([{ id: 'proj-123', name: 'test-project' }]);
+    });
+
+    and('templateReset configuré à false', () => {
+      // templateReset sera false dans l'appel
+    });
+
+    and('un template null ou vide', () => {
+      // Template sera null
+    });
+
+    when('on tente de rechercher le projet', async () => {
+      try {
+        await findOrCreateProject(
+          'fake-api-key',
+          'test-project',
+          'Test project',
+          null, // template null
+          false, // templateReset = false
+          'nuextract.ai',
+          443,
+          '/api/projects'
+        );
+      } catch (e) {
+        error = e;
+      }
+    });
+
+    then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+
+  test('Erreur projet existant sans template valide', ({ given, when, then, and }) => {
+    let error;
+    let validTemplate;
+
+    given('un projet existant sur la plateforme', async () => {
+      // Mock getNuExtractProjects retournant un projet existant SANS template
+      jest.spyOn(nuextractApi, 'getNuExtractProjects')
+        .mockResolvedValue([
+          { 
+            id: 'proj-123', 
+            name: 'test-project',
+            // Pas de propriété template
+          }
+        ]);
+      
+      // Charger un template valide pour la comparaison
+      const config = await loadGlobalConfig();
+      const apiKey = await loadApiKey(config);
+      validTemplate = await generateTemplate(config, apiKey);
+    });
+
+    and('le projet existant ne contient pas de template ou de template.schema', () => {
+      // Le projet mocké ci-dessus n'a pas de template (déjà fait dans given)
+    });
+
+    and('templateReset configuré à false', () => {
+      // templateReset sera false dans l'appel
+    });
+
+    when('on tente de rechercher le projet', async () => {
+      try {
+        await findOrCreateProject(
+          'fake-api-key',
+          'test-project',
+          'Test project',
+          validTemplate,
+          false, // templateReset = false
+          'nuextract.ai',
+          443,
+          '/api/projects'
+        );
+      } catch (e) {
+        error = e;
+      }
+    });
+
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+
+  test('Erreur template existant non conforme au JSON schema', ({ given, when, then, and }) => {
+    let error;
+    let validTemplate;
+    let invalidTemplate;
+
+    given('un projet existant sur la plateforme avec un template non conforme', async () => {
+      // Charger un template valide pour la comparaison
+      const config = await loadGlobalConfig();
+      const apiKey = await loadApiKey(config);
+      validTemplate = await generateTemplate(config, apiKey);
+      
+      // Créer un template non conforme (différent)
+      invalidTemplate = { ...validTemplate, differentProperty: 'different value' };
+      
+      // Mock getNuExtractProjects retournant un projet existant avec template NON conforme
+      jest.spyOn(nuextractApi, 'getNuExtractProjects')
+        .mockResolvedValue([
+          { 
+            id: 'proj-123', 
+            name: 'test-project',
+            template: {
+              type: 'schema',
+              schema: invalidTemplate // Template différent (non conforme)
+            }
+          }
+        ]);
+    });
+
+    and('templateReset configuré à false', () => {
+      // templateReset sera false dans l'appel
+    });
+
+    when('on tente de rechercher le projet', async () => {
+      try {
+        await findOrCreateProject(
+          'fake-api-key',
+          'test-project',
+          'Test project',
+          validTemplate, // Template de référence (conforme)
+          false, // templateReset = false
+          'nuextract.ai',
+          443,
+          '/api/projects'
+        );
+      } catch (e) {
+        error = e;
+      }
+    });
+
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
 });

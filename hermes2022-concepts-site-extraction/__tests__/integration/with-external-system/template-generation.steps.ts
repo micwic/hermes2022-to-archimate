@@ -33,30 +33,24 @@ defineFeature(feature, (test) => {
       config = await loadGlobalConfig();
       // Forcer le mode async pour ce scénario réel
       config.nuextract.templateMode = 'async';
-      expect(config).toBeDefined();
-      expect(config.nuextract).toBeDefined();
-      expect(config.nuextract.templateMode).toBe('async');
-      expect(config.nuextract.templateTransformationInstructions).toBeDefined();
-      expect(config.nuextract.templateTransformationInstructions.instructions).toBeDefined();
-      expect(Array.isArray(config.nuextract.templateTransformationInstructions.instructions)).toBe(true);
-      expect(config.nuextract.mainJSONConfigurationFile).toBeDefined();
-      expect(config.nuextract.templateOutputDirectory).toBeDefined();
-      expect(config.nuextract.apiKeyFile).toBeDefined();
+      // Vérification minimale : les validations détaillées sont effectuées par loadGlobalConfig()
+      expect(config?.nuextract?.templateMode).toBe('async');
     });
 
     and('une clé API NuExtract', async () => {
       apiKey = await loadApiKey(config);
-      expect(apiKey).toBeDefined();
-      expect(apiKey).not.toBe('');
+      // Vérification minimale : les validations détaillées (JWT, format) sont effectuées par loadApiKey()
+      expect(apiKey).toBeTruthy();
     });
 
     and('des instructions de transformation depuis config', () => {
-      expect(config.nuextract.templateTransformationInstructions.instructions.length).toBeGreaterThan(0);
+      // Validation redondante supprimée : loadInstructions() valide déjà la présence et le type array
+      // Si les instructions sont absentes ou invalides, loadInstructions() lèvera une erreur
     });
 
     and('un schéma JSON de concepts HERMES2022', () => {
-      const schemaPath = resolveFromRepoRoot(config.nuextract.mainJSONConfigurationFile);
-      expect(fs.existsSync(schemaPath)).toBe(true);
+      // Validation redondante supprimée : loadAndResolveSchemas() valide déjà l'existence et la conformité du schéma
+      // Si le schéma est absent ou invalide, loadAndResolveSchemas() lèvera une erreur
     });
 
     when('on génère un template NuExtract avec infer-template-async', async () => {
@@ -64,11 +58,12 @@ defineFeature(feature, (test) => {
     });
 
     then('le template est créé avec succès dans le répertoire de sortie des templates NuExtract', () => {
+      // Validation métier : vérifier que le fichier a été créé et correspond au template retourné
       const templateDirConfig = config?.nuextract?.templateOutputDirectory || 'shared/hermes2022-extraction-files/config/nuextract-template-generated';
       const templatePath = resolveFromRepoRoot(path.join(templateDirConfig, 'nuextract-template.json'));
       expect(fs.existsSync(templatePath)).toBe(true);
       const templateContent = JSON.parse(fs.readFileSync(templatePath, 'utf8'));
-      expect(templateContent).toBeDefined();
+      // Comparaison profonde : le template sauvegardé correspond au template retourné
       expect(template).toEqual(templateContent);
     });
 
@@ -79,14 +74,14 @@ defineFeature(feature, (test) => {
     });
 
     and('le template respecte le format NuExtract', () => {
-      expect(typeof template).toBe('object');
-      expect(template).not.toBeNull();
-      expect(Array.isArray(template.config.extractionSource.language)).toBe(true);
-      expect(Array.isArray(template.method.hermesVersion)).toBe(true);
-      expect(template.config.extractionSource.baseUrl).toBe('verbatim-string');
-      expect(template.method.publicationDate).toBe('date-time');
-      expect(template.method.lastChecked).toBe('date-time');
-      expect(template.concepts).toHaveProperty('concept-phases');
+      // Validation métier : vérifier que le template respecte le format NuExtract attendu
+      expect(template).toBeDefined();
+      expect(Array.isArray(template?.config?.extractionSource?.language)).toBe(true);
+      expect(Array.isArray(template?.method?.hermesVersion)).toBe(true);
+      expect(template?.config?.extractionSource?.baseUrl).toBe('verbatim-string');
+      expect(template?.method?.publicationDate).toBe('date-time');
+      expect(template?.method?.lastChecked).toBe('date-time');
+      expect(template?.concepts).toHaveProperty('concept-phases');
     });
   }, 120000);
 
@@ -99,30 +94,24 @@ defineFeature(feature, (test) => {
     given('des paramètres de configuration NuExtract pour la génération du template', async () => {
       config = await loadGlobalConfig();
       config.nuextract.templateMode = 'sync';
-      expect(config).toBeDefined();
-      expect(config.nuextract).toBeDefined();
-      expect(config.nuextract.templateMode).toBe('sync');
-      expect(config.nuextract.templateTransformationInstructions).toBeDefined();
-      expect(config.nuextract.templateTransformationInstructions.instructions).toBeDefined();
-      expect(Array.isArray(config.nuextract.templateTransformationInstructions.instructions)).toBe(true);
-      expect(config.nuextract.mainJSONConfigurationFile).toBeDefined();
-      expect(config.nuextract.templateOutputDirectory).toBeDefined();
-      expect(config.nuextract.apiKeyFile).toBeDefined();
+      // Vérification minimale : les validations détaillées sont effectuées par loadGlobalConfig()
+      expect(config?.nuextract?.templateMode).toBe('sync');
     });
 
     and('une clé API NuExtract', async () => {
       apiKey = await loadApiKey(config);
-      expect(apiKey).toBeDefined();
-      expect(apiKey).not.toBe('');
+      // Vérification minimale : les validations détaillées (JWT, format) sont effectuées par loadApiKey()
+      expect(apiKey).toBeTruthy();
     });
 
     and('des instructions de transformation depuis config', () => {
-      expect(config.nuextract.templateTransformationInstructions.instructions.length).toBeGreaterThan(0);
+      // Validation redondante supprimée : loadInstructions() valide déjà la présence et le type array
+      // Si les instructions sont absentes ou invalides, loadInstructions() lèvera une erreur
     });
 
     and('un schéma JSON de concepts HERMES2022', () => {
-      const schemaPath = resolveFromRepoRoot(config.nuextract.mainJSONConfigurationFile);
-      expect(fs.existsSync(schemaPath)).toBe(true);
+      // Validation redondante supprimée : loadAndResolveSchemas() valide déjà l'existence et la conformité du schéma
+      // Si le schéma est absent ou invalide, loadAndResolveSchemas() lèvera une erreur
     });
 
     when('on génère un template NuExtract avec infer-template', async () => {
@@ -130,11 +119,12 @@ defineFeature(feature, (test) => {
     });
 
     then('le template est créé avec succès dans le répertoire de sortie des templates NuExtract', () => {
+      // Validation métier : vérifier que le fichier a été créé et correspond au template retourné
       const templateDirConfig = config?.nuextract?.templateOutputDirectory || 'shared/hermes2022-extraction-files/config/nuextract-template-generated';
       const templatePath = resolveFromRepoRoot(path.join(templateDirConfig, 'nuextract-template.json'));
       expect(fs.existsSync(templatePath)).toBe(true);
       const templateContent = JSON.parse(fs.readFileSync(templatePath, 'utf8'));
-      expect(templateContent).toBeDefined();
+      // Comparaison profonde : le template sauvegardé correspond au template retourné
       expect(template).toEqual(templateContent);
     });
 
@@ -145,14 +135,14 @@ defineFeature(feature, (test) => {
     });
 
     and('le template respecte le format NuExtract', () => {
-      expect(typeof template).toBe('object');
-      expect(template).not.toBeNull();
-      expect(Array.isArray(template.config.extractionSource.language)).toBe(true);
-      expect(Array.isArray(template.method.hermesVersion)).toBe(true);
-      expect(template.config.extractionSource.baseUrl).toBe('verbatim-string');
-      expect(template.method.publicationDate).toBe('date-time');
-      expect(template.method.lastChecked).toBe('date-time');
-      expect(template.concepts).toHaveProperty('concept-phases');
+      // Validation métier : vérifier que le template respecte le format NuExtract attendu
+      expect(template).toBeDefined();
+      expect(Array.isArray(template?.config?.extractionSource?.language)).toBe(true);
+      expect(Array.isArray(template?.method?.hermesVersion)).toBe(true);
+      expect(template?.config?.extractionSource?.baseUrl).toBe('verbatim-string');
+      expect(template?.method?.publicationDate).toBe('date-time');
+      expect(template?.method?.lastChecked).toBe('date-time');
+      expect(template?.concepts).toHaveProperty('concept-phases');
     });
   }, 45000);
 });

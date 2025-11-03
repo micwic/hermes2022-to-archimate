@@ -417,6 +417,27 @@ async function findOrCreateProject(apiKey, projectName, projectDescription, temp
         return { id: existingProject.id, name: projectName, updated: true };
       } else {
         // Réutilisation du projet existant sans modification
+        // Vérifier la conformité du template existant avec le template fourni (conforme au JSON schema)
+        if (!templateObj) {
+          throw new Error('A valid NuExtractTemplate is required for template conformity validation. Script stopped.');
+        }
+        
+        console.log(`[info] Vérification de la conformité du template existant avec le JSON schema`);
+        
+        // Le template est déjà disponible dans existingProject (retourné par getNuExtractProjects)
+        if (!existingProject.template || !existingProject.template.schema) {
+          throw new Error(`Le projet ${projectName} existe mais ne contient pas de template valide. Script stopped.`);
+        }
+        
+        // Comparaison profonde du template existant avec le template de référence (conforme au JSON schema)
+        const existingTemplateSchema = JSON.stringify(existingProject.template.schema);
+        const expectedTemplateSchema = JSON.stringify(templateObj);
+        
+        if (existingTemplateSchema !== expectedTemplateSchema) {
+          throw new Error(`Le template existant du projet ${projectName} n'est pas conforme au JSON schema attendu. Script stopped.`);
+        }
+        
+        console.log(`[info] Template existant conforme au JSON schema - projet ${projectName} (id: ${existingProject.id})`);
         console.log(`Projet ${projectName} trouvé, réutilisation sans modification`);
         return { id: existingProject.id, name: projectName, existing: true };
       }

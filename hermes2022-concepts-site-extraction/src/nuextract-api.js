@@ -207,6 +207,49 @@ async function getNuExtractProjects(hostname, port, pathPrefix, apiKey) {
   });
 }
 
+// Fonction pour obtenir un projet NuExtract spécifique avec l'API GET /api/projects/{projectId}
+async function getNuExtractProject(hostname, port, pathPrefix, apiKey, projectId) {
+  return new Promise((resolve, reject) => {
+    const path = `${pathPrefix}/${projectId}`;
+    
+    const options = {
+      hostname: hostname,
+      port: port,
+      path: path,
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode !== 200) {
+          reject(new Error(`Erreur API projet: ${res.statusCode} - ${data}`));
+          return;
+        }
+        try {
+          resolve(JSON.parse(data));
+        } catch (err) {
+          reject(new Error('Invalid JSON response from GET /api/projects/{projectId}', { cause: err }));
+        }
+      });
+    });
+
+    req.setTimeout(10000, () => {
+      req.destroy();
+      reject(new Error('Timeout: La requête GET /api/projects/{projectId} a dépassé 10 secondes'));
+    });
+    req.on('error', (err) => {
+      reject(new Error('Network error calling GET /api/projects/{projectId}', { cause: err }));
+    });
+    req.end();
+  });
+}
+
 // Fonction pour Créer un projet NuExtract avec l'API POST /api/projects
 async function createNuExtractProject(hostname, port, pathPrefix, apiKey, body) {
   return new Promise((resolve, reject) => {
@@ -296,6 +339,7 @@ module.exports = {
   getJobStatus,
   pollJobUntilComplete,
   getNuExtractProjects,
+  getNuExtractProject,
   createNuExtractProject,
   putProjectTemplate
 };
