@@ -118,4 +118,42 @@ Fonctionnalité: Gestion d'erreur robuste du module nuextract-api
     Et l'erreur originale est préservée avec Error Cause
     Et le processus s'arrête proprement
   #
+  # === Tests des erreurs HTTP pour inferTextFromContent ===
 
+  Scénario: Erreur réseau lors d'appel API inferTextFromContent
+    Etant donné une erreur réseau simulée pour inferTextFromContent
+    Quand on tente d'appeler inferTextFromContent
+    Alors une erreur "Network error calling infer-text API" est générée
+    Et l'erreur originale est préservée avec Error Cause
+    Et le processus s'arrête proprement
+
+  Scénario: Timeout lors d'appel API inferTextFromContent
+    Etant donné un timeout simulé après 120 secondes pour inferTextFromContent
+    Quand on tente d'appeler inferTextFromContent
+    Alors une erreur contenant "Timeout: La requête infer-text a dépassé 120 secondes" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: Code HTTP non-200 pour inferTextFromContent
+    Etant donné une réponse HTTP 500 de l'API inferTextFromContent
+    Quand on tente d'appeler inferTextFromContent
+    Alors une erreur contenant "Erreur infer-text: 500" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: JSON invalide dans réponse inferTextFromContent
+    Etant donné une réponse avec JSON malformé pour inferTextFromContent
+    Quand on tente d'appeler inferTextFromContent
+    Alors une erreur "Invalid JSON response from infer-text API" est générée
+    Et l'erreur de parsing est préservée avec Error Cause
+    Et le processus s'arrête proprement
+
+  Scénario: Path invalide pour inferTextFromContent
+    Etant donné un path invalide pour inferTextFromContent
+    Quand on tente d'appeler inferTextFromContent
+    Alors une erreur contenant "Invalid path" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: ProjectId invalide pour inferTextFromContent
+    Etant donné un projectId invalide (null ou vide) pour inferTextFromContent
+    Quand on tente d'appeler inferTextFromContent
+    Alors une erreur contenant "Invalid projectId" est générée
+    Et le processus s'arrête proprement

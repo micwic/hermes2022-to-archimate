@@ -39,16 +39,8 @@ defineFeature(feature, (test) => {
       } else {
         (nuextractApi.getNuExtractProjects as jest.Mock).mockResolvedValue([]);
       }
-      await findOrCreateProject(
-        'fake-api-key',
-        config.nuextract.projectName,
-        config.nuextract.projectDescription,
-        templateObj,
-        templateReset,
-        config?.nuextract?.baseUrl || 'nuextract.ai',
-        config?.nuextract?.port || 443,
-        config?.nuextract?.projectsPath || '/api/projects'
-      );
+      config.nuextract.templateReset = templateReset;
+      await findOrCreateProject(config, 'fake-api-key', templateObj);
     } catch (e) {
       error = e;
     }

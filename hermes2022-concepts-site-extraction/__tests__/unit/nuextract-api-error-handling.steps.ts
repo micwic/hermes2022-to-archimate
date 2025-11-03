@@ -10,7 +10,8 @@ import {
   getJobStatus,
   pollJobUntilComplete,
   getNuExtractProjects,
-  createNuExtractProject
+  createNuExtractProject,
+  inferTextFromContent
 } from '../../src/nuextract-api.js';
 
 const feature = loadFeature(__dirname + '/nuextract-api-error-handling.feature');
@@ -60,7 +61,7 @@ defineFeature(feature, (test) => {
     
     when('on tente d\'appeler inferTemplateFromDescription', async () => {
       try {
-        await inferTemplateFromDescription('nuextract.ai', 443, '/api/infer-template', 'fake-api-key', 'test description', 35000);
+        await inferTemplateFromDescription('nuextract.ai', 443, '/api/infer-template', null, 'fake-api-key', 'test description', 35000);
       } catch (e) {
         error = e;
       }
@@ -107,7 +108,7 @@ defineFeature(feature, (test) => {
     
     when('on tente d\'appeler inferTemplateFromDescription', async () => {
       try {
-        await inferTemplateFromDescription('nuextract.ai', 443, '/api/infer-template', 'fake-api-key', 'test description', 35000);
+        await inferTemplateFromDescription('nuextract.ai', 443, '/api/infer-template', null, 'fake-api-key', 'test description', 35000);
       } catch (e) {
         error = e;
       }
@@ -155,7 +156,7 @@ defineFeature(feature, (test) => {
     
     when('on tente d\'appeler inferTemplateFromDescription', async () => {
       try {
-        await inferTemplateFromDescription('nuextract.ai', 443, '/api/infer-template', 'fake-api-key', 'test description', 35000);
+        await inferTemplateFromDescription('nuextract.ai', 443, '/api/infer-template', null, 'fake-api-key', 'test description', 35000);
       } catch (e) {
         error = e;
       }
@@ -199,7 +200,7 @@ defineFeature(feature, (test) => {
     
     when('on tente d\'appeler inferTemplateFromDescription', async () => {
       try {
-        await inferTemplateFromDescription('nuextract.ai', 443, '/api/infer-template', 'fake-api-key', 'test description', 35000);
+        await inferTemplateFromDescription('nuextract.ai', 443, '/api/infer-template', null, 'fake-api-key', 'test description', 35000);
       } catch (e) {
         error = e;
       }
@@ -245,7 +246,7 @@ defineFeature(feature, (test) => {
     
     when('on tente d\'appeler inferTemplateFromDescriptionAsync', async () => {
       try {
-        await inferTemplateFromDescriptionAsync('nuextract.ai', 443, '/api/infer-template-async', 'fake-api-key', 'test description', 60);
+        await inferTemplateFromDescriptionAsync('nuextract.ai', 443, '/api/infer-template-async', null, 'fake-api-key', 'test description', 60);
       } catch (e) {
         error = e;
       }
@@ -290,7 +291,7 @@ defineFeature(feature, (test) => {
     
     when('on tente d\'appeler inferTemplateFromDescriptionAsync', async () => {
       try {
-        await inferTemplateFromDescriptionAsync('nuextract.ai', 443, '/api/infer-template-async', 'fake-api-key', 'test description', 60);
+        await inferTemplateFromDescriptionAsync('nuextract.ai', 443, '/api/infer-template-async', null, 'fake-api-key', 'test description', 60);
       } catch (e) {
         error = e;
       }
@@ -334,7 +335,7 @@ defineFeature(feature, (test) => {
     
     when('on tente d\'appeler inferTemplateFromDescriptionAsync', async () => {
       try {
-        await inferTemplateFromDescriptionAsync('nuextract.ai', 443, '/api/infer-template-async', 'fake-api-key', 'test description', 60);
+        await inferTemplateFromDescriptionAsync('nuextract.ai', 443, '/api/infer-template-async', null, 'fake-api-key', 'test description', 60);
       } catch (e) {
         error = e;
       }
@@ -374,7 +375,7 @@ defineFeature(feature, (test) => {
     
     when('on tente d\'appeler getJobStatus', async () => {
       try {
-        await getJobStatus('nuextract.ai', 443, '/api/jobs', 'fake-api-key', 'test-job-id');
+        await getJobStatus('nuextract.ai', 443, '/api/jobs/{jobId}', null, 'fake-api-key', 'test-job-id');
       } catch (e) {
         error = e;
       }
@@ -418,7 +419,7 @@ defineFeature(feature, (test) => {
     
     when('on tente d\'appeler getJobStatus', async () => {
       try {
-        await getJobStatus('nuextract.ai', 443, '/api/jobs', 'fake-api-key', 'test-job-id');
+        await getJobStatus('nuextract.ai', 443, '/api/jobs/{jobId}', null, 'fake-api-key', 'test-job-id');
       } catch (e) {
         error = e;
       }
@@ -461,7 +462,7 @@ defineFeature(feature, (test) => {
     
     when('on tente d\'appeler getJobStatus', async () => {
       try {
-        await getJobStatus('nuextract.ai', 443, '/api/jobs', 'fake-api-key', 'test-job-id');
+        await getJobStatus('nuextract.ai', 443, '/api/jobs/{jobId}', null, 'fake-api-key', 'test-job-id');
       } catch (e) {
         error = e;
       }
@@ -512,7 +513,7 @@ defineFeature(feature, (test) => {
     when('on tente de poller le job', async () => {
       try {
         // maxAttempts=1, interval=100, initialSleepMs=100 pour test rapide
-        await pollJobUntilComplete('nuextract.ai', 443, '/api/jobs', 'fake-api-key', 'test-job-id', 1, 100, 100);
+        await pollJobUntilComplete('nuextract.ai', 443, '/api/jobs/{jobId}', null, 'fake-api-key', 'test-job-id', 1, 100, 100);
       } catch (e) {
         error = e;
       }
@@ -555,7 +556,7 @@ defineFeature(feature, (test) => {
     
     when('on tente de poller le job', async () => {
       try {
-        await pollJobUntilComplete('nuextract.ai', 443, '/api/jobs', 'fake-api-key', 'test-job-id', 1, 100, 100);
+        await pollJobUntilComplete('nuextract.ai', 443, '/api/jobs/{jobId}', null, 'fake-api-key', 'test-job-id', 1, 100, 100);
       } catch (e) {
         error = e;
       }
@@ -600,7 +601,7 @@ defineFeature(feature, (test) => {
     when('on tente de poller le job', async () => {
       try {
         // maxAttempts=3, interval=100, initialSleepMs=100 pour test rapide
-        await pollJobUntilComplete('nuextract.ai', 443, '/api/jobs', 'fake-api-key', 'test-job-id', 3, 100, 100);
+        await pollJobUntilComplete('nuextract.ai', 443, '/api/jobs/{jobId}', null, 'fake-api-key', 'test-job-id', 3, 100, 100);
       } catch (e) {
         error = e;
       }
@@ -618,7 +619,7 @@ defineFeature(feature, (test) => {
     and('le processus s\'arrête proprement', () => {
       expect(error).toBeInstanceOf(Error);
     });
-  });
+  }, 20000); // Timeout de 20s pour permettre le polling avec maxAttempts=3
   
   // === Tests des erreurs HTTP pour getNuExtractProjects ===
   
@@ -644,7 +645,7 @@ defineFeature(feature, (test) => {
     
     when('on tente d\'appeler getNuExtractProjects', async () => {
       try {
-        await getNuExtractProjects('nuextract.ai', 443, '/api/projects', 'fake-api-key');
+        await getNuExtractProjects('nuextract.ai', 443, '/api/projects', null, 'fake-api-key');
       } catch (e) {
         error = e;
       }
@@ -688,7 +689,7 @@ defineFeature(feature, (test) => {
     
     when('on tente d\'appeler getNuExtractProjects', async () => {
       try {
-        await getNuExtractProjects('nuextract.ai', 443, '/api/projects', 'fake-api-key');
+        await getNuExtractProjects('nuextract.ai', 443, '/api/projects', null, 'fake-api-key');
       } catch (e) {
         error = e;
       }
@@ -729,7 +730,7 @@ defineFeature(feature, (test) => {
     
     when('on tente d\'appeler createNuExtractProject', async () => {
       try {
-        await createNuExtractProject('nuextract.ai', 443, '/api/projects', 'fake-api-key', { name: 'test', description: 'test' });
+        await createNuExtractProject('nuextract.ai', 443, '/api/projects', null, 'fake-api-key', { name: 'test', description: 'test' });
       } catch (e) {
         error = e;
       }
@@ -743,6 +744,225 @@ defineFeature(feature, (test) => {
     and('l\'erreur originale est préservée avec Error Cause', () => {
       expect(error.cause).toBeDefined();
       expect(error.cause.code).toBe('EHOSTUNREACH');
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+    });
+  });
+  
+  // === Tests des erreurs HTTP pour inferTextFromContent ===
+  
+  test('Erreur réseau lors d\'appel API inferTextFromContent', ({ given, when, then, and }) => {
+    let error;
+    
+    given('une erreur réseau simulée pour inferTextFromContent', () => {
+      https.request = jest.fn().mockImplementation((options, callback) => {
+        const mockReq = new EventEmitter();
+        mockReq.write = jest.fn();
+        mockReq.end = jest.fn();
+        mockReq.setTimeout = jest.fn();
+        mockReq.destroy = jest.fn();
+        
+        setTimeout(() => {
+          const networkError = new Error('EHOSTUNREACH');
+          networkError.code = 'EHOSTUNREACH';
+          mockReq.emit('error', networkError);
+        }, 10);
+        
+        return mockReq;
+      });
+    });
+    
+    when('on tente d\'appeler inferTextFromContent', async () => {
+      try {
+        await inferTextFromContent('nuextract.ai', 443, '/api/projects/{projectId}/infer-text', null, 'test-project-id', 'fake-api-key', 'test text');
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then('une erreur "Network error calling infer-text API" est générée', () => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain('Network error calling infer-text API');
+    });
+    
+    and('l\'erreur originale est préservée avec Error Cause', () => {
+      expect(error.cause).toBeDefined();
+      expect(error.cause.code).toBe('EHOSTUNREACH');
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+    });
+  });
+  
+  test('Timeout lors d\'appel API inferTextFromContent', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un timeout simulé après 120 secondes pour inferTextFromContent', () => {
+      https.request = jest.fn().mockImplementation((options, callback) => {
+        const mockReq = new EventEmitter();
+        mockReq.write = jest.fn();
+        mockReq.end = jest.fn();
+        mockReq.setTimeout = jest.fn((timeoutMs, callback) => {
+          if (callback) {
+            setTimeout(() => callback(), 10);
+          }
+        });
+        mockReq.destroy = jest.fn();
+        
+        return mockReq;
+      });
+    });
+    
+    when('on tente d\'appeler inferTextFromContent', async () => {
+      try {
+        await inferTextFromContent('nuextract.ai', 443, '/api/projects/{projectId}/infer-text', null, 'test-project-id', 'fake-api-key', 'test text', 120000);
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then('une erreur contenant "Timeout: La requête infer-text a dépassé 120 secondes" est générée', () => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain('Timeout: La requête infer-text a dépassé 120 secondes');
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+    });
+  });
+  
+  test('Code HTTP non-200 pour inferTextFromContent', ({ given, when, then, and }) => {
+    let error;
+    
+    given('une réponse HTTP 500 de l\'API inferTextFromContent', () => {
+      https.request = jest.fn().mockImplementation((options, callback) => {
+        const mockRes = new EventEmitter();
+        mockRes.statusCode = 500;
+        
+        const mockReq = new EventEmitter();
+        mockReq.write = jest.fn();
+        mockReq.end = jest.fn(() => {
+          setTimeout(() => {
+            callback(mockRes);
+            mockRes.emit('data', 'Internal Server Error');
+            mockRes.emit('end');
+          }, 10);
+        });
+        mockReq.setTimeout = jest.fn();
+        
+        return mockReq;
+      });
+    });
+    
+    when('on tente d\'appeler inferTextFromContent', async () => {
+      try {
+        await inferTextFromContent('nuextract.ai', 443, '/api/projects/{projectId}/infer-text', null, 'test-project-id', 'fake-api-key', 'test text');
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then('une erreur contenant "Erreur infer-text: 500" est générée', () => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain('Erreur infer-text: 500');
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+    });
+  });
+  
+  test('JSON invalide dans réponse inferTextFromContent', ({ given, when, then, and }) => {
+    let error;
+    
+    given('une réponse avec JSON malformé pour inferTextFromContent', () => {
+      https.request = jest.fn().mockImplementation((options, callback) => {
+        const mockRes = new EventEmitter();
+        mockRes.statusCode = 200;
+        
+        const mockReq = new EventEmitter();
+        mockReq.write = jest.fn();
+        mockReq.end = jest.fn(() => {
+          setTimeout(() => {
+            callback(mockRes);
+            mockRes.emit('data', '{ invalid json }');
+            mockRes.emit('end');
+          }, 10);
+        });
+        mockReq.setTimeout = jest.fn();
+        
+        return mockReq;
+      });
+    });
+    
+    when('on tente d\'appeler inferTextFromContent', async () => {
+      try {
+        await inferTextFromContent('nuextract.ai', 443, '/api/projects/{projectId}/infer-text', null, 'test-project-id', 'fake-api-key', 'test text');
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then('une erreur "Invalid JSON response from infer-text API" est générée', () => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain('Invalid JSON response from infer-text API');
+    });
+    
+    and('l\'erreur de parsing est préservée avec Error Cause', () => {
+      expect(error.cause).toBeDefined();
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+    });
+  });
+  
+  test('Path invalide pour inferTextFromContent', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un path invalide pour inferTextFromContent', () => {
+      // Pas besoin de mock, la validation se fait avant l'appel HTTP
+    });
+    
+    when('on tente d\'appeler inferTextFromContent', async () => {
+      try {
+        await inferTextFromContent('nuextract.ai', 443, null as any, null, 'test-project-id', 'fake-api-key', 'test text');
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then('une erreur contenant "Invalid path" est générée', () => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain('Invalid path');
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+    });
+  });
+  
+  test('ProjectId invalide pour inferTextFromContent', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un projectId invalide (null ou vide) pour inferTextFromContent', () => {
+      // Pas besoin de mock, la validation se fait avant l'appel HTTP
+    });
+    
+    when('on tente d\'appeler inferTextFromContent', async () => {
+      try {
+        await inferTextFromContent('nuextract.ai', 443, '/api/projects/{projectId}/infer-text', null, null as any, 'fake-api-key', 'test text');
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then('une erreur contenant "Invalid projectId" est générée', () => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain('Invalid projectId');
     });
     
     and('le processus s\'arrête proprement', () => {
