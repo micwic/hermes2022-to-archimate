@@ -277,3 +277,4 @@ Cette distinction est fondamentale pour la transformation correcte schéma → c
 **SRP** : Respect strict du Single Responsibility Principle guidant l'architecture (instructions dans `extraction-config.schema.json` sous `nuextract`, pas dans schéma conceptuel).
 
 
+
