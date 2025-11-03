@@ -3,6 +3,9 @@ import { defineFeature, loadFeature } from 'jest-cucumber';
 import { Given, When, Then } from 'jest-cucumber';
 import path from 'path';
 import fs from 'fs';
+import https from 'https';
+import http from 'http';
+import { EventEmitter } from 'events';
 
 // Mock du module API pour permettre le mocking des appels HTTP
 jest.mock('../../src/nuextract-api.js', () => {
@@ -26,7 +29,8 @@ import {
   _testOnly_loadInstructions as loadInstructions,
   _testOnly_loadAndResolveSchemas as loadAndResolveSchemas,
   _testOnly_generateTemplate as generateTemplate, 
-  _testOnly_findOrCreateProject as findOrCreateProject
+  _testOnly_findOrCreateProject as findOrCreateProject,
+  _testOnly_fetchHtmlContent as fetchHtmlContent
 } from '../../src/nuextract-client.js';
 import { resolveFromRepoRoot } from '../../src/path-resolver.js';
 
@@ -34,17 +38,23 @@ const feature = loadFeature(__dirname + '/nuextract-client-error-handling.featur
 
 // Variables pour restauration des mocks
 let originalReadFileSync: typeof fs.readFileSync;
+let originalHttpsRequest: typeof https.request;
+let originalHttpRequest: typeof http.request;
 
 // Hooks pour isolation des tests (bonne pratique Jest/BDD)
 beforeEach(() => {
   // Sauvegarder les fonctions originales avant chaque test
   originalReadFileSync = fs.readFileSync;
+  originalHttpsRequest = https.request;
+  originalHttpRequest = http.request;
   jest.clearAllMocks();
 });
 
 afterEach(() => {
   // Restaurer les fonctions originales après chaque test
   fs.readFileSync = originalReadFileSync;
+  https.request = originalHttpsRequest;
+  http.request = originalHttpRequest;
   jest.restoreAllMocks();
 });
 
@@ -118,8 +128,8 @@ defineFeature(feature, (test) => {
     let error;
 
     given('un schéma JSON Schema avec structure invalide après transformation', () => {
-      // TODO: À implémenter après création de transformSchemaToConfig()
-      // Ce test nécessitera un mock de transformSchemaToConfig() retournant une structure invalide
+      // TODO: À implémenter après création de transformJSONSchemaIntoJSONConfigFile()
+      // Ce test nécessitera un mock de transformJSONSchemaIntoJSONConfigFile() retournant une structure invalide
     });
 
     when('on tente de charger la configuration depuis le schéma', async () => {
@@ -139,8 +149,8 @@ defineFeature(feature, (test) => {
     let error;
 
     given('un schéma JSON Schema sans section nuextract après transformation', () => {
-      // TODO: À implémenter après création de transformSchemaToConfig()
-      // Ce test nécessitera un mock de transformSchemaToConfig() retournant un config sans nuextract
+      // TODO: À implémenter après création de transformJSONSchemaIntoJSONConfigFile()
+      // Ce test nécessitera un mock de transformJSONSchemaIntoJSONConfigFile() retournant un config sans nuextract
     });
 
     when('on tente de charger la configuration depuis le schéma', async () => {
@@ -372,16 +382,19 @@ defineFeature(feature, (test) => {
   test('Erreur templateMode invalide', ({ given, when, then, and }) => {
     let error;
     let config;
+    let resolvedJsonSchema;
 
     given('une configuration avec templateMode "invalid"', async () => {
       config = await loadGlobalConfig();
       config.nuextract.templateMode = 'invalid';
+      // Charger le schéma résolu pour generateTemplate
+      resolvedJsonSchema = await loadAndResolveSchemas(config);
     });
 
     when('on tente de générer un template', async () => {
       try {
         const apiKey = await loadApiKey(config);
-        await generateTemplate(config, apiKey);
+        await generateTemplate(config, apiKey, resolvedJsonSchema);
       } catch (e) {
         error = e;
       }
@@ -402,12 +415,15 @@ defineFeature(feature, (test) => {
     let config;
     let apiKey;
     let error;
+    let resolvedJsonSchema;
 
     given('une configuration avec templateMode async', async () => {
       // Charger config ET apiKey (Arrange = Given)
       config = await loadGlobalConfig();
       apiKey = await loadApiKey(config);
       config.nuextract.templateMode = 'async';
+      // Charger le schéma résolu pour generateTemplate
+      resolvedJsonSchema = await loadAndResolveSchemas(config);
     });
 
     and('une API async qui ne retourne pas de jobId', () => {
@@ -417,7 +433,7 @@ defineFeature(feature, (test) => {
 
     when('on tente de générer un template', async () => {
       try {
-        await generateTemplate(config, apiKey); // Act simple
+        await generateTemplate(config, apiKey, resolvedJsonSchema); // Act simple
       } catch (err) {
         error = err;
       }
@@ -437,12 +453,15 @@ defineFeature(feature, (test) => {
     let config;
     let apiKey;
     let error;
+    let resolvedJsonSchema;
 
     given('une configuration avec templateMode async', async () => {
       // Charger config ET apiKey (Arrange = Given)
       config = await loadGlobalConfig();
       apiKey = await loadApiKey(config);
       config.nuextract.templateMode = 'async';
+      // Charger le schéma résolu pour generateTemplate
+      resolvedJsonSchema = await loadAndResolveSchemas(config);
     });
 
     and('templateData retourné est une string JSON invalide', () => {
@@ -461,7 +480,7 @@ defineFeature(feature, (test) => {
 
     when('on tente de parser le templateData', async () => {
       try {
-        await generateTemplate(config, apiKey); // Act simple
+        await generateTemplate(config, apiKey, resolvedJsonSchema); // Act simple
       } catch (err) {
         error = err;
       }
@@ -484,6 +503,7 @@ defineFeature(feature, (test) => {
     let errorNull;
     let errorNumber;
     let errorArray;
+    let resolvedJsonSchema;
 
     given('une configuration avec templateMode async', async () => {
       jest.clearAllMocks();
@@ -492,6 +512,8 @@ defineFeature(feature, (test) => {
       config = await loadGlobalConfig();
       apiKey = await loadApiKey(config);
       config.nuextract.templateMode = 'async';
+      // Charger le schéma résolu pour generateTemplate
+      resolvedJsonSchema = await loadAndResolveSchemas(config);
     });
 
     and('templateData retourné est de type invalide (null, number, array)', async () => {
@@ -508,7 +530,7 @@ defineFeature(feature, (test) => {
       try {
         (nuextractApi.pollJobUntilComplete as jest.Mock)
           .mockResolvedValue(null); // Type invalide : null
-        await generateTemplate(config, apiKey);
+        await generateTemplate(config, apiKey, resolvedJsonSchema);
       } catch (err) {
         errorNull = err;
       }
@@ -517,7 +539,7 @@ defineFeature(feature, (test) => {
       try {
         (nuextractApi.pollJobUntilComplete as jest.Mock)
           .mockResolvedValue(42); // Type invalide : number
-        await generateTemplate(config, apiKey);
+        await generateTemplate(config, apiKey, resolvedJsonSchema);
       } catch (err) {
         errorNumber = err;
       }
@@ -526,7 +548,7 @@ defineFeature(feature, (test) => {
       try {
         (nuextractApi.pollJobUntilComplete as jest.Mock)
           .mockResolvedValue([1, 2, 3]); // Type invalide : array
-        await generateTemplate(config, apiKey);
+        await generateTemplate(config, apiKey, resolvedJsonSchema);
       } catch (err) {
         errorArray = err;
       }
@@ -756,9 +778,12 @@ defineFeature(feature, (test) => {
     let error;
     let config;
     let apiKey;
+    let resolvedJsonSchema;
 
     given('une configuration valide', async () => {
       config = await loadGlobalConfig();
+      // Charger le schéma résolu pour generateTemplate
+      resolvedJsonSchema = await loadAndResolveSchemas(config);
     });
 
     and('une API qui retourne un template vide', () => {
@@ -768,7 +793,7 @@ defineFeature(feature, (test) => {
     when('on tente de générer un template', async () => {
       try {
         apiKey = await loadApiKey(config);
-        const template = await generateTemplate(config, apiKey);
+        const template = await generateTemplate(config, apiKey, resolvedJsonSchema);
         
         // Vérifier que le template n'est pas vide
         if (!template || Object.keys(template).length === 0) {
@@ -800,12 +825,15 @@ defineFeature(feature, (test) => {
   test('Erreur timeout API génération template mode sync', ({ given, when, then, and }) => {
     let error;
     let config;
+    let resolvedJsonSchema;
 
     given('une configuration avec templateMode sync', async () => {
       config = await loadGlobalConfig();
       config.nuextract.templateMode = 'sync';
       // Réduire le timeout pour forcer un timeout
       config.nuextract.templateGenerationDuration = 1; // 1ms + 5000ms = timeout très court
+      // Charger le schéma résolu pour generateTemplate
+      resolvedJsonSchema = await loadAndResolveSchemas(config);
     });
 
     and('un schéma très volumineux causant un timeout', () => {
@@ -815,7 +843,7 @@ defineFeature(feature, (test) => {
     when('on tente de générer un template', async () => {
       try {
         const apiKey = await loadApiKey(config);
-        await generateTemplate(config, apiKey);
+        await generateTemplate(config, apiKey, resolvedJsonSchema);
       } catch (e) {
         error = e;
       }
@@ -836,17 +864,20 @@ defineFeature(feature, (test) => {
   test('Erreur API NuExtract inaccessible', ({ given, when, then, and }) => {
     let error;
     let config;
+    let resolvedJsonSchema;
 
     given('une configuration avec baseUrl incorrect', async () => {
       config = await loadGlobalConfig();
       config.nuextract.baseUrl = 'localhost';
       config.nuextract.port = 99999; // Port inaccessible
+      // Charger le schéma résolu pour generateTemplate
+      resolvedJsonSchema = await loadAndResolveSchemas(config);
     });
 
     when('on tente d\'appeler l\'API NuExtract', async () => {
       try {
         const apiKey = await loadApiKey(config);
-        await generateTemplate(config, apiKey);
+        await generateTemplate(config, apiKey, resolvedJsonSchema);
       } catch (e) {
         error = e;
       }
@@ -876,16 +907,20 @@ defineFeature(feature, (test) => {
     when('on tente de gérer un projet', async () => {
       try {
         // Appel direct avec projectName null (erreur levée avant appels API)
-        await findOrCreateProject(
-          'fake-api-key',
-          null, // projectName null
-          'Test project',
-          { test: 'template' },
-          false,
-          'nuextract.ai',
-          443,
-          '/api/projects'
-        );
+        // Note: Si projectName est absent de config, le fallback 'HERMES2022' s'applique
+        // Pour tester la validation, il faut passer projectName comme chaîne vide après trim
+        const config = {
+          nuextract: {
+            projectName: '   ', // projectName vide après trim (teste la validation)
+            projectDescription: 'Test project',
+            baseUrl: 'nuextract.ai',
+            port: 443,
+            projectsPath: '/api/projects',
+            projectTemplatePath: '/api/projects/{projectId}/template',
+            pathPrefix: null
+          }
+        };
+        await findOrCreateProject(config, 'fake-api-key', { test: 'template' });
       } catch (e) {
         error = e;
       }
@@ -917,16 +952,19 @@ defineFeature(feature, (test) => {
 
     when('on tente de créer un nouveau projet', async () => {
       try {
-        await findOrCreateProject(
-          'fake-api-key',
-          'test-project',
-          'Test project without template',
-          null, // template null
-          false,
-          'nuextract.ai',
-          443,
-          '/api/projects'
-        );
+        const config = {
+          nuextract: {
+            projectName: 'test-project',
+            projectDescription: 'Test project without template',
+            templateReset: false,
+            baseUrl: 'nuextract.ai',
+            port: 443,
+            projectsPath: '/api/projects',
+            projectTemplatePath: '/api/projects/{projectId}/template',
+            pathPrefix: null
+          }
+        };
+        await findOrCreateProject(config, 'fake-api-key', null); // template null
       } catch (e) {
         error = e;
       }
@@ -962,16 +1000,19 @@ defineFeature(feature, (test) => {
 
     when('on tente de mettre à jour le projet', async () => {
       try {
-        await findOrCreateProject(
-          'fake-api-key',
-          'test-project',
-          'Test project',
-          null, // template null
-          true, // templateReset = true
-          'nuextract.ai',
-          443,
-          '/api/projects'
-        );
+        const config = {
+          nuextract: {
+            projectName: 'test-project',
+            projectDescription: 'Test project',
+            templateReset: true, // templateReset = true
+            baseUrl: 'nuextract.ai',
+            port: 443,
+            projectsPath: '/api/projects',
+            projectTemplatePath: '/api/projects/{projectId}/template',
+            pathPrefix: null
+          }
+        };
+        await findOrCreateProject(config, 'fake-api-key', null); // template null
       } catch (e) {
         error = e;
       }
@@ -987,57 +1028,60 @@ defineFeature(feature, (test) => {
       jest.clearAllMocks();
     });
   });
-
+  
   test('Erreur validation conformité projet existant sans template fourni', ({ given, when, then, and }) => {
     let error;
-
+    
     given('un projet existant sur la plateforme', () => {
       // Mock getNuExtractProjects retournant un projet existant
       jest.spyOn(nuextractApi, 'getNuExtractProjects')
         .mockResolvedValue([{ id: 'proj-123', name: 'test-project' }]);
     });
-
+    
     and('templateReset configuré à false', () => {
       // templateReset sera false dans l'appel
     });
-
+    
     and('un template null ou vide', () => {
       // Template sera null
     });
-
+    
     when('on tente de rechercher le projet', async () => {
       try {
-        await findOrCreateProject(
-          'fake-api-key',
-          'test-project',
-          'Test project',
-          null, // template null
-          false, // templateReset = false
-          'nuextract.ai',
-          443,
-          '/api/projects'
-        );
+        const config = {
+          nuextract: {
+            projectName: 'test-project',
+            projectDescription: 'Test project',
+            templateReset: false, // templateReset = false
+            baseUrl: 'nuextract.ai',
+            port: 443,
+            projectsPath: '/api/projects',
+            projectTemplatePath: '/api/projects/{projectId}/template',
+            pathPrefix: null
+          }
+        };
+        await findOrCreateProject(config, 'fake-api-key', null); // template null
       } catch (e) {
         error = e;
       }
     });
-
+    
     then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
       expect(error.message).toContain(expectedMessage);
     });
-
+    
     and('le processus s\'arrête proprement', () => {
       expect(error).toBeInstanceOf(Error);
       expect(error.message).toContain('Script stopped');
       jest.clearAllMocks();
     });
   });
-
+  
   test('Erreur projet existant sans template valide', ({ given, when, then, and }) => {
     let error;
     let validTemplate;
-
+    
     given('un projet existant sur la plateforme', async () => {
       // Mock getNuExtractProjects retournant un projet existant SANS template
       jest.spyOn(nuextractApi, 'getNuExtractProjects')
@@ -1052,56 +1096,61 @@ defineFeature(feature, (test) => {
       // Charger un template valide pour la comparaison
       const config = await loadGlobalConfig();
       const apiKey = await loadApiKey(config);
-      validTemplate = await generateTemplate(config, apiKey);
+      const resolvedJsonSchema = await loadAndResolveSchemas(config);
+      validTemplate = await generateTemplate(config, apiKey, resolvedJsonSchema);
     });
-
+    
     and('le projet existant ne contient pas de template ou de template.schema', () => {
       // Le projet mocké ci-dessus n'a pas de template (déjà fait dans given)
     });
-
+    
     and('templateReset configuré à false', () => {
       // templateReset sera false dans l'appel
     });
-
+    
     when('on tente de rechercher le projet', async () => {
       try {
-        await findOrCreateProject(
-          'fake-api-key',
-          'test-project',
-          'Test project',
-          validTemplate,
-          false, // templateReset = false
-          'nuextract.ai',
-          443,
-          '/api/projects'
-        );
+        const config = {
+          nuextract: {
+            projectName: 'test-project',
+            projectDescription: 'Test project',
+            templateReset: false, // templateReset = false
+            baseUrl: 'nuextract.ai',
+            port: 443,
+            projectsPath: '/api/projects',
+            projectTemplatePath: '/api/projects/{projectId}/template',
+            pathPrefix: null
+          }
+        };
+        await findOrCreateProject(config, 'fake-api-key', validTemplate);
       } catch (e) {
         error = e;
       }
     });
-
+    
     then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
       expect(error.message).toContain(expectedMessage);
     });
-
+    
     and('le processus s\'arrête proprement', () => {
       expect(error).toBeInstanceOf(Error);
       expect(error.message).toContain('Script stopped');
       jest.clearAllMocks();
     });
   });
-
+  
   test('Erreur template existant non conforme au JSON schema', ({ given, when, then, and }) => {
     let error;
     let validTemplate;
     let invalidTemplate;
-
+    
     given('un projet existant sur la plateforme avec un template non conforme', async () => {
       // Charger un template valide pour la comparaison
       const config = await loadGlobalConfig();
       const apiKey = await loadApiKey(config);
-      validTemplate = await generateTemplate(config, apiKey);
+      const resolvedJsonSchema = await loadAndResolveSchemas(config);
+      validTemplate = await generateTemplate(config, apiKey, resolvedJsonSchema);
       
       // Créer un template non conforme (différent)
       invalidTemplate = { ...validTemplate, differentProperty: 'different value' };
@@ -1119,33 +1168,193 @@ defineFeature(feature, (test) => {
           }
         ]);
     });
-
+    
     and('templateReset configuré à false', () => {
       // templateReset sera false dans l'appel
     });
-
+    
     when('on tente de rechercher le projet', async () => {
       try {
-        await findOrCreateProject(
-          'fake-api-key',
-          'test-project',
-          'Test project',
-          validTemplate, // Template de référence (conforme)
-          false, // templateReset = false
-          'nuextract.ai',
-          443,
-          '/api/projects'
-        );
+        const config = {
+          nuextract: {
+            projectName: 'test-project',
+            projectDescription: 'Test project',
+            templateReset: false,
+            baseUrl: 'nuextract.ai',
+            port: 443,
+            projectsPath: '/api/projects',
+            projectTemplatePath: '/api/projects/{projectId}/template',
+            pathPrefix: null
+          }
+        };
+        await findOrCreateProject(config, 'fake-api-key', validTemplate); // Template de référence (conforme)
       } catch (e) {
         error = e;
       }
     });
-
+    
     then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
       expect(error.message).toContain(expectedMessage);
     });
-
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  // === Tests des erreurs HTTP pour fetchHtmlContent ===
+  
+  test('Erreur réseau lors d\'appel fetchHtmlContent', ({ given, when, then, and }) => {
+    let error;
+    
+    given('une erreur réseau simulée pour fetchHtmlContent', () => {
+      https.request = jest.fn().mockImplementation((options, callback) => {
+        const mockReq = new EventEmitter();
+        mockReq.write = jest.fn();
+        mockReq.end = jest.fn();
+        mockReq.setTimeout = jest.fn();
+        mockReq.destroy = jest.fn();
+        
+        setTimeout(() => {
+          const networkError = new Error('EHOSTUNREACH');
+          networkError.code = 'EHOSTUNREACH';
+          mockReq.emit('error', networkError);
+        }, 10);
+        
+        return mockReq;
+      });
+    });
+    
+    when('on tente d\'appeler fetchHtmlContent', async () => {
+      try {
+        await fetchHtmlContent('https://www.hermes.admin.ch/en/project-management/phases.html');
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then('une erreur "Network error fetching HTML content" est générée', () => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain('Network error fetching HTML content');
+    });
+    
+    and('l\'erreur originale est préservée avec Error Cause', () => {
+      expect(error.cause).toBeDefined();
+      expect(error.cause.code).toBe('EHOSTUNREACH');
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('Timeout lors d\'appel fetchHtmlContent', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un timeout simulé après 30 secondes pour fetchHtmlContent', () => {
+      https.request = jest.fn().mockImplementation((options, callback) => {
+        const mockReq = new EventEmitter();
+        mockReq.write = jest.fn();
+        mockReq.end = jest.fn();
+        mockReq.setTimeout = jest.fn((timeoutMs, callback) => {
+          if (callback) {
+            setTimeout(() => callback(), 10);
+          }
+        });
+        mockReq.destroy = jest.fn();
+        
+        return mockReq;
+      });
+    });
+    
+    when('on tente d\'appeler fetchHtmlContent', async () => {
+      try {
+        await fetchHtmlContent('https://www.hermes.admin.ch/en/project-management/phases.html', 30000);
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then('une erreur contenant "Timeout: La requête HTML a dépassé 30 secondes" est générée', () => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain('Timeout: La requête HTML a dépassé 30 secondes');
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('Code HTTP non-200 pour fetchHtmlContent', ({ given, when, then, and }) => {
+    let error;
+    
+    given('une réponse HTTP 404 pour fetchHtmlContent', () => {
+      https.request = jest.fn().mockImplementation((options, callback) => {
+        const mockRes = new EventEmitter();
+        mockRes.statusCode = 404;
+        
+        const mockReq = new EventEmitter();
+        mockReq.write = jest.fn();
+        mockReq.end = jest.fn(() => {
+          setTimeout(() => {
+            callback(mockRes);
+            mockRes.emit('data', 'Not Found');
+            mockRes.emit('end');
+          }, 10);
+        });
+        mockReq.setTimeout = jest.fn();
+        
+        return mockReq;
+      });
+    });
+    
+    when('on tente d\'appeler fetchHtmlContent', async () => {
+      try {
+        await fetchHtmlContent('https://www.hermes.admin.ch/en/project-management/phases.html');
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then('une erreur contenant "HTTP error: 404" est générée', () => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain('HTTP error: 404');
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('URL invalide pour fetchHtmlContent', ({ given, when, then, and }) => {
+    let error;
+    
+    given('une URL invalide pour fetchHtmlContent', () => {
+      // Pas besoin de mock, la validation se fait avant l'appel HTTP
+    });
+    
+    when('on tente d\'appeler fetchHtmlContent', async () => {
+      try {
+        await fetchHtmlContent('invalid-url');
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then('une erreur contenant "Invalid URL" est générée', () => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain('Invalid URL');
+    });
+    
     and('le processus s\'arrête proprement', () => {
       expect(error).toBeInstanceOf(Error);
       expect(error.message).toContain('Script stopped');

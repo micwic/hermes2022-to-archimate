@@ -15,6 +15,7 @@ jest.mock('../../../src/nuextract-api.js', () => {
 import {
   _testOnly_loadGlobalConfig as loadGlobalConfig,
   _testOnly_loadApiKey as loadApiKey,
+  _testOnly_loadAndResolveSchemas as loadAndResolveSchemas,
   _testOnly_generateTemplate as generateTemplate
 } from '../../../src/nuextract-client.js';
 
@@ -39,7 +40,8 @@ defineFeature(feature, (test) => {
 
   const arrangeErrorThrow = async () => {
     try {
-      await generateTemplate(config, apiKey);
+      const resolvedJsonSchema = await loadAndResolveSchemas(config);
+      await generateTemplate(config, apiKey, resolvedJsonSchema);
     } catch (e) {
       error = e;
     }

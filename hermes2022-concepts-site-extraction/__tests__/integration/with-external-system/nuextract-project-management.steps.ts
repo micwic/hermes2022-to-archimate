@@ -8,6 +8,7 @@ import path from 'path';
 import { 
   _testOnly_loadGlobalConfig as loadGlobalConfig, 
   _testOnly_loadApiKey as loadApiKey, 
+  _testOnly_loadAndResolveSchemas as loadAndResolveSchemas,
   _testOnly_generateTemplate as generateTemplate, 
   _testOnly_findOrCreateProject as findOrCreateProject
 } from '../../../src/nuextract-client.js';
@@ -48,7 +49,8 @@ defineFeature(feature, (test) => {
     });
 
     and('un template NuExtract valide', async () => {
-      template = await generateTemplate(config, apiKey);
+      const resolvedJsonSchema = await loadAndResolveSchemas(config);
+      template = await generateTemplate(config, apiKey, resolvedJsonSchema);
       // Validation minimale : les validations détaillées sont effectuées par generateTemplate()
       expect(template).toBeDefined();
     });
@@ -58,6 +60,7 @@ defineFeature(feature, (test) => {
         config?.nuextract?.baseUrl || 'nuextract.ai',
         config?.nuextract?.port || 443,
         config?.nuextract?.projectsPath || '/api/projects',
+        config?.nuextract?.pathPrefix || null,
         apiKey
       );
       // Vérification explicite que l'appel API fonctionne correctement
@@ -78,16 +81,7 @@ defineFeature(feature, (test) => {
     });
 
     when('on demande la création du projet avec findOrCreateProject', async () => {
-      projectResult = await findOrCreateProject(
-        apiKey,
-        config.nuextract.projectName,
-        config.nuextract.projectDescription,
-        template,
-        config.nuextract.templateReset,
-        config?.nuextract?.baseUrl || 'nuextract.ai',
-        config?.nuextract?.port || 443,
-        config?.nuextract?.projectsPath || '/api/projects'
-      );
+      projectResult = await findOrCreateProject(config, apiKey, template);
     });
 
     then('le projet est créé avec succès', () => {
@@ -110,7 +104,8 @@ defineFeature(feature, (test) => {
       const project = await getNuExtractProject(
         config?.nuextract?.baseUrl || 'nuextract.ai',
         config?.nuextract?.port || 443,
-        config?.nuextract?.projectsPath || '/api/projects',
+        config?.nuextract?.projectPath || '/api/projects/{projectId}',
+        config?.nuextract?.pathPrefix || null,
         apiKey,
         projectResult.id
       );
@@ -146,37 +141,23 @@ defineFeature(feature, (test) => {
     });
 
     and('un projet "HERMES2022" existant sur la plateforme', async () => {
-      const template = await generateTemplate(config, apiKey);
-      existingProject = await findOrCreateProject(
-        apiKey,
-        config.nuextract.projectName,
-        config.nuextract.projectDescription,
-        template,
-        false,
-        config?.nuextract?.baseUrl || 'nuextract.ai',
-        config?.nuextract?.port || 443,
-        config?.nuextract?.projectsPath || '/api/projects'
-      );
+      const resolvedJsonSchema = await loadAndResolveSchemas(config);
+      const template = await generateTemplate(config, apiKey, resolvedJsonSchema);
+      config.nuextract.templateReset = false;
+      existingProject = await findOrCreateProject(config, apiKey, template);
       expect(existingProject).toBeDefined();
       expect(existingProject.id).toBeDefined();
     });
 
     and('un nouveau template NuExtract valide', async () => {
-      newTemplate = await generateTemplate(config, apiKey);
+      const resolvedJsonSchema = await loadAndResolveSchemas(config);
+      newTemplate = await generateTemplate(config, apiKey, resolvedJsonSchema);
       expect(newTemplate).toBeDefined();
     });
 
     when('on met à jour le template du projet avec findOrCreateProject sur un projet existant (templateReset=true)', async () => {
-      updateResult = await findOrCreateProject(
-        apiKey,
-        config.nuextract.projectName,
-        config.nuextract.projectDescription,
-        newTemplate,
-        true,
-        config?.nuextract?.baseUrl || 'nuextract.ai',
-        config?.nuextract?.port || 443,
-        config?.nuextract?.projectsPath || '/api/projects'
-      );
+      config.nuextract.templateReset = true;
+      updateResult = await findOrCreateProject(config, apiKey, newTemplate);
     });
 
     then('le template est mis à jour avec succès', () => {
@@ -188,7 +169,8 @@ defineFeature(feature, (test) => {
       const project = await getNuExtractProject(
         config?.nuextract?.baseUrl || 'nuextract.ai',
         config?.nuextract?.port || 443,
-        config?.nuextract?.projectsPath || '/api/projects',
+        config?.nuextract?.projectPath || '/api/projects/{projectId}',
+        config?.nuextract?.pathPrefix || null,
         apiKey,
         updateResult.id
       );
@@ -224,32 +206,18 @@ defineFeature(feature, (test) => {
     });
 
     and('un projet "HERMES2022" existant sur la plateforme', async () => {
-      const template = await generateTemplate(config, apiKey);
-      existingProject = await findOrCreateProject(
-        apiKey,
-        config.nuextract.projectName,
-        config.nuextract.projectDescription,
-        template,
-        false,
-        config?.nuextract?.baseUrl || 'nuextract.ai',
-        config?.nuextract?.port || 443,
-        config?.nuextract?.projectsPath || '/api/projects'
-      );
+      const resolvedJsonSchema = await loadAndResolveSchemas(config);
+      const template = await generateTemplate(config, apiKey, resolvedJsonSchema);
+      config.nuextract.templateReset = false;
+      existingProject = await findOrCreateProject(config, apiKey, template);
       expect(existingProject).toBeDefined();
     });
 
     when('on recherche le projet avec findOrCreateProject sans nouveau template', async () => {
-      template = await generateTemplate(config, apiKey);
-      searchResult = await findOrCreateProject(
-        apiKey,
-        config.nuextract.projectName,
-        config.nuextract.projectDescription,
-        template,
-        false,
-        config?.nuextract?.baseUrl || 'nuextract.ai',
-        config?.nuextract?.port || 443,
-        config?.nuextract?.projectsPath || '/api/projects'
-      );
+      const resolvedJsonSchema = await loadAndResolveSchemas(config);
+      template = await generateTemplate(config, apiKey, resolvedJsonSchema);
+      config.nuextract.templateReset = false;
+      searchResult = await findOrCreateProject(config, apiKey, template);
     });
 
     then('Ne rien faire', () => {

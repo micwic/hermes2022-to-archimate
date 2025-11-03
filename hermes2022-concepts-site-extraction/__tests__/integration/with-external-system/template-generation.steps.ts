@@ -7,7 +7,8 @@ import path from 'path';
 // Import des fonctions du script refactorisé
 import { 
   _testOnly_loadGlobalConfig as loadGlobalConfig, 
-  _testOnly_loadApiKey as loadApiKey, 
+  _testOnly_loadApiKey as loadApiKey,
+  _testOnly_loadAndResolveSchemas as loadAndResolveSchemas,
   _testOnly_generateTemplate as generateTemplate 
 } from '../../../src/nuextract-client.js';
 import { resolveFromRepoRoot } from '../../../src/path-resolver.js';
@@ -54,7 +55,8 @@ defineFeature(feature, (test) => {
     });
 
     when('on génère un template NuExtract avec infer-template-async', async () => {
-      template = await generateTemplate(config, apiKey);
+      const resolvedJsonSchema = await loadAndResolveSchemas(config);
+      template = await generateTemplate(config, apiKey, resolvedJsonSchema);
     });
 
     then('le template est créé avec succès dans le répertoire de sortie des templates NuExtract', () => {
@@ -115,7 +117,8 @@ defineFeature(feature, (test) => {
     });
 
     when('on génère un template NuExtract avec infer-template', async () => {
-      template = await generateTemplate(config, apiKey);
+      const resolvedJsonSchema = await loadAndResolveSchemas(config);
+      template = await generateTemplate(config, apiKey, resolvedJsonSchema);
     });
 
     then('le template est créé avec succès dans le répertoire de sortie des templates NuExtract', () => {

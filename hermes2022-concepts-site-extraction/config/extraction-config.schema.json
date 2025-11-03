@@ -114,6 +114,11 @@
           "enum": [443],
           "description": "Port de l'API NuExtract"
         },
+        "pathPrefix": {
+          "type": ["string", "null"],
+          "enum": [null, ""],
+          "description": "Préfixe optionnel pour versionning des APIs (null ou vide si absent)"
+        },
         "projectsPath": {
           "type": "string",
           "enum": ["/api/projects"],
@@ -139,6 +144,26 @@
           "enum": ["/api/projects/{projectId}/extract"],
           "description": "Chemin de l'endpoint d'extraction"
         },
+        "jobsPath": {
+          "type": "string",
+          "enum": ["/api/jobs/{jobId}"],
+          "description": "Chemin de l'endpoint de statut des jobs"
+        },
+        "projectPath": {
+          "type": "string",
+          "enum": ["/api/projects/{projectId}"],
+          "description": "Chemin de l'endpoint de gestion d'un projet spécifique"
+        },
+        "projectTemplatePath": {
+          "type": "string",
+          "enum": ["/api/projects/{projectId}/template"],
+          "description": "Chemin de l'endpoint de mise à jour du template d'un projet"
+        },
+        "extractionBlocksMaxDepth": {
+          "type": "number",
+          "enum": [10],
+          "description": "Profondeur maximale de récursivité pour éviter les boucles infinies"
+        },
         "description": {
           "type": "string",
           "enum": ["Configuration pour l'utilisation des APIs NuExtract"],
@@ -158,11 +183,16 @@
         "model",
         "baseUrl",
         "port",
+        "pathPrefix",
         "projectsPath",
         "infer-templatePath",
         "infer-templateAsyncPath",
         "infer-textPath",
         "extractPath",
+        "jobsPath",
+        "projectPath",
+        "projectTemplatePath",
+        "extractionBlocksMaxDepth",
         "description"
       ],
       "additionalProperties": false

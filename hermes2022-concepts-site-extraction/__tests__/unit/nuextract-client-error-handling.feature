@@ -146,6 +146,29 @@ Fonctionnalité: Gestion d'erreur robuste
     Quand on tente de mettre à jour le projet
     Alors une erreur "A valid NuExtractTemplate is required for template update" est générée
     Et le processus s'arrête proprement
+  
+  Scénario: Erreur validation conformité projet existant sans template fourni
+    Etant donné un projet existant sur la plateforme
+    Et templateReset configuré à false
+    Et un template null ou vide
+    Quand on tente de rechercher le projet
+    Alors une erreur "A valid NuExtractTemplate is required for template conformity validation" est générée
+    Et le processus s'arrête proprement
+  
+  Scénario: Erreur projet existant sans template valide
+    Etant donné un projet existant sur la plateforme
+    Et le projet existant ne contient pas de template ou de template.schema
+    Et templateReset configuré à false
+    Quand on tente de rechercher le projet
+    Alors une erreur contenant "existe mais ne contient pas de template valide" est générée
+    Et le processus s'arrête proprement
+  
+  Scénario: Erreur template existant non conforme au JSON schema
+    Etant donné un projet existant sur la plateforme avec un template non conforme
+    Et templateReset configuré à false
+    Quand on tente de rechercher le projet
+    Alors une erreur contenant "n'est pas conforme au JSON schema attendu" est générée
+    Et le processus s'arrête proprement
   #
   # === Gestion des erreurs de template NuExtract et appels API ===
 
@@ -167,5 +190,32 @@ Fonctionnalité: Gestion d'erreur robuste
     Etant donné une configuration avec baseUrl incorrect
     Quand on tente d'appeler l'API NuExtract
     Alors une erreur de connexion est générée
+    Et le processus s'arrête proprement
+  #
+  # === Gestion des erreurs HTTP pour fetchHtmlContent ===
+  
+  Scénario: Erreur réseau lors d'appel fetchHtmlContent
+    Etant donné une erreur réseau simulée pour fetchHtmlContent
+    Quand on tente d'appeler fetchHtmlContent
+    Alors une erreur "Network error fetching HTML content" est générée
+    Et l'erreur originale est préservée avec Error Cause
+    Et le processus s'arrête proprement
+  
+  Scénario: Timeout lors d'appel fetchHtmlContent
+    Etant donné un timeout simulé après 30 secondes pour fetchHtmlContent
+    Quand on tente d'appeler fetchHtmlContent
+    Alors une erreur contenant "Timeout: La requête HTML a dépassé 30 secondes" est générée
+    Et le processus s'arrête proprement
+  
+  Scénario: Code HTTP non-200 pour fetchHtmlContent
+    Etant donné une réponse HTTP 404 pour fetchHtmlContent
+    Quand on tente d'appeler fetchHtmlContent
+    Alors une erreur contenant "HTTP error: 404" est générée
+    Et le processus s'arrête proprement
+  
+  Scénario: URL invalide pour fetchHtmlContent
+    Etant donné une URL invalide pour fetchHtmlContent
+    Quand on tente d'appeler fetchHtmlContent
+    Alors une erreur contenant "Invalid URL" est générée
     Et le processus s'arrête proprement
   #
