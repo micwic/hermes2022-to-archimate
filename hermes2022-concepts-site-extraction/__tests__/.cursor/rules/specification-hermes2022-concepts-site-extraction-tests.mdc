@@ -348,7 +348,9 @@ jest.spyOn(nuextractApi, 'inferTemplateFromDescriptionAsync')
 
 [2025-10-26] Les timeouts Jest sont adaptés selon le type de test et la durée d'exécution attendue :
 
-- **Tests unitaires** : 15000ms (15s) - Timeout global configuré dans cucumber-jest.config.js et jest.config.js
+- **Tests unitaires** : 15000ms (15s) - Timeout global configuré dans
+  `hermes2022-concepts-site-extraction/jest.config.js` et répliqué par la
+  configuration racine `jest.config.js`
 - **Tests intégration mode sync** : 45000ms (45s) - Timeout par test pour appel API synchrone `/api/infer-template`
 - **Tests intégration mode async** : 120000ms (2 minutes) - Timeout par test pour workflow async complet (sleep 30s + polling)
 
@@ -372,7 +374,7 @@ test('Génération de template NuExtract avec infer-template-async', ({ given, w
 - **Timeout global dans config** :
 
 ```javascript
-// cucumber-jest.config.js
+// hermes2022-concepts-site-extraction/jest.config.js
 module.exports = {
   testTimeout: 15000,  // 15 secondes par défaut
   // ...
@@ -409,7 +411,8 @@ test('Génération de template NuExtract avec infer-template-async',
 - **Tests unitaires** (`__tests__/unit/`) : error-handling avec mocking de toutes les dépendances externes (fs, API)
 - **Tests d'intégration** (`__tests__/integration/`) : template-generation et nuextract-project-management avec appels API réels
 
-[2025-10-26] Cette séparation est reflétée dans la configuration cucumber-jest.config.js :
+[2025-10-26] Cette séparation est reflétée dans la configuration
+`hermes2022-concepts-site-extraction/jest.config.js` :
 
 ```javascript
 testMatch: [
