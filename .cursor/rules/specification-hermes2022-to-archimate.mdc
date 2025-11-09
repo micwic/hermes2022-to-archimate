@@ -6,7 +6,7 @@ alwaysApply: true
 # hermes2022-to-archimate/.cursor/rules/specification-hermes2022-to-archimate.mdc: Spécification générale du projet hermes2022-to-archimate
 
 > Créé le : 2025-08-15  
-> Dernière mise à jour : 2025-10-29
+> Dernière mise à jour : 2025-11-09
 
 ## Description générale
 
@@ -218,7 +218,8 @@ Le projet est ainsi divisé en deux parties qui se déroulent séquentiellement 
 
 #### Patterns validés à suivre pour Cadre de tests BDD et validation JSON
 
-- Configuration centralisée: `cursor-ws-hermes2022-to-archimate/cucumber-jest.config.js`.
+- Configuration orchestrée via `jest.config.js` à la racine du dépôt, qui référence
+  `hermes2022-concepts-site-extraction/jest.config.js` avec la propriété `projects`.
 - Découverte des steps: `**/__tests__/{integration,e2e}/**/*.steps.{js,ts}` ;
   environnement `node` ; setup: `__tests__/support/jest-cucumber-setup.js`.
 - Résolution des artefacts: répertoire piloté par `artifactBaseDir` dans
