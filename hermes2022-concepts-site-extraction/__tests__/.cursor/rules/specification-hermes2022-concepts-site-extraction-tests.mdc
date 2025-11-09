@@ -34,19 +34,19 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/__tests__/.
 
 ## Principe : Spécifications générales vs spécifications détaillées
 
-**Spécifications générales** (ce document) :
+__Spécifications générales__ (ce document) :
 
 - Décisions architecturales et techniques justifiées
 - Patterns validés avec exemples minimalistes
 - Anti-patterns avec solutions recommandées
 - État d'implémentation
 
-**Spécifications détaillées** (fichiers BDD) :
+__Spécifications détaillées__ (fichiers BDD) :
 
 - `.feature` : Scénarios Gherkin exhaustifs (Given/When/Then)
 - `.steps.ts` : Implémentation complète des steps avec mocking et assertions
 
-**Règle** : Éviter la redondance en documentant uniquement les décisions et patterns dans les spécifications générales, pas les scénarios détaillés déjà présents dans `.feature` et `.steps.ts`
+__Règle__ : Éviter la redondance en documentant uniquement les décisions et patterns dans les spécifications générales, pas les scénarios détaillés déjà présents dans `.feature` et `.steps.ts`
 
 ## Conception générale
 
@@ -83,15 +83,15 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/__tests__/.
 
 [2025-10-26] Mécanisme de capture et correspondance selon la documentation jest-cucumber :
 
-1. **Définition du step dans `.feature`** : `Alors une erreur "API_KEY is not set" est générée`
-2. **Pattern regex dans `.steps.ts`** : `/^une erreur "(.*)" est générée$/`
-3. **Capture du groupe** : Le pattern `(.*)` capture le texte entre guillemets (`"API_KEY is not set"`)
-4. **Paramètre de fonction** : La valeur capturée est passée comme paramètre `expectedMessage` à la fonction step definition
+1. __Définition du step dans `.feature`__ : `Alors une erreur "API_KEY is not set" est générée`
+2. __Pattern regex dans `.steps.ts`__ : `/^une erreur "(.*)" est générée$/`
+3. __Capture du groupe__ : Le pattern `(.*)` capture le texte entre guillemets (`"API_KEY is not set"`)
+4. __Paramètre de fonction__ : La valeur capturée est passée comme paramètre `expectedMessage` à la fonction step definition
 
 [2025-10-26] Deux variantes de regex sont utilisées pour établir la correspondance avec les steps "Then" Gherkin des fichiers `.feature` :
 
-- **Regex n°1** : `/^une erreur "(.*)" est générée$/` - Capture le texte exact entre guillemets après le litéral 'une erreur ' dans le step Gherkin, le `^` et `$` assurent une correspondance complète de la ligne
-- **Regex n°2** : `/^une erreur contenant "(.*)" est générée$/` - Capture le texte avec le mot-clé "contenant" rendant l'intention de validation partielle explicite dans le langage Gherkin
+- __Regex n°1__ : `/^une erreur "(.*)" est générée$/` - Capture le texte exact entre guillemets après le litéral 'une erreur ' dans le step Gherkin, le `^` et `$` assurent une correspondance complète de la ligne
+- __Regex n°2__ : `/^une erreur contenant "(.*)" est générée$/` - Capture le texte avec le mot-clé "contenant" rendant l'intention de validation partielle explicite dans le langage Gherkin
 
 [2025-10-26] Les deux regex utilisent l'assertion Jest `.toContain()` au lieu de `.toBe()` car les messages d'erreur complets incluent contexte et terminaison "Script stopped." selon @error-handling-governance, permettant une validation partielle robuste du fragment de message capturé.
 
@@ -103,24 +103,24 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/__tests__/.
 
 #### Justification pour Patterns Gherkin
 
-- **Conformité Cucumber** : Les expressions régulières pour step definitions sont le mécanisme standard Cucumber (documenté dans cucumber.io et jest-cucumber)
-- **Clarté des intentions** : Le mot "contenant" dans le Gherkin (langage naturel) rend explicite qu'on vérifie une correspondance partielle
-- **Flexibilité** : L'assertion `.toContain()` de Jest permet de valider le fragment clé du message sans dépendre du format exact du message complet (bonne pratique Jest)
-- **Robustesse** : Les tests résistent aux modifications mineures des messages d'erreur (ajout contexte, formatage) selon le principe de tests résilients
-- **Réutilisabilité** : Le step "le processus s'arrête proprement" évite la duplication de code de cleanup (principe DRY - Don't Repeat Yourself)
-- **Isolation des tests** : Le cleanup systématique des mocks garantit l'absence d'effets de bord entre tests (bonne pratique Jest documentée)
+- __Conformité Cucumber__ : Les expressions régulières pour step definitions sont le mécanisme standard Cucumber (documenté dans cucumber.io et jest-cucumber)
+- __Clarté des intentions__ : Le mot "contenant" dans le Gherkin (langage naturel) rend explicite qu'on vérifie une correspondance partielle
+- __Flexibilité__ : L'assertion `.toContain()` de Jest permet de valider le fragment clé du message sans dépendre du format exact du message complet (bonne pratique Jest)
+- __Robustesse__ : Les tests résistent aux modifications mineures des messages d'erreur (ajout contexte, formatage) selon le principe de tests résilients
+- __Réutilisabilité__ : Le step "le processus s'arrête proprement" évite la duplication de code de cleanup (principe DRY - Don't Repeat Yourself)
+- __Isolation des tests__ : Le cleanup systématique des mocks garantit l'absence d'effets de bord entre tests (bonne pratique Jest documentée)
 
 #### Patterns validés pour Patterns Gherkin
 
-- **Pattern avec capture de groupe** : Correspondance entre step Gherkin et step definition TypeScript
+- __Pattern avec capture de groupe__ : Correspondance entre step Gherkin et step definition TypeScript
 
-**Étape 1 - Step Gherkin dans `.feature`** :
+__Étape 1 - Step Gherkin dans `.feature`__ :
 
 ```gherkin
 Alors une erreur "API_KEY is not set" est générée
 ```
 
-**Étape 2 - Step definition TypeScript dans `.steps.ts`** :
+__Étape 2 - Step definition TypeScript dans `.steps.ts`__ :
 
 ```typescript
 // Pattern regex : /^une erreur "(.*)" est générée$/
@@ -135,15 +135,15 @@ then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
 });
 ```
 
-- **Pattern avec mot-clé "contenant"** : Intention explicite de validation partielle dans le langage Gherkin
+- __Pattern avec mot-clé "contenant"__ : Intention explicite de validation partielle dans le langage Gherkin
 
-**Étape 1 - Step Gherkin dans `.feature`** :
+__Étape 1 - Step Gherkin dans `.feature`__ :
 
 ```gherkin
 Alors une erreur contenant "templateMode invalide" est générée
 ```
 
-**Étape 2 - Step definition TypeScript dans `.steps.ts`** :
+__Étape 2 - Step definition TypeScript dans `.steps.ts`__ :
 
 ```typescript
 // Pattern regex : /^une erreur contenant "(.*)" est générée$/
@@ -155,7 +155,7 @@ then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
 });
 ```
 
-- **Step cleanup réutilisable** : Encapsulation des assertions de cleanup selon principe DRY
+- __Step cleanup réutilisable__ : Encapsulation des assertions de cleanup selon principe DRY
 
 ```typescript
 // Step "And" standard Gherkin pour cleanup après assertion d'erreur
@@ -175,13 +175,13 @@ and('le processus s\'arrête proprement', () => {
 
 #### Anti-Patterns pour Patterns Gherkin à éviter
 
-- **Assertion `.toBe()` sur message complet** : Éviter `expect(error.message).toBe("Configuration error: Invalid JSON in configuration file. Script stopped.")` → **Solution** : Utiliser `.toContain("Invalid JSON")` pour valider uniquement le fragment clé → **Règle à adopter** : Validation partielle robuste selon bonnes pratiques Jest (tests résilients aux changements de formatage)
+- __Assertion `.toBe()` sur message complet__ : Éviter `expect(error.message).toBe("Configuration error: Invalid JSON in configuration file. Script stopped.")` → __Solution__ : Utiliser `.toContain("Invalid JSON")` pour valider uniquement le fragment clé → __Règle à adopter__ : Validation partielle robuste selon bonnes pratiques Jest (tests résilients aux changements de formatage)
 
-- **Regex sans groupe de capture** : Éviter `/^une erreur est générée$/` qui ne capture aucune valeur → **Solution** : Utiliser `/^une erreur "(.*)" est générée$/` avec groupe de capture `(.*)` → **Règle à adopter** : Regex avec capture explicite selon mécanisme standard Cucumber step definitions
+- __Regex sans groupe de capture__ : Éviter `/^une erreur est générée$/` qui ne capture aucune valeur → __Solution__ : Utiliser `/^une erreur "(.*)" est générée$/` avec groupe de capture `(.*)` → __Règle à adopter__ : Regex avec capture explicite selon mécanisme standard Cucumber step definitions
 
-- **Pas de cleanup des mocks** : Éviter oubli de `jest.clearAllMocks()` et restauration des fonctions mockées → **Solution** : Step réutilisable "le processus s'arrête proprement" → **Règle à adopter** : Cleanup systématique pour isolation des tests (bonne pratique Jest documentée, évite effets de bord entre tests)
+- __Pas de cleanup des mocks__ : Éviter oubli de `jest.clearAllMocks()` et restauration des fonctions mockées → __Solution__ : Step réutilisable "le processus s'arrête proprement" → __Règle à adopter__ : Cleanup systématique pour isolation des tests (bonne pratique Jest documentée, évite effets de bord entre tests)
 
-- **Hardcoding valeur dans step definition** : Éviter `expect(error.message).toContain('templateMode invalide')` avec valeur en dur alors que le pattern capture `expectedMessage` → **Solution** : Utiliser le paramètre capturé `expect(error.message).toContain(expectedMessage)` → **Règle à adopter** : Exploitation systématique des groupes de capture regex pour réutilisabilité du step definition
+- __Hardcoding valeur dans step definition__ : Éviter `expect(error.message).toContain('templateMode invalide')` avec valeur en dur alors que le pattern capture `expectedMessage` → __Solution__ : Utiliser le paramètre capturé `expect(error.message).toContain(expectedMessage)` → __Règle à adopter__ : Exploitation systématique des groupes de capture regex pour réutilisabilité du step definition
 
 #### État d'implémentation pour Patterns Gherkin
 
@@ -195,19 +195,19 @@ and('le processus s\'arrête proprement', () => {
 
 #### Justification pour Tests loadInstructions
 
-- **Criticité des instructions** : Essentielles pour transformation correcte des énumérations JSON Schema vers format NuExtract
-- **Détection précoce** : Erreurs détectées avant appel API (économie quota)
-- **Exhaustivité** : Couverture complète des 3 étapes de traitement
+- __Criticité des instructions__ : Essentielles pour transformation correcte des énumérations JSON Schema vers format NuExtract
+- __Détection précoce__ : Erreurs détectées avant appel API (économie quota)
+- __Exhaustivité__ : Couverture complète des 3 étapes de traitement
 
 #### Patterns validés pour Tests loadInstructions
 
-- **Mocking fs.readFileSync** : Simulation fichier manquant (ENOENT), heading absent, contenu vide
-- **Error Cause** : Préservation de l'erreur originale pour ENOENT
-- **Messages explicites** : Conformité @error-handling-governance
+- __Mocking fs.readFileSync__ : Simulation fichier manquant (ENOENT), heading absent, contenu vide
+- __Error Cause__ : Préservation de l'erreur originale pour ENOENT
+- __Messages explicites__ : Conformité @error-handling-governance
 
 #### Anti-Patterns pour Tests loadInstructions à éviter
 
-- **Validation laxiste** : Éviter retour `''` en cas d'erreur → **Solution** : Lever erreur explicite → **Règle** : Gestion stricte selon @error-handling-governance
+- __Validation laxiste__ : Éviter retour `''` en cas d'erreur → __Solution__ : Lever erreur explicite → __Règle__ : Gestion stricte selon @error-handling-governance
 
 #### État d'implémentation pour Tests loadInstructions
 
@@ -221,20 +221,20 @@ and('le processus s\'arrête proprement', () => {
 
 #### Justification pour Tests nuextract-api
 
-- **Couche critique** : Module API/I/O isolant tous les appels HTTP externes
-- **Gestion d'erreur stricte** : Conformité @error-handling-governance avec Error Cause
-- **Testabilité améliorée** : Mocking du module https pour simuler tous les cas d'erreur
-- **Couverture exhaustive** : Tous les chemins d'erreur de chaque fonction testés
+- __Couche critique__ : Module API/I/O isolant tous les appels HTTP externes
+- __Gestion d'erreur stricte__ : Conformité @error-handling-governance avec Error Cause
+- __Testabilité améliorée__ : Mocking du module https pour simuler tous les cas d'erreur
+- __Couverture exhaustive__ : Tous les chemins d'erreur de chaque fonction testés
 
 #### Patterns validés pour Tests nuextract-api
 
-- **Mock https.request** : Simulation EventEmitter pour req et res
-- **Error Cause préservée** : Validation que error.cause contient l'erreur originale
-- **Messages explicites** : Conformité messages d'erreur avec code nuextract-api.js
+- __Mock https.request__ : Simulation EventEmitter pour req et res
+- __Error Cause préservée__ : Validation que error.cause contient l'erreur originale
+- __Messages explicites__ : Conformité messages d'erreur avec code nuextract-api.js
 
 #### Anti-Patterns pour Tests nuextract-api à éviter
 
-- **Tests d'intégration dans unit/** : Éviter appels API réels → **Solution** : Mocking complet → **Règle** : Séparation stricte unit/integration
+- __Tests d'intégration dans unit/__ : Éviter appels API réels → __Solution__ : Mocking complet → __Règle__ : Séparation stricte unit/integration
 
 #### État d'implémentation pour Tests nuextract-api
 
@@ -246,9 +246,9 @@ and('le processus s\'arrête proprement', () => {
 
 [2025-10-26] Les tests unitaires (error-handling) utilisent le mocking pour isoler les dépendances externes :
 
-- **Mocking fs.readFileSync** : Simule fichiers manquants (ENOENT) ou JSON invalide
-- **Mocking module nuextract-api.js** : Utilise jest.mock() pour mocker le module complet, puis jest.spyOn() pour mocker des fonctions spécifiques
-- **Restauration obligatoire** : Les mocks sont restaurés dans le step "le processus s'arrête proprement" pour éviter pollution entre tests
+- __Mocking fs.readFileSync__ : Simule fichiers manquants (ENOENT) ou JSON invalide
+- __Mocking module nuextract-api.js__ : Utilise jest.mock() pour mocker le module complet, puis jest.spyOn() pour mocker des fonctions spécifiques
+- __Restauration obligatoire__ : Les mocks sont restaurés dans le step "le processus s'arrête proprement" pour éviter pollution entre tests
 
 [2025-10-26] Pattern de mocking module API :
 
@@ -271,14 +271,14 @@ jest.spyOn(nuextractApi, 'inferTemplateFromDescriptionAsync').mockResolvedValue(
 
 #### Justification pour Mocking
 
-- **Isolation** : Tests unitaires ne dépendent pas de l'état du filesystem ou de la disponibilité de l'API NuExtract
-- **Rapidité** : Pas d'I/O réel, exécution rapide (<1s par test)
-- **Fiabilité** : Pas d'échecs aléatoires dus à réseau ou quota API
-- **Contrôle** : Simulation précise de cas d'erreur difficiles à reproduire (ENOENT, JSON malformé, timeout)
+- __Isolation__ : Tests unitaires ne dépendent pas de l'état du filesystem ou de la disponibilité de l'API NuExtract
+- __Rapidité__ : Pas d'I/O réel, exécution rapide (<1s par test)
+- __Fiabilité__ : Pas d'échecs aléatoires dus à réseau ou quota API
+- __Contrôle__ : Simulation précise de cas d'erreur difficiles à reproduire (ENOENT, JSON malformé, timeout)
 
 #### Patterns validés pour Mocking
 
-- **Mock fs pour fichier manquant** :
+- __Mock fs pour fichier manquant__ :
 
 ```typescript
 const originalReadFileSync = fs.readFileSync;
@@ -289,7 +289,7 @@ fs.readFileSync = jest.fn().mockImplementation(() => {
 });
 ```
 
-- **Mock fs pour JSON invalide** :
+- __Mock fs pour JSON invalide__ :
 
 ```typescript
 fs.readFileSync = jest.fn().mockImplementation((filePath, encoding) => {
@@ -300,7 +300,7 @@ fs.readFileSync = jest.fn().mockImplementation((filePath, encoding) => {
 });
 ```
 
-- **Mock module API avec spy** :
+- __Mock module API avec spy__ :
 
 ```typescript
 jest.spyOn(nuextractApi, 'inferTemplateFromDescriptionAsync')
@@ -309,9 +309,9 @@ jest.spyOn(nuextractApi, 'inferTemplateFromDescriptionAsync')
 
 #### Anti-Patterns pour Mocking à éviter
 
-- **Tests réels dans unit/** : Éviter appels API réels dans tests unitaires → **Solution** : Déplacer vers integration/ → **Règle à adopter** : Séparation stricte unit/integration
-- **Pas de restauration mocks** : Éviter pollution entre tests → **Solution** : Restaurer dans cleanup → **Règle à adopter** : jest.clearAllMocks() systématique
-- **Mock partiel incomplet** : Éviter de mocker module sans ...actual → **Solution** : Spread actual → **Règle à adopter** : Préserver fonctions non mockées
+- __Tests réels dans unit/__ : Éviter appels API réels dans tests unitaires → __Solution__ : Déplacer vers integration/ → __Règle à adopter__ : Séparation stricte unit/integration
+- __Pas de restauration mocks__ : Éviter pollution entre tests → __Solution__ : Restaurer dans cleanup → __Règle à adopter__ : jest.clearAllMocks() systématique
+- __Mock partiel incomplet__ : Éviter de mocker module sans ...actual → __Solution__ : Spread actual → __Règle à adopter__ : Préserver fonctions non mockées
 
 #### État d'implémentation pour Mocking
 
@@ -342,17 +342,34 @@ jest.spyOn(nuextractApi, 'inferTemplateFromDescriptionAsync')
 
 🚧 [Déploiement en cours - 2025-11-09] : transition progressive des scénarios unitaires vers cet usage systématique des fixtures.
 
+### Exécution end-to-end de l'agent NuExtract
+
+#### Description détaillée pour exécution end-to-end de l'agent NuExtract
+
+- Le scénario E2E `hermes2022-concepts-workflow` exécute l'agent complet `nuextract-client.js` via `execFileAsync`, reproduisant exactement le contexte d'exécution utilisé dans JArchi.
+- Un répertoire temporaire `tmp-artifacts/<timestamp-pid>` est injecté dans la variable d'environnement `HERMES2022_CONCEPTS_ARTIFACT_DIR`, garantissant l'isolation de chaque session conformément à @test-mock-governance.
+- L'exécution est encapsulée dans un timeout de 120 secondes, valeur alignée avec la gouvernance @bdd-governance (tests d'intégration mode async) et la spécification de tests qui impose un délai suffisant pour les workflows NuExtract (sleep initial puis polling des jobs).
+- Les assertions vérifient la présence de l'artefact daté du jour ainsi que de son sidecar d'approbation initialisé à `pending` pour `/concepts/overview`, assurant la traçabilité et le visa humain attendus par @specification-hermes2022-concepts-site-extraction.
+
+#### Justification pour exécution end-to-end de l'agent NuExtract
+
+- __Parité production__ : lancer `nuextract-client.js` via `execFileAsync` excecute le point d'entrée réel (`require.main === module`), valide la résolution des chemins, le chargement des dépendances et l'enchaînement `main()` → `process.exit`, exactement comme dans JArchi.
+- __Couverture orchestration__ : l'exécution “boîte noire” vérifie l'ordre complet des opérations (lecture configuration, validation JWT, génération du template async, gestion projet NuExtract, sauvegarde artefacts, création du sidecar) au-delà des exports `_testOnly_` unitaires.
+- __Robustesse__ : le timeout de 120 secondes absorbe les durées requises par le mode async (sleep initial + polling) tout en détectant les blocages éventuels.
+- __Gestion des erreurs__ : un échec de l'agent remonte via le code de retour du processus et les messages “Script stopped.”, ce qui valide la mise en œuvre de @error-handling-governance dans le contexte runtime (logs, propagation, exit code).
+- __Traçabilité__ : la validation des artefacts générés, y compris le sidecar d'approbation, garantit que l'orchestration respecte les exigences métier (journalisation, visa humain) définies dans la spécification générale du module.
+
 ### Timeouts différenciés selon type de test
 
 #### Description détaillée pour Timeouts
 
 [2025-10-26] Les timeouts Jest sont adaptés selon le type de test et la durée d'exécution attendue :
 
-- **Tests unitaires** : 15000ms (15s) - Timeout global configuré dans
+- __Tests unitaires__ : 15000ms (15s) - Timeout global configuré dans
   `hermes2022-concepts-site-extraction/jest.config.js` et répliqué par la
   configuration racine `jest.config.js`
-- **Tests intégration mode sync** : 45000ms (45s) - Timeout par test pour appel API synchrone `/api/infer-template`
-- **Tests intégration mode async** : 120000ms (2 minutes) - Timeout par test pour workflow async complet (sleep 30s + polling)
+- __Tests intégration mode sync__ : 45000ms (45s) - Timeout par test pour appel API synchrone `/api/infer-template`
+- __Tests intégration mode async__ : 120000ms (2 minutes) - Timeout par test pour workflow async complet (sleep 30s + polling)
 
 [2025-10-26] Configuration timeout par test avec paramètre :
 
@@ -364,14 +381,14 @@ test('Génération de template NuExtract avec infer-template-async', ({ given, w
 
 #### Justification pour Timeouts
 
-- **Tests unitaires** : Exécution rapide (<1s), timeout 15s largement suffisant
-- **Mode sync API** : Appel HTTP unique avec génération template (~11s constaté empiriquement), timeout 45s sécuritaire
-- **Mode async API** : Sleep initial 30s + polling max 60s = 90s théorique, timeout 120s avec marge confortable
-- **Évite faux négatifs** : Timeouts adaptés évitent échecs tests dus à latence réseau acceptable
+- __Tests unitaires__ : Exécution rapide (<1s), timeout 15s largement suffisant
+- __Mode sync API__ : Appel HTTP unique avec génération template (~11s constaté empiriquement), timeout 45s sécuritaire
+- __Mode async API__ : Sleep initial 30s + polling max 60s = 90s théorique, timeout 120s avec marge confortable
+- __Évite faux négatifs__ : Timeouts adaptés évitent échecs tests dus à latence réseau acceptable
 
 #### Patterns validés pour Timeouts
 
-- **Timeout global dans config** :
+- __Timeout global dans config__ :
 
 ```javascript
 // hermes2022-concepts-site-extraction/jest.config.js
@@ -381,7 +398,7 @@ module.exports = {
 };
 ```
 
-- **Timeout par test d'intégration** :
+- __Timeout par test d'intégration__ :
 
 ```typescript
 test('Génération de template NuExtract avec infer-template-async', 
@@ -394,9 +411,9 @@ test('Génération de template NuExtract avec infer-template-async',
 
 #### Anti-Patterns pour Timeouts à éviter
 
-- **Timeout global insuffisant** : Éviter timeout unique 5000ms pour tous tests → **Solution** : Différencier par type → **Règle à adopter** : Timeout adapté à la durée réelle
-- **Pas de timeout explicite** : Éviter de dépendre du timeout Jest par défaut → **Solution** : Configurer explicitement → **Règle à adopter** : Timeouts documentés
-- **Timeout trop court** : Éviter timeout <2x durée attendue → **Solution** : Marge sécurité 50% → **Règle à adopter** : Tolérance latence réseau
+- __Timeout global insuffisant__ : Éviter timeout unique 5000ms pour tous tests → __Solution__ : Différencier par type → __Règle à adopter__ : Timeout adapté à la durée réelle
+- __Pas de timeout explicite__ : Éviter de dépendre du timeout Jest par défaut → __Solution__ : Configurer explicitement → __Règle à adopter__ : Timeouts documentés
+- __Timeout trop court__ : Éviter timeout <2x durée attendue → __Solution__ : Marge sécurité 50% → __Règle à adopter__ : Tolérance latence réseau
 
 #### État d'implémentation pour Timeouts
 
@@ -408,28 +425,28 @@ test('Génération de template NuExtract avec infer-template-async',
 
 [2025-10-26] L'architecture des tests suit une séparation stricte entre tests unitaires et tests d'intégration selon leur nature :
 
-- **Tests unitaires** (`__tests__/unit/`) : error-handling avec mocking de toutes les dépendances externes (fs, API)
-- **Tests d'intégration** (`__tests__/integration/`) : template-generation et nuextract-project-management avec appels API réels
+- __Tests unitaires__ (`__tests__/unit/`) : error-handling avec mocking de toutes les dépendances externes (fs, API)
+- __Tests d'intégration__ (`__tests__/integration/`) : template-generation et nuextract-project-management avec appels API réels
 
 [2025-10-26] Cette séparation est reflétée dans la configuration
 `hermes2022-concepts-site-extraction/jest.config.js` :
 
 ```javascript
 testMatch: [
-  '**/__tests__/{unit,integration}/**/*.steps.{js,ts}'
+  '__/__tests__/{unit,integration}/__/*.steps.{js,ts}'
 ],
 ```
 
 #### Justification pour Séparation unit/integration
 
-- **Clarté** : Distinction immédiate entre tests isolés et tests end-to-end
-- **Exécution sélective** : Possibilité d'exécuter uniquement tests unitaires rapides en développement
-- **Maintenance** : Identification facilitée des tests à adapter lors de changements API vs logique interne
-- **Standard BDD** : Architecture reconnue alignée avec @bdd-governance
+- __Clarté__ : Distinction immédiate entre tests isolés et tests end-to-end
+- __Exécution sélective__ : Possibilité d'exécuter uniquement tests unitaires rapides en développement
+- __Maintenance__ : Identification facilitée des tests à adapter lors de changements API vs logique interne
+- __Standard BDD__ : Architecture reconnue alignée avec @bdd-governance
 
 #### Patterns validés pour Séparation unit/integration
 
-- **Structure répertoires** :
+- __Structure répertoires__ :
 
 ```text
 __tests__/
@@ -449,7 +466,7 @@ __tests__/
     └── jest-cucumber-setup.js
 ```
 
-- **Imports relatifs adaptés** :
+- __Imports relatifs adaptés__ :
 
 ```typescript
 // Dans __tests__/unit/nuextract-client-error-handling.steps.ts
@@ -461,9 +478,9 @@ require('../../src/nuextract-client.js')     // Remonte 2 niveaux
 
 #### Anti-Patterns pour Séparation unit/integration à éviter
 
-- **Mélange dans même fichier** : Éviter tests mockés et réels dans error-handling → **Solution** : Séparer par répertoire → **Règle à adopter** : Architecture unit/integration stricte
-- **Nomenclature ambiguë** : Éviter noms génériques "tests/" → **Solution** : Nommer explicitement unit/ et integration/ → **Règle à adopter** : Clarté intentionnelle
-- **Tests réels dans unit/** : Éviter appels API dans tests unitaires → **Solution** : Déplacer vers integration/ → **Règle à adopter** : Respect séparation responsabilités
+- __Mélange dans même fichier__ : Éviter tests mockés et réels dans error-handling → __Solution__ : Séparer par répertoire → __Règle à adopter__ : Architecture unit/integration stricte
+- __Nomenclature ambiguë__ : Éviter noms génériques "tests/" → __Solution__ : Nommer explicitement unit/ et integration/ → __Règle à adopter__ : Clarté intentionnelle
+- __Tests réels dans unit/__ : Éviter appels API dans tests unitaires → __Solution__ : Déplacer vers integration/ → __Règle à adopter__ : Respect séparation responsabilités
 
 #### État d'implémentation pour Séparation unit/integration
 
@@ -522,7 +539,7 @@ module.exports = {
 ```javascript
 // Configuration Jest BDD (jest-cucumber) pour hermes2022-concepts-site-extraction
 module.exports = {
-  testMatch: ['**/__tests__/{unit,integration,e2e}/**/*.steps.{js,ts}'],
+  testMatch: ['__/__tests__/{unit,integration,e2e}/__/*.steps.{js,ts}'],
   // ...
 };
 ```

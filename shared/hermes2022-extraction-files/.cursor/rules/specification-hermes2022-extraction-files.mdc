@@ -52,122 +52,122 @@ Chemin : hermes2022-to-archimate/shared/hermes2022-extraction-files/.cursor/rule
 #### Description détaillée pour la structure modulaire
 
 - [2025-08-16] Les fichiers intermédiaires sont organisés selon une structure modulaire respectant le principe de ségrégation des domaines
-- [2025-08-16] **IMPLÉMENTATION ACTUELLE** : Seules les phases HERMES2022 sont implémentées, les autres concepts (scénarios, modules, tâches, résultats, rôles) seront ajoutés progressivement
+- [2025-08-16] __IMPLÉMENTATION ACTUELLE__ : Seules les phases HERMES2022 sont implémentées, les autres concepts (scénarios, modules, tâches, résultats, rôles) seront ajoutés progressivement
 - [2025-08-16] La structure est conçue pour faciliter la maintenance et l'évolution indépendante de chaque concept
-- [2025-08-16] **APPROCHE PAR LANGUE** : Un fichier intermédiaire par langue d'extraction pour éviter les complexités de gestion multilingue simultanée
+- [2025-08-16] __APPROCHE PAR LANGUE__ : Un fichier intermédiaire par langue d'extraction pour éviter les complexités de gestion multilingue simultanée
 
 #### Justification pour la structure modulaire
 
-- **Maintenabilité** : Évolution indépendante de chaque concept sans impact sur les autres
-- **Lisibilité** : Organisation claire facilitant la compréhension et la maintenance
-- **Extensibilité** : Ajout facile de nouveaux concepts sans modification de l'architecture existante
-- **Cohérence** : Respect du principe de ségrégation des domaines
-- **Simplicité linguistique** : Évite les complexités de gestion multilingue simultanée
+- __Maintenabilité__ : Évolution indépendante de chaque concept sans impact sur les autres
+- __Lisibilité__ : Organisation claire facilitant la compréhension et la maintenance
+- __Extensibilité__ : Ajout facile de nouveaux concepts sans modification de l'architecture existante
+- __Cohérence__ : Respect du principe de ségrégation des domaines
+- __Simplicité linguistique__ : Évite les complexités de gestion multilingue simultanée
 
 #### Patterns validés pour la structure modulaire
 
-- **Un schéma par concept** : `/config/json-schemas/{concept}-schema.json` pour chaque concept HERMES2022
-- **Schéma principal** : `hermes2022-concepts.json` qui référence tous les concepts implémentés
-- **Fichiers par langue** : `hermes2022-concepts-{langue}.json` pour chaque langue d'extraction
-- **Archive structurée** : `/data/archive/{YYYY-MM-DD}/` pour l'historique
+- __Un schéma par concept__ : `/config/json-schemas/{concept}-schema.json` pour chaque concept HERMES2022
+- __Schéma principal__ : `hermes2022-concepts.json` qui référence tous les concepts implémentés
+- __Fichiers par langue__ : `hermes2022-concepts-{langue}.json` pour chaque langue d'extraction
+- __Archive structurée__ : `/data/archive/{YYYY-MM-DD}/` pour l'historique
 
 #### Anti-Patterns pour la structure modulaire à éviter
 
-- **Schéma monolithique** : Éviter un seul fichier schema complexe → **Solution** : Modularité par concept → **Règle à adopter** : Un schéma par domaine pour faciliter la maintenance
-- **Mélange des responsabilités** : Éviter de mélanger spécifications, schémas et données → **Solution** : Séparation par répertoires → **Règle à adopter** : Structure modulaire avec responsabilités distinctes
-- **Gestion multilingue simultanée** : Éviter les fichiers complexes avec plusieurs langues → **Solution** : Un fichier par langue → **Règle à adopter** : Séparation linguistique claire
+- __Schéma monolithique__ : Éviter un seul fichier schema complexe → __Solution__ : Modularité par concept → __Règle à adopter__ : Un schéma par domaine pour faciliter la maintenance
+- __Mélange des responsabilités__ : Éviter de mélanger spécifications, schémas et données → __Solution__ : Séparation par répertoires → __Règle à adopter__ : Structure modulaire avec responsabilités distinctes
+- __Gestion multilingue simultanée__ : Éviter les fichiers complexes avec plusieurs langues → __Solution__ : Un fichier par langue → __Règle à adopter__ : Séparation linguistique claire
 
 #### État d'implémentation pour la structure modulaire
 
 🚧 [En cours de conception et réalisation]
 
-- ✅ **Phases HERMES2022** : Schéma complet implémenté
-- ❌ **Autres concepts** : À implémenter progressivement selon les besoins
+- ✅ __Phases HERMES2022__ : Schéma complet implémenté
+- ❌ __Autres concepts__ : À implémenter progressivement selon les besoins
 
 ### Format et validation des fichiers intermédiaires
 
 #### Description détaillée pour le format et validation
 
 - [2025-08-16] Les fichiers intermédiaires utilisent le format JSON avec validation JSON Schema Draft 7
-- [2025-08-16] **IMPLÉMENTATION ACTUELLE** : Seul le schéma des phases est complètement défini
+- [2025-08-16] __IMPLÉMENTATION ACTUELLE__ : Seul le schéma des phases est complètement défini
 - [2025-08-16] La validation est automatique et systématique avant toute consommation par les modules avals
-- [2025-08-16] **IDENTIFIANTS INTERNES** : Création d'identifiants aléatoires uniques (format `ph_abc123`) pour éviter la dépendance aux noms multilingues
+- [2025-08-16] __IDENTIFIANTS INTERNES__ : Création d'identifiants aléatoires uniques (format `ph_abc123`) pour éviter la dépendance aux noms multilingues
 
 #### Justification pour le format et validation
 
-- **Format JSON** : Lisibilité humaine et machine, interopérabilité universelle
-- **JSON Schema** : Validation structurelle automatisée, documentation intégrée
-- **Validation systématique** : Garantie de la qualité et de la cohérence des données
-- **Traçabilité** : Contrôle automatisé des données échangées
-- **Identifiants internes** : Indépendance linguistique et unicité garantie
+- __Format JSON__ : Lisibilité humaine et machine, interopérabilité universelle
+- __JSON Schema__ : Validation structurelle automatisée, documentation intégrée
+- __Validation systématique__ : Garantie de la qualité et de la cohérence des données
+- __Traçabilité__ : Contrôle automatisé des données échangées
+- __Identifiants internes__ : Indépendance linguistique et unicité garantie
 
 #### Patterns validés pour le format et validation
 
-- **Validation automatique** : Contrôles de cohérence avant consommation
-- **Schémas auto-documentés** : Documentation intégrée dans les schémas
-- **Gestion d'erreurs** : Traitement systématique des données invalides
-- **Logs de validation** : Traçabilité des validations effectuées
-- **Identifiants aléatoires** : Format `ph_abc123` pour l'unicité et l'indépendance linguistique
+- __Validation automatique__ : Contrôles de cohérence avant consommation
+- __Schémas auto-documentés__ : Documentation intégrée dans les schémas
+- __Gestion d'erreurs__ : Traitement systématique des données invalides
+- __Logs de validation__ : Traçabilité des validations effectuées
+- __Identifiants aléatoires__ : Format `ph_abc123` pour l'unicité et l'indépendance linguistique
 
 #### Anti-Patterns pour le format et validation à éviter
 
-- **Validation manuelle** : Éviter les contrôles manuels → **Solution** : Validation automatique → **Règle à adopter** : Contrôles systématiques via JSON Schema
-- **Schémas rigides** : Éviter les schémas non évolutifs → **Solution** : Schémas extensibles → **Règle à adopter** : Versioning et compatibilité ascendante
-- **Identifiants séquentiels** : Éviter les formats suggérant un ordre → **Solution** : Identifiants aléatoires → **Règle à adopter** : Format `ph_abc123` sans séquence
+- __Validation manuelle__ : Éviter les contrôles manuels → __Solution__ : Validation automatique → __Règle à adopter__ : Contrôles systématiques via JSON Schema
+- __Schémas rigides__ : Éviter les schémas non évolutifs → __Solution__ : Schémas extensibles → __Règle à adopter__ : Versioning et compatibilité ascendante
+- __Identifiants séquentiels__ : Éviter les formats suggérant un ordre → __Solution__ : Identifiants aléatoires → __Règle à adopter__ : Format `ph_abc123` sans séquence
 
 #### État d'implémentation pour le format et validation
 
 🚧 [En cours de conception et réalisation]
 
-- ✅ **Schéma des phases** : Structure complète avec identifiants aléatoires
-- ✅ **Validation JSON Schema** : Contraintes et patterns définis
-- ❌ **Autres concepts** : Schémas à définir progressivement
+- ✅ __Schéma des phases__ : Structure complète avec identifiants aléatoires
+- ✅ __Validation JSON Schema__ : Contraintes et patterns définis
+- ❌ __Autres concepts__ : Schémas à définir progressivement
 
 ### Contraintes référentielles et hiérarchie des concepts
 
 #### Description détaillée pour les contraintes référentielles
 
-- [2025-08-16] **PHASES COMME CONCEPT DE RÉFÉRENCE** : Les phases représentent le niveau le plus élevé dans la hiérarchie HERMES2022
-- [2025-08-16] **DÉPENDANCES** : Les phases ne sont dépendantes que de la méthode et de la version HERMES2022, pas de contraintes externes
-- [2025-08-16] **RÉFÉRENCEMENT FUTUR** : Les phases seront référencées par les autres concepts au fur et à mesure de l'avancement de la réalisation
-- [2025-08-16] **VALIDATION D'EXISTENCE** : Les références vers les phases doivent pointer vers des phases valides selon le schéma JSON
+- [2025-08-16] __PHASES COMME CONCEPT DE RÉFÉRENCE__ : Les phases représentent le niveau le plus élevé dans la hiérarchie HERMES2022
+- [2025-08-16] __DÉPENDANCES__ : Les phases ne sont dépendantes que de la méthode et de la version HERMES2022, pas de contraintes externes
+- [2025-08-16] __RÉFÉRENCEMENT FUTUR__ : Les phases seront référencées par les autres concepts au fur et à mesure de l'avancement de la réalisation
+- [2025-08-16] __VALIDATION D'EXISTENCE__ : Les références vers les phases doivent pointer vers des phases valides selon le schéma JSON
 
 #### Justification pour les contraintes référentielles
 
-- **Hiérarchie claire** : Les phases sont le fondement de la méthodologie HERMES2022
-- **Indépendance** : Pas de dépendances externes pour les phases
-- **Réutilisabilité** : Les identifiants de phases seront référencés par d'autres concepts
-- **Validation stricte** : Assure la cohérence des références entre concepts
+- __Hiérarchie claire__ : Les phases sont le fondement de la méthodologie HERMES2022
+- __Indépendance__ : Pas de dépendances externes pour les phases
+- __Réutilisabilité__ : Les identifiants de phases seront référencés par d'autres concepts
+- __Validation stricte__ : Assure la cohérence des références entre concepts
 
 #### Patterns validés pour les contraintes référentielles
 
-- **Phases comme référence** : Concept de niveau supérieur sans dépendances
-- **Identifiants uniques** : Format `ph_abc123` pour la traçabilité
-- **Validation d'existence** : Contrôle que les références pointent vers des phases valides
-- **Évolutivité** : Structure prête pour l'ajout de nouveaux concepts référençant les phases
+- __Phases comme référence__ : Concept de niveau supérieur sans dépendances
+- __Identifiants uniques__ : Format `ph_abc123` pour la traçabilité
+- __Validation d'existence__ : Contrôle que les références pointent vers des phases valides
+- __Évolutivité__ : Structure prête pour l'ajout de nouveaux concepts référençant les phases
 
 #### Anti-Patterns pour les contraintes référentielles à éviter
 
-- **Dépendances circulaires** : Éviter que les phases dépendent d'autres concepts → **Solution** : Phases comme concept de référence → **Règle à adopter** : Hiérarchie claire avec phases au niveau supérieur
-- **Références invalides** : Éviter les références vers des phases inexistantes → **Solution** : Validation d'existence → **Règle à adopter** : Contrôle systématique des références
+- __Dépendances circulaires__ : Éviter que les phases dépendent d'autres concepts → __Solution__ : Phases comme concept de référence → __Règle à adopter__ : Hiérarchie claire avec phases au niveau supérieur
+- __Références invalides__ : Éviter les références vers des phases inexistantes → __Solution__ : Validation d'existence → __Règle à adopter__ : Contrôle systématique des références
 
 #### État d'implémentation pour les contraintes référentielles
 
 🚧 [En cours de conception et réalisation]
 
-- ✅ **Structure des phases** : Définie et implémentée
-- ❌ **Références croisées** : À implémenter avec les autres concepts
+- ✅ __Structure des phases__ : Définie et implémentée
+- ❌ __Références croisées__ : À implémenter avec les autres concepts
 
 ### Hiérarchie spécifique des phases HERMES2022 et propriété "order"
 
 #### Description détaillée pour la hiérarchie des phases HERMES2022
 
-- [2025-08-18] **HIÉRARCHIE OFFICIELLE HERMES2022** : La méthodologie HERMES2022 définit une structure hiérarchique spécifique des phases avec la phase "Execution" qui regroupe plusieurs sous-phases
-- [2025-08-18] **STRUCTURE À DEUX NIVEAUX** :
-  - **Niveau 1** : 1=Initiation, 2=Execution, 3=Closure  
-  - **Niveau 2** : Execution (2) = 2.1=Concept + 2.2=Implementation + 2.3=Deployment
-- [2025-08-18] **PROPRIÉTÉ "ORDER" COMPLEXE** : La propriété "order" doit supporter cette hiérarchie à deux niveaux avec un format "\\d+(\\.\\d+)*" pour permettre 1, 2, 2.1, 2.2, 2.3, 3
-- [2025-08-18] **PAGES DE RÉFÉRENCE SPÉCIFIQUES** :
+- [2025-08-18] __HIÉRARCHIE OFFICIELLE HERMES2022__ : La méthodologie HERMES2022 définit une structure hiérarchique spécifique des phases avec la phase "Execution" qui regroupe plusieurs sous-phases
+- [2025-08-18] __STRUCTURE À DEUX NIVEAUX__ :
+  - __Niveau 1__ : 1=Initiation, 2=Execution, 3=Closure  
+  - __Niveau 2__ : Execution (2) = 2.1=Concept + 2.2=Implementation + 2.3=Deployment
+- [2025-08-18] __PROPRIÉTÉ "ORDER" COMPLEXE__ : La propriété "order" doit supporter cette hiérarchie à deux niveaux avec un format "\\d+(\\.\\d+)*" pour permettre 1, 2, 2.1, 2.2, 2.3, 3
+- [2025-08-18] __PAGES DE RÉFÉRENCE SPÉCIFIQUES__ :
   - Page générale : <https://www.hermes.admin.ch/en/project-management/phases.html>
   - Initiation : <https://www.hermes.admin.ch/en/project-management/phases/initiation.html>
   - Concept : <https://www.hermes.admin.ch/en/project-management/phases/concept.html>
@@ -178,23 +178,23 @@ Chemin : hermes2022-to-archimate/shared/hermes2022-extraction-files/.cursor/rule
 
 #### Justification pour la hiérarchie des phases HERMES2022
 
-- **Conformité méthodologique** : Respect exact de la structure officielle HERMES2022
-- **Phase composite "Execution"** : Regroupement logique Concept+Implementation+Deployment selon la méthodologie
-- **Propriété "order" hiérarchique** : Nécessaire pour représenter correctement la structure à deux niveaux
-- **URLs de référence spécifiques** : Sources officielles pour l'extraction du contexte et de l'articulation
+- __Conformité méthodologique__ : Respect exact de la structure officielle HERMES2022
+- __Phase composite "Execution"__ : Regroupement logique Concept+Implementation+Deployment selon la méthodologie
+- __Propriété "order" hiérarchique__ : Nécessaire pour représenter correctement la structure à deux niveaux
+- __URLs de référence spécifiques__ : Sources officielles pour l'extraction du contexte et de l'articulation
 
 #### Patterns validés pour la hiérarchie des phases HERMES2022
 
-- **Order hiérarchique** : Format "1", "2", "2.1", "2.2", "2.3", "3" selon pattern "\\d+(\\.\\d+)*"
-- **Phase composite** : Type "composite" pour Execution, type "simple" pour les autres
-- **Extraction par URL** : Une URL spécifique par phase pour extraction du contexte
-- **Contexte général** : Page générale phases.html pour articulation d'ensemble
+- __Order hiérarchique__ : Format "1", "2", "2.1", "2.2", "2.3", "3" selon pattern "\\d+(\\.\\d+)*"
+- __Phase composite__ : Type "composite" pour Execution, type "simple" pour les autres
+- __Extraction par URL__ : Une URL spécifique par phase pour extraction du contexte
+- __Contexte général__ : Page générale phases.html pour articulation d'ensemble
 
 #### Anti-Patterns pour la hiérarchie des phases HERMES2022 à éviter
 
-- **Order séquentiel simple** : Éviter 1,2,3,4,5,6 qui ne respecte pas la hiérarchie → **Solution** : Hiérarchie à deux niveaux → **Règle à adopter** : Format "\\d+(\\.\\d+)*"
-- **URLs génériques** : Éviter l'extraction depuis la page générale uniquement → **Solution** : URLs spécifiques par phase → **Règle à adopter** : Une URL par phase pour le contexte détaillé
-- **Description littérale fixe** : Éviter description prédéfinie dans le schéma → **Solution** : Structure pour contenu extractible → **Règle à adopter** : Description comme string avec contraintes de validation
+- __Order séquentiel simple__ : Éviter 1,2,3,4,5,6 qui ne respecte pas la hiérarchie → __Solution__ : Hiérarchie à deux niveaux → __Règle à adopter__ : Format "\\d+(\\.\\d+)*"
+- __URLs génériques__ : Éviter l'extraction depuis la page générale uniquement → __Solution__ : URLs spécifiques par phase → __Règle à adopter__ : Une URL par phase pour le contexte détaillé
+- __Description littérale fixe__ : Éviter description prédéfinie dans le schéma → __Solution__ : Structure pour contenu extractible → __Règle à adopter__ : Description comme string avec contraintes de validation
 
 #### État d'implémentation pour la hiérarchie des phases HERMES2022
 
@@ -204,40 +204,40 @@ Chemin : hermes2022-to-archimate/shared/hermes2022-extraction-files/.cursor/rule
 
 #### Description détaillée pour la structure du schéma JSON
 
-- [2025-08-18] **STRUCTURE DESCRIPTION** : La propriété "description" est définie comme structure pour contenu extractible (string, pattern, required)
-- [2025-08-18] **EXTRACTION CONTEXTE** : La description contient le contexte et l'articulation extraits des pages spécifiques HERMES2022
-- [2025-08-18] **CONTRAINTES DE VALIDATION** : Longueur minimale/maximale, patterns de validation pour assurer la qualité du contenu extrait
-- [2025-08-18] **INTEROPÉRABILITÉ** : Structure compatible avec les modules de chargement Archimate et Neo4j
+- [2025-08-18] __STRUCTURE DESCRIPTION__ : La propriété "description" est définie comme structure pour contenu extractible (string, pattern, required)
+- [2025-08-18] __EXTRACTION CONTEXTE__ : La description contient le contexte et l'articulation extraits des pages spécifiques HERMES2022
+- [2025-08-18] __CONTRAINTES DE VALIDATION__ : Longueur minimale/maximale, patterns de validation pour assurer la qualité du contenu extrait
+- [2025-08-18] __INTEROPÉRABILITÉ__ : Structure compatible avec les modules de chargement Archimate et Neo4j
 
 #### Description générale du concept de phases (phases-concept)
 
-- [2025-08-18] **PROPRIÉTÉ DE NIVEAU SUPÉRIEUR** : Ajout de `phases-concept` au schéma `hermes2022-phases.json` pour porter la description générale des phases HERMES2022.
-- **But** : Capturer un résumé conceptuel (cycle de vie, approches traditionnelle/agile, uniformité des interfaces, jalons/quality gates, hiérarchie 1/2/2.x/3, rôle d'Initiation/Closure) provenant de la page officielle des phases.
-- **Champs** :
+- [2025-08-18] __PROPRIÉTÉ DE NIVEAU SUPÉRIEUR__ : Ajout de `phases-concept` au schéma `hermes2022-phases.json` pour porter la description générale des phases HERMES2022.
+- __But__ : Capturer un résumé conceptuel (cycle de vie, approches traditionnelle/agile, uniformité des interfaces, jalons/quality gates, hiérarchie 1/2/2.x/3, rôle d'Initiation/Closure) provenant de la page officielle des phases.
+- __Champs__ :
   - `overview` (string, minLength 50, maxLength 5000) : texte synthétique structuré.
   - `sourceUrl` (string, uri, enum = `<https://www.hermes.admin.ch/en/project-management/phases.html>`) : référence officielle.
   - `lastChecked` (string, date) : date de dernière vérification.
-- **Obligation** : `phases-concept` est requis au même titre que `metadata` et `phases`.
-- **Complémentarité** : `phases-concept` précède et contextualise la liste `phases` sans la remplacer.
+- __Obligation__ : `phases-concept` est requis au même titre que `metadata` et `phases`.
+- __Complémentarité__ : `phases-concept` précède et contextualise la liste `phases` sans la remplacer.
 
 #### Justification pour la structure du schéma JSON
 
-- **Extraction IA optimisée** : Permet l'extraction effective du contenu depuis les pages HERMES2022
-- **Contexte riche** : Capture l'articulation générale et le contexte spécifique de chaque phase
-- **Validation qualité** : Contraintes pour assurer la pertinence du contenu extrait
-- **Interopérabilité** : Structure compatible avec les modules de chargement Archimate et Neo4j
+- __Extraction IA optimisée__ : Permet l'extraction effective du contenu depuis les pages HERMES2022
+- __Contexte riche__ : Capture l'articulation générale et le contexte spécifique de chaque phase
+- __Validation qualité__ : Contraintes pour assurer la pertinence du contenu extrait
+- __Interopérabilité__ : Structure compatible avec les modules de chargement Archimate et Neo4j
 
 #### Patterns validés pour la structure du schéma JSON
 
-- **Description extractible** : Type string avec contraintes minLength/maxLength appropriées
-- **Validation pattern** : Contraintes sur le format et la qualité du contenu
-- **Champs required** : Description obligatoire pour chaque phase extraite
-- **Métadonnées extraction** : Source, date, version pour traçabilité
+- __Description extractible__ : Type string avec contraintes minLength/maxLength appropriées
+- __Validation pattern__ : Contraintes sur le format et la qualité du contenu
+- __Champs required__ : Description obligatoire pour chaque phase extraite
+- __Métadonnées extraction__ : Source, date, version pour traçabilité
 
 #### Anti-Patterns pour la structure du schéma JSON à éviter
 
-- **Description prédéfinie** : Éviter les littéraux fixes dans le schéma → **Solution** : Structure extractible → **Règle à adopter** : Description comme contenu variable validé
-- **Contraintes trop strictes** : Éviter des patterns trop rigides → **Solution** : Contraintes adaptées au contenu HERMES2022 → **Règle à adopter** : Validation équilibrée qualité/flexibilité
+- __Description prédéfinie__ : Éviter les littéraux fixes dans le schéma → __Solution__ : Structure extractible → __Règle à adopter__ : Description comme contenu variable validé
+- __Contraintes trop strictes__ : Éviter des patterns trop rigides → __Solution__ : Contraintes adaptées au contenu HERMES2022 → __Règle à adopter__ : Validation équilibrée qualité/flexibilité
 
 #### État d'implémentation pour la structure du schéma JSON
 
@@ -253,22 +253,22 @@ Chemin : hermes2022-to-archimate/shared/hermes2022-extraction-files/.cursor/rule
 
 #### Justification pour la gestion d'archive
 
-- **Traçabilité** : Suivi des évolutions des concepts HERMES2022
-- **Audit** : Possibilité de revenir sur des versions antérieures
-- **Analyse** : Comparaison des extractions pour identifier les changements
-- **Conformité** : Respect des exigences de traçabilité du projet
+- __Traçabilité__ : Suivi des évolutions des concepts HERMES2022
+- __Audit__ : Possibilité de revenir sur des versions antérieures
+- __Analyse__ : Comparaison des extractions pour identifier les changements
+- __Conformité__ : Respect des exigences de traçabilité du projet
 
 #### Patterns validés pour la gestion d'archive
 
-- **Versioning automatique** : Numérotation automatique des versions
-- **Métadonnées** : Informations de contexte pour chaque extraction
-- **Compression** : Optimisation de l'espace de stockage
-- **Indexation** : Recherche et accès facilités aux archives
+- __Versioning automatique__ : Numérotation automatique des versions
+- __Métadonnées__ : Informations de contexte pour chaque extraction
+- __Compression__ : Optimisation de l'espace de stockage
+- __Indexation__ : Recherche et accès facilités aux archives
 
 #### Anti-Patterns pour la gestion d'archive à éviter
 
-- **Perte d'historique** : Éviter de perdre les extractions passées → **Solution** : Système d'archive → **Règle à adopter** : Conservation systématique des versions
-- **Archive non structurée** : Éviter le stockage non organisé → **Solution** : Structure hiérarchique → **Règle à adopter** : Organisation par date et concept
+- __Perte d'historique__ : Éviter de perdre les extractions passées → __Solution__ : Système d'archive → __Règle à adopter__ : Conservation systématique des versions
+- __Archive non structurée__ : Éviter le stockage non organisé → __Solution__ : Structure hiérarchique → __Règle à adopter__ : Organisation par date et concept
 
 #### État d'implémentation pour la gestion d'archive
 

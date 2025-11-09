@@ -59,10 +59,10 @@ alwaysApply: true
 ## Conception générale
 
 - Le projet est divisé en deux modules distincts :
-  - **Script Javascript JArchi**
+  - __Script Javascript JArchi__
     - 1a) Extraction/Transformation des concepts HERMES2022 à partir du site internet
     - 1b) Chargement/Mise à jour des éléments et relations correspondant aux concepts HERMES2022 dans un modèle Archimate de Archi
-  - **Javascript**
+  - __Javascript__
     - 2) Chargement/Mise à jour des noeuds d'une base de données graphe Neo4j correspondant aux concepts standards HERMES2022.
 
 - L'Extraction/Transformation donne lieu à la création/mise à jour de fichiers intermédiaires structurés et vérifiables pour être partagés comme données de référence en entrée par les autres modules 1) pour le chargement initial et la mise à jour de modèles Archimate Archi 2) et pour le chargement des concepts HERMES2022 dans la base de données graphe Neo4j.
@@ -93,16 +93,16 @@ L'analyse des contenus du site en question a permis d'identifier des pages spéc
 
 Le projet est ainsi divisé en deux parties qui se déroulent séquentiellement et trois modules :
 
-**Phase 1 - Extraction :**
+__Phase 1 - Extraction :__
 
 - `hermes2022-concepts-site-extraction` : Extraction automatisée des concepts HERMES2022 depuis le site web avec assistance IA, production de fichiers JSON intermédiaires validés
 
-**Phase 2 - Chargement parallèle :**
+__Phase 2 - Chargement parallèle :__
 
 - `archimate-model-loader` : Chargement des concepts dans un modèle ArchiMate via l'interface JArchi d'Archi
 - `hermes2022-ia-loader` : Chargement des concepts dans Neo4j pour services RAG et intégration IA
 
-**Architecture modulaire :**
+__Architecture modulaire :__
 
 - Modules indépendants communiquant via fichiers JSON intermédiaires
 - Interface standardisée JSON Schema pour validation des données
@@ -116,13 +116,13 @@ Le projet est ainsi divisé en deux parties qui se déroulent séquentiellement 
 
 #### Patterns validés à suivre suite à la décision
 
-- **Séparation extraction/chargement** : Modules indépendants avec interfaces définies
-- **Validation humaine** : Processus de revue des listes intermédiaires
-- **IA assistée** : Prompts structurés pour extraction cohérente
+- __Séparation extraction/chargement__ : Modules indépendants avec interfaces définies
+- __Validation humaine__ : Processus de revue des listes intermédiaires
+- __IA assistée__ : Prompts structurés pour extraction cohérente
 
 #### Anti-Patterns en raison d'erreurs identifiées, à ne pas reproduire
 
-- **Extraction directe** : Éviter l'extraction directe sans validation → **Solution** : Listes intermédiaires validables → **Règle à adopter** : Processus de validation systématique
+- __Extraction directe__ : Éviter l'extraction directe sans validation → __Solution__ : Listes intermédiaires validables → __Règle à adopter__ : Processus de validation systématique
 
 #### État d'implémentation de la décision
 
@@ -146,13 +146,13 @@ Le projet est ainsi divisé en deux parties qui se déroulent séquentiellement 
 
 #### Patterns validés pour Structure et format du fichier intermédiaire
 
-- **JSON Schema modulaire** : Séparation par domaines fonctionnels
-- **Validation systématique** : Contrôles automatisés avant consommation
-- **Documentation intégrée** : Schémas auto-documentés
+- __JSON Schema modulaire__ : Séparation par domaines fonctionnels
+- __Validation systématique__ : Contrôles automatisés avant consommation
+- __Documentation intégrée__ : Schémas auto-documentés
 
 #### Anti-Patterns pour Structure et format du fichier intermédiaire à éviter
 
-- **Schéma monolithique** : Éviter un seul fichier schema complexe → **Solution** : Modularité par références → **Règle à adopter** : Un schéma par domaine ou concept pour faciliter la maintenance
+- __Schéma monolithique__ : Éviter un seul fichier schema complexe → __Solution__ : Modularité par références → __Règle à adopter__ : Un schéma par domaine ou concept pour faciliter la maintenance
 
 #### État d'implémentation pour Structure et format du fichier intermédiaire
 
@@ -220,7 +220,7 @@ Le projet est ainsi divisé en deux parties qui se déroulent séquentiellement 
 
 - Configuration orchestrée via `jest.config.js` à la racine du dépôt, qui référence
   `hermes2022-concepts-site-extraction/jest.config.js` avec la propriété `projects`.
-- Découverte des steps: `**/__tests__/{integration,e2e}/**/*.steps.{js,ts}` ;
+- Découverte des steps: `__/__tests__/{integration,e2e}/__/*.steps.{js,ts}` ;
   environnement `node` ; setup: `__tests__/support/jest-cucumber-setup.js`.
 - Résolution des artefacts: répertoire piloté par `artifactBaseDir` dans
   `hermes2022-concepts-site-extraction/config/extraction-config.json` avec
@@ -290,13 +290,13 @@ et validations JSON). Montées de version à effectuer de manière coordonnée
 
 #### Patterns validés
 
-- **CHEMINS COMPLETS** : Utiliser chemins complets depuis repoRoot (ex: `hermes2022-concepts-site-extraction/config/nuextract-api-key.key`)
-- **RÉSOLUTION** : Utiliser `find-up` + `path.resolve()` comme défini dans `@root-directory-governance.mdc`
+- __CHEMINS COMPLETS__ : Utiliser chemins complets depuis repoRoot (ex: `hermes2022-concepts-site-extraction/config/nuextract-api-key.key`)
+- __RÉSOLUTION__ : Utiliser `find-up` + `path.resolve()` comme défini dans `@root-directory-governance.mdc`
 
 #### Anti-Patterns à éviter
 
-- **CHEMINS RELATIFS FRAGILES** : Éviter `../../../config/...` → **Solution** : Chemins depuis repoRoot → **Règle à adopter** : Utiliser `find-up` pour déterminer repoRoot
-- **CHEMINS RELATIFS AU MODULE** : Éviter `config/nuextract-api-key.key` même dans le module → **Solution** : Toujours depuis repoRoot → **Règle à adopter** : `hermes2022-concepts-site-extraction/config/...`
+- __CHEMINS RELATIFS FRAGILES__ : Éviter `../../../config/...` → __Solution__ : Chemins depuis repoRoot → __Règle à adopter__ : Utiliser `find-up` pour déterminer repoRoot
+- __CHEMINS RELATIFS AU MODULE__ : Éviter `config/nuextract-api-key.key` même dans le module → __Solution__ : Toujours depuis repoRoot → __Règle à adopter__ : `hermes2022-concepts-site-extraction/config/...`
 
 #### État d'implémentation
 

@@ -53,13 +53,13 @@ Chemin : hermes2022-to-archimate/hermes2022-ia-loader/.cursor/rules/
 
 #### Patterns validés à suivre suite à la décision
 
-- **[Pattern n] :** [description + exemple]
-- **[Pattern n+1] :** [description + exemple]
+- __[Pattern n] :__ [description + exemple]
+- __[Pattern n+1] :__ [description + exemple]
 
 #### Anti-Patterns en raison d'erreurs identifiées, à ne pas reproduire
 
-- **[Erreur n] :** [description] → **Solution :** [approche correcte] → **Règle à adopter pour éviter :** [Règle|pattern à adopter]
-- **[Erreur n+1] :** [description] → **Solution :** [approche correcte] → **Règle à adopter pour éviter :** [Règle|pattern à adopter]
+- __[Erreur n] :__ [description] → __Solution :__ [approche correcte] → __Règle à adopter pour éviter :__ [Règle|pattern à adopter]
+- __[Erreur n+1] :__ [description] → __Solution :__ [approche correcte] → __Règle à adopter pour éviter :__ [Règle|pattern à adopter]
 
 #### État d'implémentation de la décision
 
