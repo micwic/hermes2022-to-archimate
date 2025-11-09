@@ -1,1 +1,101 @@
-{}
+{
+  "config": {
+    "extractionSource": {
+      "baseUrl": "verbatim-string",
+      "language": [
+        "de",
+        "fr",
+        "it",
+        "en"
+      ],
+      "description": "string"
+    }
+  },
+  "method": {
+    "hermesVersion": [
+      "2022",
+      "5",
+      "5.1"
+    ],
+    "publicationDate": "date-time",
+    "overview": "string",
+    "sourceUrl": "verbatim-string",
+    "extractionInstructions": [
+      "Extract the overview of HERMES2022 method from the homepage",
+      "The overview must be factual, 600-5000 characters, plain text English",
+      "Focus on methodology concepts, project lifecycle, and key principles"
+    ],
+    "lastChecked": "date-time"
+  },
+  "concepts": {
+    "overview": "string",
+    "sourceUrl": "verbatim-string",
+    "extractionInstructions": [
+      "Produce a synthetic text (overview) covering project management in traditional or agile mode, other uses are out of scope, strictly limited to information explicitly present in the two referenced pages",
+      "Finality and scope of the method (focus 'project management')",
+      "Principles/approaches of conduct (traditional, agile, hybrid) if and only if explicitly mentioned",
+      "Articulation of high-level concepts and their relationships at overview (without detailing sub-chapters treated elsewhere): phases, scenarios, modules, tasks, results, roles",
+      "Overview of phases and their hierarchy (1, 2, 2.1, 2.2, 2.3, 3) at conceptual level only",
+      "Governance and quality assurance if explicitly mentioned (milestones, decisions, 'quality gates')",
+      "Domains explicitly out of scope on these pages (portfolio, application management, etc.)",
+      "Target length: 200-650 words (≈ 1200-4000 characters). Strict schema bounds: 600-5000 characters",
+      "Output: plain text (no rich Markdown). Site language. Factual, neutral style, without extrapolation",
+      "Integrate salient points useful for AI for context and methodology as a whole without creating unnecessary redundancies with underlying concepts described for themselves"
+    ],
+    "lastChecked": "date-time",
+    "concept-phases": {
+      "overview": "string",
+      "sourceUrl": "verbatim-string",
+      "extractionInstructions": [
+        "Produce a synthetic text (overview) covering:",
+        "Lifecycle (project start, solution development, project end)",
+        "Traditional vs agile approaches (Execution not subdivided in agile)",
+        "Uniformity of interfaces, milestones/quality gates, releases",
+        "Hierarchy and order (1, 2, 2.1, 2.2, 2.3, 3), role Initiation/Closure",
+        "Target length: 600-1500 words, factual style and faithful to source",
+        "Integrate salient points useful for AI for context and articulation"
+      ],
+      "lastChecked": "date-time",
+      "phases": [
+        {
+          "id": "verbatim-string",
+          "sourceUrl": "verbatim-string",
+          "extractionInstructions": [
+            "Extract phase information from the specific phase page",
+            "Extract base information: name, hierarchical order, type",
+            "Extract main description explaining main objective, role in project lifecycle, and foundations created",
+            "Extract context explaining how phase integrates in lifecycle, relationship with other phases, importance in HERMES2022 methodology",
+            "Identify and list main outcomes (results): documents produced, decisions taken, foundations established",
+            "Identify control points and milestones: phase release decisions, required validations, success criteria",
+            "Determine supported approaches: traditional, agile, or both. Fill approach field with one or more values allowed by schema (traditional, agile, both) based on page content",
+            "Output: plain text (no rich Markdown). Site language. Factual, neutral style, without extrapolation",
+            "Extract only information present on the page",
+            "Respect JSON structure defined in schema",
+            "Maintain coherence with validation schema",
+            "Prioritize precision over quantity of information"
+          ],
+          "lastChecked": "date-time",
+          "name": "verbatim-string",
+          "order": "verbatim-string",
+          "type": [
+            "simple",
+            "composite"
+          ],
+          "description": "string",
+          "context": "string",
+          "outcomes": [
+            "verbatim-string"
+          ],
+          "milestones": [
+            "verbatim-string"
+          ],
+          "approach": [
+            "traditional",
+            "agile",
+            "both"
+          ]
+        }
+      ]
+    }
+  }
+}

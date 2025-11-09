@@ -1,10 +1,10 @@
 // @ts-nocheck
 import { defineFeature, loadFeature } from 'jest-cucumber';
-import * as nuextractApi from '../../../src/nuextract-api.js';
+import * as nuextractApi from '@src/nuextract-api.js';
 
-// Mock global du module API (préserve les fonctions non utilisées)
-jest.mock('../../../src/nuextract-api.js', () => {
-  const actual = jest.requireActual('../../../src/nuextract-api.js');
+// Mock global du module API avec alias moduleNameMapper (conforme @root-directory-governance)
+jest.mock('@src/nuextract-api.js', () => {
+  const actual = jest.requireActual('@src/nuextract-api.js');
   return {
     ...actual,
     inferTemplateFromDescriptionAsync: jest.fn(actual.inferTemplateFromDescriptionAsync),
@@ -17,7 +17,7 @@ import {
   _testOnly_loadApiKey as loadApiKey,
   _testOnly_loadAndResolveSchemas as loadAndResolveSchemas,
   _testOnly_generateTemplate as generateTemplate
-} from '../../../src/nuextract-client.js';
+} from '@src/nuextract-client.js';
 
 const feature = loadFeature(__dirname + '/template-generation-mocked.feature');
 

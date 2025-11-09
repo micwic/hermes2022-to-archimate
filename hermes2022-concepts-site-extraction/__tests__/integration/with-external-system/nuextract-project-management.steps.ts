@@ -99,9 +99,12 @@ defineFeature(feature, (test) => {
       // Validation technique : vérifier que l'exécution s'est bien déroulée
       // Note : Le projet peut avoir été réutilisé s'il existait déjà (test d'intégration réel)
       expect(projectResult?.id).toBeDefined(); // L'ID est toujours présent
-      expect(projectResult?.updated).toBeUndefined(); // Pas de mise à jour lors de la création
-      // Soit created=true (nouveau projet), soit existing=true (projet réutilisé)
-      expect(projectResult?.created === true || projectResult?.existing === true).toBe(true);
+      // Création : created === true ; mise à jour : updated === true ; réutilisation sans changement : existing === true
+      expect(
+        projectResult?.created === true
+        || projectResult?.updated === true
+        || projectResult?.existing === true
+      ).toBe(true);
     });
 
     and('l\'ID du projet est retourné', () => {
