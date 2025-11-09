@@ -72,6 +72,13 @@ __Règle__ : Éviter la redondance en documentant uniquement les décisions et p
 | `/template-generation.steps.ts` | Step definitions | Implémentation steps template-generation (integration/) |
 | `/nuextract-project-management.feature` | Feature Gherkin | Scénarios gestion projets (integration/) |
 | `/nuextract-project-management.steps.ts` | Step definitions | Implémentation steps project-management (integration/) |
+| `/__tests__/integration/with-external-system-mocked/` | Répertoire | Tests d'intégration mockés (NuExtract simulé) |
+| `/with-external-system-mocked/template-generation-mocked.feature` | Feature Gherkin | Tests génération template avec NuExtract mocké |
+| `/with-external-system-mocked/template-generation-mocked.steps.ts` | Step definitions | Implémentation correspondante (modes async) |
+| `/with-external-system-mocked/nuextract-project-management-mocked.feature` | Feature Gherkin | Tests mockés de gestion de projets NuExtract |
+| `/with-external-system-mocked/nuextract-project-management-mocked.steps.ts` | Step definitions | Implémentation correspondante (cycles création/mise à jour) |
+| `/with-external-system-mocked/extract-hermes2022-concepts-mocked.feature` | Feature Gherkin | Tests mockés de l'extraction complète des concepts |
+| `/with-external-system-mocked/extract-hermes2022-concepts-mocked.steps.ts` | Step definitions | Implémentation correspondante (agrégation blocs, erreurs API) |
 
 ## Décisions architecturales et techniques
 
@@ -565,3 +572,51 @@ module.exports = {
 #### État d'implémentation pour Configuration Jest
 
 ✅ [Fonctionnalité réalisée - 2025-10-26]
+
+### Tests d'intégration mockés pour extractHermes2022ConceptsWithNuExtract
+
+#### Description détaillée
+
+[2025-11-09] Les scénarios `extract-hermes2022-concepts-mocked` valident la
+logique d'orchestration sans appeler la plateforme SaaS NuExtract. Les mocks
+suivants sont utilisés :
+
+- `collectHtmlSourcesAndInstructions` (module `html-collector-and-transformer`)
+  renvoie une préparation contrôlée comprenant les blocs à extraire.
+- `inferTextFromContent` (module `nuextract-api.js`) retourne soit des
+  fragments JSON cohérents, soit lève une erreur simulée.
+
+Le schéma JSON validé par Ajv est volontairement minimaliste et spécifique aux
+scénarios mockés. Il garantit la validation du pipeline tout en restant
+indépendant du schéma exhaustif `hermes2022-concepts.json`.
+
+#### Justification
+
+- __Indépendance__ : Les tests ne consomment aucun quota NuExtract et se
+  déclenchent hors-ligne.
+- __Couverture ciblée__ : Vérifie la boucle blocs → appels API → recomposition
+  → validation Ajv (succès et échec).
+- __Respect SOLID__ : La séparation introduite avec
+  `html-collector-and-transformer.js` est exploitée via mocking direct du
+  module, sans artifice dans `nuextract-client.js`.
+
+#### Patterns validés
+
+- Hooks d'isolation `beforeEach`/`afterEach` avec `jest.clearAllMocks()` et
+  `jest.restoreAllMocks()` conformément à @test-mock-governance.
+- Utilisation de `jest.mock` sur `html-collector-and-transformer.js` pour
+  injecter directement la préparation attendue.
+- Construction d'un schéma JSON minimal (Draft-07) passé à
+  `_testOnly_extractHermes2022ConceptsWithNuExtract` pour maintenir la
+  validation Ajv tout en réduisant la complexité.
+- Vérification des prompts envoyés à `inferTextFromContent` pour garantir que
+  chaque bloc est expédié à l'API simulée.
+
+#### Anti-Patterns à éviter
+
+- __Mocks internes__ : Aucun override direct dans `nuextract-client.js` (les
+  modules sont mockés à l'extérieur selon @code-modularity-governance).
+- __Schéma monolithique__ : Ne pas réutiliser le schéma exhaustif dans ces
+  tests mockés (coût inutile et dépendance aux évolutions structurelles).
+- __Absence d'assertion__ : Toujours vérifier le nombre d'appels API et la
+  propagation des erreurs (`Invalid JSON response`, etc.).

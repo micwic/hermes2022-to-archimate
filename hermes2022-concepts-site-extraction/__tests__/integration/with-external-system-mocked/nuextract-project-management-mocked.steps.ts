@@ -1,9 +1,10 @@
 // @ts-nocheck
 import { defineFeature, loadFeature } from 'jest-cucumber';
-import * as nuextractApi from '../../../src/nuextract-api.js';
+import * as nuextractApi from '@src/nuextract-api.js';
 
-jest.mock('../../../src/nuextract-api.js', () => {
-  const actual = jest.requireActual('../../../src/nuextract-api.js');
+// Mock global du module API avec alias moduleNameMapper (conforme @root-directory-governance)
+jest.mock('@src/nuextract-api.js', () => {
+  const actual = jest.requireActual('@src/nuextract-api.js');
   return {
     ...actual,
     getNuExtractProjects: jest.fn(actual.getNuExtractProjects),
@@ -15,7 +16,7 @@ jest.mock('../../../src/nuextract-api.js', () => {
 import {
   _testOnly_loadGlobalConfig as loadGlobalConfig,
   _testOnly_findOrCreateProject as findOrCreateProject
-} from '../../../src/nuextract-client.js';
+} from '@src/nuextract-client.js';
 
 const feature = loadFeature(__dirname + '/nuextract-project-management-mocked.feature');
 
