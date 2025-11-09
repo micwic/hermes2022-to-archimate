@@ -13,9 +13,9 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 ## Description générale
 
 - La méthode HERMES des gestion de projet et de programme de la Confédération Helvétique est décrite en anglais sur le site <https://www.hermes.admin.ch/en/>
-- **Finalité du module** : Extraire automatiquement les concepts HERMES2022 depuis les pages officielles spécifiques et les transformer en fichiers intermédiaires structurés JSON validés
-- **Portée du module** : Extraction ciblée des concepts de la méthode HERMES2022 avec leur contexte et articulation générale, selon la hiérarchie officielle (1=Initiation, 2=Execution avec 2.1=Concept, 2.2=Implementation, 2.3=Deployment, 3=Closure)
-- **Interface de sortie** : Fichiers JSON conformes aux schémas définis dans le module hermes2022-extraction-files
+- __Finalité du module__ : Extraire automatiquement les concepts HERMES2022 depuis les pages officielles spécifiques et les transformer en fichiers intermédiaires structurés JSON validés
+- __Portée du module__ : Extraction ciblée des concepts de la méthode HERMES2022 avec leur contexte et articulation générale, selon la hiérarchie officielle (1=Initiation, 2=Execution avec 2.1=Concept, 2.2=Implementation, 2.3=Deployment, 3=Closure)
+- __Interface de sortie__ : Fichiers JSON conformes aux schémas définis dans le module hermes2022-extraction-files
 
 ## Contexte
 
@@ -69,7 +69,7 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 
 #### Patterns validés à suivre suite à la décision
 
-- **URL RACINE** à utiliser pour les requêtes internet est <https://www.hermes.admin.ch/en/>
+- __URL RACINE__ à utiliser pour les requêtes internet est <https://www.hermes.admin.ch/en/>
 
 #### État d'implémentation de la décision
 
@@ -131,53 +131,53 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 - [2025-10-26] L'extraction des concepts HERMES2022 est réalisée par un agent JavaScript modulaire exécuté dans JArchi (plugin d'Archi), qui articule les requêtes HTTP vers les APIs de NuExtract dans le cloud pour analyser et résumer le contenu des pages HTML, puis générer des fichiers JSON structurés avec les synthèses opérées.
 - [2025-10-26] L'agent est divisé en modules distincts selon les principes SOLID :
-  - **`nuextract-api.js`** : Couche API/I/O - Appels HTTP purs vers les APIs NuExtract (fonctions pures avec Dependency Injection)
-  - **`nuextract-client.js`** : Couche logique métier - Orchestration, validation, transformation, gestion des fallbacks de configuration
-  - **Snippet racine (`findUp.sync`)** : À appliquer dans chaque module pour déterminer `repoRoot` avant de charger la configuration ou les schémas
+  - __`nuextract-api.js`__ : Couche API/I/O - Appels HTTP purs vers les APIs NuExtract (fonctions pures avec Dependency Injection)
+  - __`nuextract-client.js`__ : Couche logique métier - Orchestration, validation, transformation, gestion des fallbacks de configuration
+  - __Snippet racine (`findUp.sync`)__ : À appliquer dans chaque module pour déterminer `repoRoot` avant de charger la configuration ou les schémas
 - [2025-10-26] L'agent gère le cycle complet : chargement configuration, validation clé API, chargement instructions, résolution et validation schémas JSON, génération template, gestion projet NuExtract.
 - [2025-10-26] L'agent est conçu pour être modulaire, réutilisable et intégré à l'écosystème JArchi de Archi sans dépendances externes inutiles.
 
 #### Justification pour l'architecture modulaire
 
-- **Separation of Concerns** : API/I/O séparé de la logique métier et des fallbacks de configuration
-- **Single Responsibility Principle (SRP)** : Chaque module a une responsabilité unique et claire
-- **Dependency Injection** : Élimination du couplage fort via variables globales, toutes les dépendances passées en paramètres
-- **Testabilité** : Logique métier testable avec API mockée, fonctions pures facilement testables
-- **Maintenabilité** : Changements API isolés sans impact sur logique métier
-- **Réutilisabilité** : Module API réutilisable dans d'autres contextes (pas de dépendance à une config spécifique)
-- **Simplicité et Intégration** : Langage de référence qui permet d'utiliser les APIs Java natives (java.net.http.HttpClient) pour les requêtes HTTP et les appels aux APIs de NuExtract, évitant les dépendances Node.js ou Axios, et permettant une exécution directe dans JArchi de Archi.
+- __Separation of Concerns__ : API/I/O séparé de la logique métier et des fallbacks de configuration
+- __Single Responsibility Principle (SRP)__ : Chaque module a une responsabilité unique et claire
+- __Dependency Injection__ : Élimination du couplage fort via variables globales, toutes les dépendances passées en paramètres
+- __Testabilité__ : Logique métier testable avec API mockée, fonctions pures facilement testables
+- __Maintenabilité__ : Changements API isolés sans impact sur logique métier
+- __Réutilisabilité__ : Module API réutilisable dans d'autres contextes (pas de dépendance à une config spécifique)
+- __Simplicité et Intégration__ : Langage de référence qui permet d'utiliser les APIs Java natives (java.net.http.HttpClient) pour les requêtes HTTP et les appels aux APIs de NuExtract, évitant les dépendances Node.js ou Axios, et permettant une exécution directe dans JArchi de Archi.
 
 #### Patterns validés pour l'architecture modulaire
 
-- **Fonctions pures API** : `async function inferTemplateAsync(hostname, port, path, apiKey, description, timeout) { ... }`
-- **Exports normaux API** : `module.exports = { inferTemplateAsync, getJobStatus, ... }` (interface publique)
-- **Exports _testOnly_ client** : `module.exports = { _testOnly_loadGlobalConfig, _testOnly_generateTemplate, ... }` (logique métier pour tests)
-- **Import module API** : `const nuextractApi = require('./nuextract-api.js')`
-- **Appels avec DI** : `await nuextractApi.inferTemplateAsync(hostname, port, path, apiKey, description, 60)`
-- **Fallbacks dans client** : `const hostname = config?.nuextract?.baseUrl || 'nuextract.ai'`
-- **Résolution chemins** : `resolveFromRepoRoot(config.nuextract.apiKeyFile)` avec le snippet présenté dans @root-directory-governance
-- **Requêtes HTTP natives** : Utilisation de `https` (Node.js) ou `java.net.http.HttpClient` (JArchi) pour les appels vers NuExtract
-- **Gestion asynchrone** : Promesses JavaScript pour les requêtes non-bloquantes
-- **Validation JSON Schema** : Utilisation de `@apidevtools/json-schema-ref-parser` pour résolution des `$ref` et `Ajv` pour validation conformité JSON Schema Draft-07
+- __Fonctions pures API__ : `async function inferTemplateAsync(hostname, port, path, apiKey, description, timeout) { ... }`
+- __Exports normaux API__ : `module.exports = { inferTemplateAsync, getJobStatus, ... }` (interface publique)
+- __Exports _testOnly_ client__ : `module.exports = { _testOnly_loadGlobalConfig, _testOnly_generateTemplate, ... }` (logique métier pour tests)
+- __Import module API__ : `const nuextractApi = require('./nuextract-api.js')`
+- __Appels avec DI__ : `await nuextractApi.inferTemplateAsync(hostname, port, path, apiKey, description, 60)`
+- __Fallbacks dans client__ : `const hostname = config?.nuextract?.baseUrl || 'nuextract.ai'`
+- __Résolution chemins__ : `resolveFromRepoRoot(config.nuextract.apiKeyFile)` avec le snippet présenté dans @root-directory-governance
+- __Requêtes HTTP natives__ : Utilisation de `https` (Node.js) ou `java.net.http.HttpClient` (JArchi) pour les appels vers NuExtract
+- __Gestion asynchrone__ : Promesses JavaScript pour les requêtes non-bloquantes
+- __Validation JSON Schema__ : Utilisation de `@apidevtools/json-schema-ref-parser` pour résolution des `$ref` et `Ajv` pour validation conformité JSON Schema Draft-07
 
 #### Anti-Patterns pour l'architecture modulaire à éviter
 
-- **Variables globales** : Éviter GLOBAL_CONFIG dans nuextract-api.js → **Solution** : Paramètres explicites → **Règle** : Dependency Injection
-- **Appels internes directs** : Éviter `await inferTemplateAsync(...)` dans le même module → **Solution** : Import depuis module API → **Règle** : Séparation obligatoire selon SRP
-- **Logique métier dans API** : Éviter la logique de transformation ou fallbacks dans nuextract-api.js → **Solution** : API = HTTP uniquement → **Règle** : Separation of Concerns
-- **Exports _testOnly_ dans API** : Éviter dans nuextract-api.js → **Solution** : Exports normaux → **Règle** : Interface publique claire
-- **God Module** : Éviter d'ajouter d'autres responsabilités (parsing, validation) dans nuextract-api.js → **Solution** : Créer modules dédiés → **Règle** : Single Responsibility
-- **Dépendances externes lourdes** : Éviter Axios ou libs Node.js inutiles → **Solution** : APIs Java natives pour JArchi → **Règle à adopter** : Minimalisme pour intégration JArchi
-- **Gestion d'erreurs insuffisante** : Éviter les timeouts infinis → **Solution** : Timeouts explicites → **Règle à adopter** : Robustesse et non-blocage de l'UI
+- __Variables globales__ : Éviter GLOBAL_CONFIG dans nuextract-api.js → __Solution__ : Paramètres explicites → __Règle__ : Dependency Injection
+- __Appels internes directs__ : Éviter `await inferTemplateAsync(...)` dans le même module → __Solution__ : Import depuis module API → __Règle__ : Séparation obligatoire selon SRP
+- __Logique métier dans API__ : Éviter la logique de transformation ou fallbacks dans nuextract-api.js → __Solution__ : API = HTTP uniquement → __Règle__ : Separation of Concerns
+- __Exports _testOnly_ dans API__ : Éviter dans nuextract-api.js → __Solution__ : Exports normaux → __Règle__ : Interface publique claire
+- __God Module__ : Éviter d'ajouter d'autres responsabilités (parsing, validation) dans nuextract-api.js → __Solution__ : Créer modules dédiés → __Règle__ : Single Responsibility
+- __Dépendances externes lourdes__ : Éviter Axios ou libs Node.js inutiles → __Solution__ : APIs Java natives pour JArchi → __Règle à adopter__ : Minimalisme pour intégration JArchi
+- __Gestion d'erreurs insuffisante__ : Éviter les timeouts infinis → __Solution__ : Timeouts explicites → __Règle à adopter__ : Robustesse et non-blocage de l'UI
 
 #### État d'implémentation pour l'architecture modulaire
 
 ✅ [Fonctionnalité réalisée - 2025-10-26]
 
-- ✅ **Module API** : `nuextract-api.js` créé avec 7 fonctions pures (exports normaux)
-- ✅ **Module client** : `nuextract-client.js` refactorisé (logique métier uniquement, exports `_testOnly_`)
-- ✅ **Snippet racine** : Utilisation standardisée du bloc `findUp.sync('package.json', { cwd: __dirname })` selon @root-directory-governance
-- ✅ **Résolution schémas** : Intégration `@apidevtools/json-schema-ref-parser` et `Ajv` pour résolution/validation JSON Schema Draft-07
+- ✅ __Module API__ : `nuextract-api.js` créé avec 7 fonctions pures (exports normaux)
+- ✅ __Module client__ : `nuextract-client.js` refactorisé (logique métier uniquement, exports `_testOnly_`)
+- ✅ __Snippet racine__ : Utilisation standardisée du bloc `findUp.sync('package.json', { cwd: __dirname })` selon @root-directory-governance
+- ✅ __Résolution schémas__ : Intégration `@apidevtools/json-schema-ref-parser` et `Ajv` pour résolution/validation JSON Schema Draft-07
 
 ### Intégration des APIs NuExtract pour l'extraction structurée
 
@@ -195,31 +195,31 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 #### Justification pour l'intégration des APIs NuExtract
 
-- **Précision et Fiabilité** : Modèle spécialisé pour extraction HTML→JSON, surpassant les modèles généralistes pour cette tâche, avec validation automatique du JSON.
-- **Sécurité et Conformité** : Utilisation de la clé API personnelle (pas de stockage sensible externe), respect des licences MIT et lois suisses.
-- **Intégration avec JArchi** : APIs REST simples, compatibles avec java.net.http.HttpClient, sans dépendances supplémentaires.
-- **Évolutivité** : Support de schémas personnalisés pour différents concepts HERMES2022, et possibilité d'extension à d'autres modèles IA.
+- __Précision et Fiabilité__ : Modèle spécialisé pour extraction HTML→JSON, surpassant les modèles généralistes pour cette tâche, avec validation automatique du JSON.
+- __Sécurité et Conformité__ : Utilisation de la clé API personnelle (pas de stockage sensible externe), respect des licences MIT et lois suisses.
+- __Intégration avec JArchi__ : APIs REST simples, compatibles avec java.net.http.HttpClient, sans dépendances supplémentaires.
+- __Évolutivité__ : Support de schémas personnalisés pour différents concepts HERMES2022, et possibilité d'extension à d'autres modèles IA.
 
 #### Patterns validés pour l'intégration des APIs NuExtract
 
-- **Authentification Bearer** : Utilisation de l'en-tête `Authorization: Bearer <clé JWT>` pour sécuriser les requêtes avec la clé définie dans @hermes2022-concepts-site-extraction/config/nuextract-api-key.key
-- **Gestion des Quotas** : Implémentation d'un compteur d'usage dans l'agent, avec logging pour éviter les dépassements.
-- **Validation de Réponse** : Parsing de la réponse JSON avec vérification des erreurs (ex. : code 429 pour quota dépassé).
+- __Authentification Bearer__ : Utilisation de l'en-tête `Authorization: Bearer <clé JWT>` pour sécuriser les requêtes avec la clé définie dans @hermes2022-concepts-site-extraction/config/nuextract-api-key.key
+- __Gestion des Quotas__ : Implémentation d'un compteur d'usage dans l'agent, avec logging pour éviter les dépassements.
+- __Validation de Réponse__ : Parsing de la réponse JSON avec vérification des erreurs (ex. : code 429 pour quota dépassé).
 
 #### Anti-Patterns pour l'intégration des APIs NuExtract à éviter
 
-- **Utilisation sans authentification** : Éviter les requêtes non authentifiées → **Solution** : Toujours inclure la clé Bearer → **Règle à adopter** : Sécurité des accès API.
-- **Dépassement de quotas** : Éviter les requêtes excessives → **Solution** : Suivi et limites → **Règle à adopter** : Gestion proactive des ressources.
-- **Hardcodage de la clé** : Éviter de coder la clé en dur → **Solution** : Variable d'environnement ou config → **Règle à adopter** : Sécurité et maintenabilité.
+- __Utilisation sans authentification__ : Éviter les requêtes non authentifiées → __Solution__ : Toujours inclure la clé Bearer → __Règle à adopter__ : Sécurité des accès API.
+- __Dépassement de quotas__ : Éviter les requêtes excessives → __Solution__ : Suivi et limites → __Règle à adopter__ : Gestion proactive des ressources.
+- __Hardcodage de la clé__ : Éviter de coder la clé en dur → __Solution__ : Variable d'environnement ou config → __Règle à adopter__ : Sécurité et maintenabilité.
 
 #### État d'implémentation pour l'intégration des APIs NuExtract
 
 ✅ [Intégration réalisée dans nuextract-api.js - 2025-10-26]
 
-- ✅ **7 fonctions API** : inferTemplateFromDescription, inferTemplateFromDescriptionAsync, getJobStatus, pollJobUntilComplete, getNuExtractProjects, createNuExtractProject, putProjectTemplate
-- ✅ **Gestion timeouts** : Timeouts explicites pour toutes les requêtes HTTP (sync: 35s, async: 10s, jobs: 5s, projects: 10s)
-- ✅ **Authentification Bearer** : En-tête `Authorization: Bearer <clé JWT>` sur toutes les requêtes
-- ✅ **Gestion erreurs** : Messages d'erreur contextualisés avec Error Cause (ES2022) pour préserver stack trace
+- ✅ __7 fonctions API__ : inferTemplateFromDescription, inferTemplateFromDescriptionAsync, getJobStatus, pollJobUntilComplete, getNuExtractProjects, createNuExtractProject, putProjectTemplate
+- ✅ __Gestion timeouts__ : Timeouts explicites pour toutes les requêtes HTTP (sync: 35s, async: 10s, jobs: 5s, projects: 10s)
+- ✅ __Authentification Bearer__ : En-tête `Authorization: Bearer <clé JWT>` sur toutes les requêtes
+- ✅ __Gestion erreurs__ : Messages d'erreur contextualisés avec Error Cause (ES2022) pour préserver stack trace
 
 ### Validation de la clé API avec jsonwebtoken
 
@@ -236,19 +236,19 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 #### Justification pour la validation de la clé API
 
-- **Validation robuste** : Détecte les JWT mal formés avant l'appel API (évite les requêtes inutiles avec clés invalides comme `"1234"` ou `"a.b.c"`)
-- **Standard de l'industrie** : `jsonwebtoken` est la bibliothèque de référence pour JWT en Node.js (50M téléchargements/semaine)
-- **Pas de clé publique nécessaire** : Le décodage sans vérification de signature suffit pour valider la structure
-- **Sécurité** : Détection précoce des erreurs de configuration (clé corrompue, fichier mal formaté)
-- **Taille acceptable** : ~50KB de dépendance, négligeable comparé à Jest/Babel déjà présents
+- __Validation robuste__ : Détecte les JWT mal formés avant l'appel API (évite les requêtes inutiles avec clés invalides comme `"1234"` ou `"a.b.c"`)
+- __Standard de l'industrie__ : `jsonwebtoken` est la bibliothèque de référence pour JWT en Node.js (50M téléchargements/semaine)
+- __Pas de clé publique nécessaire__ : Le décodage sans vérification de signature suffit pour valider la structure
+- __Sécurité__ : Détection précoce des erreurs de configuration (clé corrompue, fichier mal formaté)
+- __Taille acceptable__ : ~50KB de dépendance, négligeable comparé à Jest/Babel déjà présents
 
 #### Patterns validés pour la validation de la clé API
 
-- **Décodage sans vérification** : Utilisation de `jwt.decode(apiKey, { complete: true })` au lieu de `jwt.verify()`
-- **Validation structurelle** : Vérification que `decoded.header` et `decoded.payload` existent
-- **Validation des champs requis** : Vérification que `decoded.header.typ` et `decoded.header.alg` sont présents
-- **Gestion d'erreur** : Encapsulation dans try-catch avec message explicite
-- **Séquence de validation** :
+- __Décodage sans vérification__ : Utilisation de `jwt.decode(apiKey, { complete: true })` au lieu de `jwt.verify()`
+- __Validation structurelle__ : Vérification que `decoded.header` et `decoded.payload` existent
+- __Validation des champs requis__ : Vérification que `decoded.header.typ` et `decoded.header.alg` sont présents
+- __Gestion d'erreur__ : Encapsulation dans try-catch avec message explicite
+- __Séquence de validation__ :
   1. Chargement de la clé (env var ou fichier)
   2. Trim des espaces
   3. Vérification non vide
@@ -256,89 +256,89 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 #### Anti-Patterns pour la validation de la clé API à éviter
 
-- **Validation simple par split** : Éviter `apiKey.split('.').length === 3` qui accepte `"a.b.c"` → **Solution** : Utiliser `jsonwebtoken` → **Règle à adopter** : Validation structurelle complète
-- **Vérification de signature** : Éviter `jwt.verify()` qui nécessite la clé publique → **Solution** : Utiliser `jwt.decode()` → **Règle à adopter** : Décodage sans vérification suffit
-- **Validation manuelle base64** : Éviter de réinventer la roue avec Buffer.from() → **Solution** : Utiliser `jsonwebtoken` → **Règle à adopter** : Utiliser bibliothèque standard
-- **Hardcodage JWT test** : Éviter les JWT de test codés en dur dans le code → **Solution** : Mocks dans les tests uniquement → **Règle à adopter** : Configuration externe pour production
+- __Validation simple par split__ : Éviter `apiKey.split('.').length === 3` qui accepte `"a.b.c"` → __Solution__ : Utiliser `jsonwebtoken` → __Règle à adopter__ : Validation structurelle complète
+- __Vérification de signature__ : Éviter `jwt.verify()` qui nécessite la clé publique → __Solution__ : Utiliser `jwt.decode()` → __Règle à adopter__ : Décodage sans vérification suffit
+- __Validation manuelle base64__ : Éviter de réinventer la roue avec Buffer.from() → __Solution__ : Utiliser `jsonwebtoken` → __Règle à adopter__ : Utiliser bibliothèque standard
+- __Hardcodage JWT test__ : Éviter les JWT de test codés en dur dans le code → __Solution__ : Mocks dans les tests uniquement → __Règle à adopter__ : Configuration externe pour production
 
 #### État d'implémentation pour la validation de la clé API
 
 ✅ [Fonctionnalité réalisée]
 
-- ✅ **Installation** : `jsonwebtoken` 9.0.2 ajouté aux devDependencies
-- ✅ **Implémentation** : Validation dans `loadApiKey()` de `nuextract-client.js`
-- ✅ **Tests BDD** : 4 scénarios passent (clé absente, clé vide, JWT invalide, chargement réussi)
+- ✅ __Installation__ : `jsonwebtoken` 9.0.2 ajouté aux devDependencies
+- ✅ __Implémentation__ : Validation dans `loadApiKey()` de `nuextract-client.js`
+- ✅ __Tests BDD__ : 4 scénarios passent (clé absente, clé vide, JWT invalide, chargement réussi)
 
 ### Résolution et validation des schémas JSON
 
 #### Description détaillée pour la résolution et validation des schémas
 
 - [2025-10-28] Les schémas JSON avec références `$ref` sont résolus et validés avant utilisation pour génération de template
-- [2025-10-28] **Résolution des références** : Utilisation de `@apidevtools/json-schema-ref-parser` pour résoudre automatiquement toutes les références `$ref` dans un schéma JSON monolithique
-- [2025-10-28] **Validation conformité** : Utilisation de `Ajv` (avec `ajv-formats`) pour valider que le schéma résolu est conforme à JSON Schema Draft-07 (standard utilisé dans le projet)
+- [2025-10-28] __Résolution des références__ : Utilisation de `@apidevtools/json-schema-ref-parser` pour résoudre automatiquement toutes les références `$ref` dans un schéma JSON monolithique
+- [2025-10-28] __Validation conformité__ : Utilisation de `Ajv` (avec `ajv-formats`) pour valider que le schéma résolu est conforme à JSON Schema Draft-07 (standard utilisé dans le projet)
 - [2025-10-28] Le schéma résolu et validé est ensuite fusionné avec les instructions textuelles pour créer la description envoyée à l'API NuExtract
 - [2025-10-28] Les erreurs de résolution ou validation sont contextualisées avec Error Cause (ES2022) pour préserver la traçabilité
 
 #### Justification pour la résolution et validation des schémas
 
-- **Modularité** : Permet de séparer les schémas en fichiers distincts avec références `$ref` pour faciliter la maintenance
-- **Validation stricte** : Garantit que le schéma respecte le standard JSON Schema Draft-07 avant utilisation
-- **Traçabilité** : Erreurs contextualisées avec Error Cause pour faciliter le débogage
-- **Standard reconnu** : `@apidevtools/json-schema-ref-parser` est la bibliothèque standard pour résolution de références JSON Schema
-- **Validation robuste** : `Ajv` est la bibliothèque de référence pour validation JSON Schema en JavaScript
+- __Modularité__ : Permet de séparer les schémas en fichiers distincts avec références `$ref` pour faciliter la maintenance
+- __Validation stricte__ : Garantit que le schéma respecte le standard JSON Schema Draft-07 avant utilisation
+- __Traçabilité__ : Erreurs contextualisées avec Error Cause pour faciliter le débogage
+- __Standard reconnu__ : `@apidevtools/json-schema-ref-parser` est la bibliothèque standard pour résolution de références JSON Schema
+- __Validation robuste__ : `Ajv` est la bibliothèque de référence pour validation JSON Schema en JavaScript
 
 #### Patterns validés pour la résolution et validation des schémas
 
-- **Résolution références** : `const resolvedSchema = await $RefParser.dereference(mainSchemaFile, { dereference: { circular: 'ignore' } })`
-- **Validation Draft-07** : `const metaSchema = require('ajv/dist/refs/json-schema-draft-07.json')` puis `ajv.compile(metaSchema)`
-- **Gestion erreurs** : `throw new Error('Invalid JSON schema structure or content. Script stopped.', { cause: error })`
-- **Séquence** : Résolution `$ref` → Validation conformité → Stringify pour fusion avec instructions
+- __Résolution références__ : `const resolvedSchema = await $RefParser.dereference(mainSchemaFile, { dereference: { circular: 'ignore' } })`
+- __Validation Draft-07__ : `const metaSchema = require('ajv/dist/refs/json-schema-draft-07.json')` puis `ajv.compile(metaSchema)`
+- __Gestion erreurs__ : `throw new Error('Invalid JSON schema structure or content. Script stopped.', { cause: error })`
+- __Séquence__ : Résolution `$ref` → Validation conformité → Stringify pour fusion avec instructions
 
 #### Anti-Patterns pour la résolution et validation des schémas à éviter
 
-- **Résolution manuelle** : Éviter de résoudre manuellement les `$ref` avec boucles custom → **Solution** : Utiliser `@apidevtools/json-schema-ref-parser` → **Règle à adopter** : Bibliothèque standard
-- **Validation absente** : Éviter d'utiliser un schéma non validé → **Solution** : Toujours valider avec Ajv → **Règle à adopter** : Validation obligatoire
-- **Perte traçabilité** : Éviter `throw new Error(error.message)` qui perd la stack → **Solution** : Utiliser Error Cause → **Règle à adopter** : Error Cause pour wrapping
+- __Résolution manuelle__ : Éviter de résoudre manuellement les `$ref` avec boucles custom → __Solution__ : Utiliser `@apidevtools/json-schema-ref-parser` → __Règle à adopter__ : Bibliothèque standard
+- __Validation absente__ : Éviter d'utiliser un schéma non validé → __Solution__ : Toujours valider avec Ajv → __Règle à adopter__ : Validation obligatoire
+- __Perte traçabilité__ : Éviter `throw new Error(error.message)` qui perd la stack → __Solution__ : Utiliser Error Cause → __Règle à adopter__ : Error Cause pour wrapping
 
 #### État d'implémentation pour la résolution et validation des schémas
 
 ✅ [Fonctionnalité réalisée - 2025-10-28]
 
-- ✅ **Bibliothèque résolution** : `@apidevtools/json-schema-ref-parser` installée et intégrée
-- ✅ **Bibliothèque validation** : `Ajv` + `ajv-formats` installées et intégrées
-- ✅ **Fonction loadAndResolveSchemas** : Refactorisée dans `nuextract-client.js` avec résolution et validation
-- ✅ **Tests BDD** : 4 scénarios passent (schéma manquant, `$ref` manquant, JSON malformé, schéma non conforme)
+- ✅ __Bibliothèque résolution__ : `@apidevtools/json-schema-ref-parser` installée et intégrée
+- ✅ __Bibliothèque validation__ : `Ajv` + `ajv-formats` installées et intégrées
+- ✅ __Fonction loadAndResolveSchemas__ : Refactorisée dans `nuextract-client.js` avec résolution et validation
+- ✅ __Tests BDD__ : 4 scénarios passent (schéma manquant, `$ref` manquant, JSON malformé, schéma non conforme)
 
 ### Gestion des modes de génération de template (sync/async)
 
 #### Description détaillée pour la gestion des modes
 
 - [2025-10-24] L'extraction supporte deux modes de génération de template via le paramètre `templateMode` dans `extraction-config.json`
-- [2025-10-24] **Mode sync** : Utilise `/api/infer-template` - traitement synchrone avec timeout HTTP global
-- [2025-10-24] **Mode async** : Utilise `/api/infer-template-async` - traitement asynchrone avec polling de statut
-- [2025-10-24] **Constat empirique** : L'API synchrone timeout à ~11 secondes avec le schéma `hermes2022-concepts.json` (4442 caractères) et retourne erreur 206 (Partial Content) avec body vide `{}`, tandis que l'API asynchrone permet de traiter le même schéma en 44 secondes avec succès
-- [2025-10-24] **Paramètre unifié `templateGenerationDuration`** : Représente le temps estimé de génération (défaut 30000ms)
-  - **Mode sync** : Utilisé comme base pour le timeout HTTP avec marge de sécurité = `templateGenerationDuration + 5000`
-  - **Mode async** : Utilisé comme sleep initial avant le polling = `templateGenerationDuration`
+- [2025-10-24] __Mode sync__ : Utilise `/api/infer-template` - traitement synchrone avec timeout HTTP global
+- [2025-10-24] __Mode async__ : Utilise `/api/infer-template-async` - traitement asynchrone avec polling de statut
+- [2025-10-24] __Constat empirique__ : L'API synchrone timeout à ~11 secondes avec le schéma `hermes2022-concepts.json` (4442 caractères) et retourne erreur 206 (Partial Content) avec body vide `{}`, tandis que l'API asynchrone permet de traiter le même schéma en 44 secondes avec succès
+- [2025-10-24] __Paramètre unifié `templateGenerationDuration`__ : Représente le temps estimé de génération (défaut 30000ms)
+  - __Mode sync__ : Utilisé comme base pour le timeout HTTP avec marge de sécurité = `templateGenerationDuration + 5000`
+  - __Mode async__ : Utilisé comme sleep initial avant le polling = `templateGenerationDuration`
 - [2025-10-24] Le template généré est sauvegardé dans `shared/hermes2022-extraction-files/config/nuextract-template-generated/nuextract-template.json`
 
 #### Justification pour la gestion des modes
 
-- **Flexibilité** : Permet de choisir entre rapidité (sync pour petits schémas) et fiabilité (async pour schémas complexes >4000 caractères)
-- **Résout les timeouts** : Le mode async résout les timeouts systématiques avec des schémas JSON complexes
-- **Gestion d'erreur explicite** : Message d'erreur clair en cas de timeout sync proposant de passer en mode async
+- __Flexibilité__ : Permet de choisir entre rapidité (sync pour petits schémas) et fiabilité (async pour schémas complexes >4000 caractères)
+- __Résout les timeouts__ : Le mode async résout les timeouts systématiques avec des schémas JSON complexes
+- __Gestion d'erreur explicite__ : Message d'erreur clair en cas de timeout sync proposant de passer en mode async
 
 #### Patterns validés pour la gestion des modes
 
-- **Paramètre `templateMode`** : Valeurs acceptées "sync" ou "async" (défaut "sync" si absent)
-- **Paramètre `templateGenerationDuration`** : Temps estimé en ms (défaut 30000)
-- **Paramètres d'endpoints** : `infer-templatePath` et `infer-templateAsyncPath` dans configuration
-- **Mode sync** :
+- __Paramètre `templateMode`__ : Valeurs acceptées "sync" ou "async" (défaut "sync" si absent)
+- __Paramètre `templateGenerationDuration`__ : Temps estimé en ms (défaut 30000)
+- __Paramètres d'endpoints__ : `infer-templatePath` et `infer-templateAsyncPath` dans configuration
+- __Mode sync__ :
   - Timeout HTTP = `templateGenerationDuration + 5000` ms
   - Pas de sleep, pas de retry
   - Template retourné directement dans la réponse
   - Message d'erreur timeout explicite : "Timeout sync après Xms. Pour schémas >4000 caractères, utilisez templateMode: 'async'"
-- **Mode async** :
+- __Mode async__ :
   - Timeout paramètre API = 60 secondes (`?timeout=60s`)
   - Sleep initial = `templateGenerationDuration` ms
   - Polling interval = 3 secondes entre chaque vérification
@@ -346,16 +346,16 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
   - Workflow : POST `/api/infer-template-async?timeout=60s` → obtenir jobId → sleep → polling GET `/api/jobs/{jobId}` → récupérer outputData
   - Statuts acceptés : `"completed"` (succès normal) ET `"timeout"` (succès avec dépassement timeout mais outputData présent)
   - Statut échec : `"failed"` (échec du job)
-- **Format description** : Schéma JSON en premier, puis instructions (sans headers/commentaires) — Les instructions placées avant le schéma perturbent la génération du template
-- **Limite taille** : 32k caractères pour le champ `description` selon support NuMind
+- __Format description__ : Schéma JSON en premier, puis instructions (sans headers/commentaires) — Les instructions placées avant le schéma perturbent la génération du template
+- __Limite taille__ : 32k caractères pour le champ `description` selon support NuMind
 
 #### Anti-Patterns pour la gestion des modes à éviter
 
-- **Mode invalide** : Éviter templateMode ni "sync" ni "async" → **Solution** : Validation stricte → **Règle à adopter** : Lever erreur explicite si valeur invalide
-- **Utiliser mode sync pour schémas >4000 caractères** : Éviter `/api/infer-template` pour gros schémas → **Solution** : Utiliser mode async → **Règle à adopter** : Workflow async pour schémas complexes
-- **Polling immédiat (async)** : Éviter de poller dès la soumission → **Solution** : Sleep `templateGenerationDuration` initial → **Règle à adopter** : Laisser le temps au job de s'initialiser
-- **Polling trop rapide (async)** : Éviter interval <2s → **Solution** : Interval 3s → **Règle à adopter** : Limiter la charge sur l'API
-- **Instructions avant schéma** : Éviter headers/instructions avant le schéma JSON → **Solution** : Schéma d'abord, instructions après → **Règle à adopter** : Format description = schéma + instructions (sans headers)
+- __Mode invalide__ : Éviter templateMode ni "sync" ni "async" → __Solution__ : Validation stricte → __Règle à adopter__ : Lever erreur explicite si valeur invalide
+- __Utiliser mode sync pour schémas >4000 caractères__ : Éviter `/api/infer-template` pour gros schémas → __Solution__ : Utiliser mode async → __Règle à adopter__ : Workflow async pour schémas complexes
+- __Polling immédiat (async)__ : Éviter de poller dès la soumission → __Solution__ : Sleep `templateGenerationDuration` initial → __Règle à adopter__ : Laisser le temps au job de s'initialiser
+- __Polling trop rapide (async)__ : Éviter interval <2s → __Solution__ : Interval 3s → __Règle à adopter__ : Limiter la charge sur l'API
+- __Instructions avant schéma__ : Éviter headers/instructions avant le schéma JSON → __Solution__ : Schéma d'abord, instructions après → __Règle à adopter__ : Format description = schéma + instructions (sans headers)
 
 #### État d'implémentation pour la gestion des modes
 
@@ -374,40 +374,40 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 #### Justification pour la génération de template depuis configuration JSON centralisée
 
-- **Centralisation** : Configuration technique centralisée dans un seul fichier schéma selon SRP
-- **Paramétrage structuré** : Pattern `enum` pour définir toutes les valeurs possibles sans duplication
-- **Type safety** : Validation JSON Schema avec Ajv garantit la conformité avant utilisation
-- **Simplicité** : Plus de parsing Markdown, extraction directe depuis config en mémoire
-- **Historisation** : Le fichier `extraction-config.json` sera créé dans le répertoire des données après extraction pour traçabilité
+- __Centralisation__ : Configuration technique centralisée dans un seul fichier schéma selon SRP
+- __Paramétrage structuré__ : Pattern `enum` pour définir toutes les valeurs possibles sans duplication
+- __Type safety__ : Validation JSON Schema avec Ajv garantit la conformité avant utilisation
+- __Simplicité__ : Plus de parsing Markdown, extraction directe depuis config en mémoire
+- __Historisation__ : Le fichier `extraction-config.json` sera créé dans le répertoire des données après extraction pour traçabilité
 
 #### Patterns validés pour la génération de template depuis configuration JSON centralisée
 
-- **Schéma source** : `extraction-config.schema.json` avec toutes les propriétés et leurs `enum` possibles
-- **Transformation** : `transformSchemaToConfig(schema)` qui parcourt récursivement les propriétés
-- **Pattern enum** :
-  - **Propriétés simples** : `property.enum[0]` = valeur par défaut
-  - **Arrays** : `property.items.enum` (array complet) = valeur par défaut
-- **Validation Ajv** : Config transformé validé avec le schéma avant utilisation
-- **Extraction instructions** : `config.nuextract.templateTransformationInstructions.instructions` (array joint avec `\n`)
-- **Localisation SRP** : `templateTransformationInstructions` dans `extraction-config.schema.json` sous `nuextract`, PAS dans schéma conceptuel
+- __Schéma source__ : `extraction-config.schema.json` avec toutes les propriétés et leurs `enum` possibles
+- __Transformation__ : `transformSchemaToConfig(schema)` qui parcourt récursivement les propriétés
+- __Pattern enum__ :
+  - __Propriétés simples__ : `property.enum[0]` = valeur par défaut
+  - __Arrays__ : `property.items.enum` (array complet) = valeur par défaut
+- __Validation Ajv__ : Config transformé validé avec le schéma avant utilisation
+- __Extraction instructions__ : `config.nuextract.templateTransformationInstructions.instructions` (array joint avec `\n`)
+- __Localisation SRP__ : `templateTransformationInstructions` dans `extraction-config.schema.json` sous `nuextract`, PAS dans schéma conceptuel
 
 #### Anti-Patterns pour la génération de template depuis configuration JSON centralisée à éviter
 
-- **Instructions dans schéma conceptuel** : Éviter de placer `templateTransformationInstructions` dans `hermes2022-concepts.json` → **Solution** : Configuration technique dans `extraction-config.schema.json` → **Règle à adopter** : SRP strict
-- **Parsing Markdown** : Éviter de charger et parser `instructions-template-nuextract.md` → **Solution** : Extraction depuis config en mémoire → **Règle à adopter** : Pas de parsing inutile
-- **Default JSON Schema** : Éviter d'utiliser `default` dans le schéma → **Solution** : Pattern `enum` uniquement → **Règle à adopter** : Enum comme source unique
-- **Redondance enum** : Éviter de dupliquer les valeurs entre `enum` et `default` → **Solution** : Uniquement `enum`, transformation manuelle → **Règle à adopter** : DRY
+- __Instructions dans schéma conceptuel__ : Éviter de placer `templateTransformationInstructions` dans `hermes2022-concepts.json` → __Solution__ : Configuration technique dans `extraction-config.schema.json` → __Règle à adopter__ : SRP strict
+- __Parsing Markdown__ : Éviter de charger et parser `instructions-template-nuextract.md` → __Solution__ : Extraction depuis config en mémoire → __Règle à adopter__ : Pas de parsing inutile
+- __Default JSON Schema__ : Éviter d'utiliser `default` dans le schéma → __Solution__ : Pattern `enum` uniquement → __Règle à adopter__ : Enum comme source unique
+- __Redondance enum__ : Éviter de dupliquer les valeurs entre `enum` et `default` → __Solution__ : Uniquement `enum`, transformation manuelle → __Règle à adopter__ : DRY
 
 #### État d'implémentation pour la génération de template depuis configuration JSON centralisée
 
 ✅ [Migration réalisée - 2025-11-01]
 
-- ✅ **Schéma JSON Schema** : `extraction-config.schema.json` créé avec structure complète et instructions migrées
-- ✅ **Fonction transformation** : `transformSchemaToConfig()` implémentée avec logique enum[0] vs items.enum
-- ✅ **loadGlobalConfig()** : Modifié pour lire schéma, transformer et valider avec Ajv
-- ✅ **loadInstructions()** : Modifié pour extraire depuis config en mémoire (plus de parsing Markdown)
-- ✅ **Tests BDD** : Tous les tests unitaires et d'intégration passent (24/24 unitaires, 6/6 intégration)
-- ✅ **Nettoyage** : Fichiers obsolètes `instructions-template-nuextract.md` et `extraction-config.json` supprimés
+- ✅ __Schéma JSON Schema__ : `extraction-config.schema.json` créé avec structure complète et instructions migrées
+- ✅ __Fonction transformation__ : `transformSchemaToConfig()` implémentée avec logique enum[0] vs items.enum
+- ✅ __loadGlobalConfig()__ : Modifié pour lire schéma, transformer et valider avec Ajv
+- ✅ __loadInstructions()__ : Modifié pour extraire depuis config en mémoire (plus de parsing Markdown)
+- ✅ __Tests BDD__ : Tous les tests unitaires et d'intégration passent (24/24 unitaires, 6/6 intégration)
+- ✅ __Nettoyage__ : Fichiers obsolètes `instructions-template-nuextract.md` et `extraction-config.json` supprimés
 
 ### Cycle de vie de projet NuExtract
 
@@ -422,29 +422,29 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 #### Justification pour le cycle de vie de projet NuExtract
 
-- **Automatisation** : Évite la création manuelle de projets sur la plateforme SaaS
-- **Réutilisabilité** : Permet de réutiliser un projet existant avec son template et ses exemples
-- **Simplicité** : Centralise la gestion dans l'agent JavaScript
-- **Sécurité** : La suppression reste une opération manuelle pour éviter les pertes de données accidentelles
+- __Automatisation__ : Évite la création manuelle de projets sur la plateforme SaaS
+- __Réutilisabilité__ : Permet de réutiliser un projet existant avec son template et ses exemples
+- __Simplicité__ : Centralise la gestion dans l'agent JavaScript
+- __Sécurité__ : La suppression reste une opération manuelle pour éviter les pertes de données accidentelles
 
 #### Patterns validés pour le cycle de vie de projet NuExtract
 
-- **Recherche avant création** : Utiliser `getNuExtractProjects()` pour vérifier l'existence avant création
-- **Fonction unifiée** : `findOrCreateProject(apiKey, projectName, projectDescription, templateObj, templateReset)` gère automatiquement la recherche, création et mise à jour
-- **Paramètres configurables** : `projectName`, `projectDescription` et `templateReset` définis dans `extraction-config.json`
-- **Template obligatoire** : Un template est obligatoire pour la création d'un nouveau projet, une erreur est levée si `templateObj` est `null`
-- **Contrôle mise à jour** : Le paramètre `templateReset` (boolean) détermine si le template d'un projet existant doit être mis à jour
-- **Mise à jour template** : `putProjectTemplate(apiKey, projectId, template)` appelé automatiquement si `templateReset=true` et projet existant
-- **Correspondance par nom** : Le projet est identifié par son nom (`projectName`) sur la plateforme
-- **Retour structuré** : La fonction retourne un objet `{ id, name, created?, updated? }` indiquant l'action effectuée
+- __Recherche avant création__ : Utiliser `getNuExtractProjects()` pour vérifier l'existence avant création
+- __Fonction unifiée__ : `findOrCreateProject(apiKey, projectName, projectDescription, templateObj, templateReset)` gère automatiquement la recherche, création et mise à jour
+- __Paramètres configurables__ : `projectName`, `projectDescription` et `templateReset` définis dans `extraction-config.json`
+- __Template obligatoire__ : Un template est obligatoire pour la création d'un nouveau projet, une erreur est levée si `templateObj` est `null`
+- __Contrôle mise à jour__ : Le paramètre `templateReset` (boolean) détermine si le template d'un projet existant doit être mis à jour
+- __Mise à jour template__ : `putProjectTemplate(apiKey, projectId, template)` appelé automatiquement si `templateReset=true` et projet existant
+- __Correspondance par nom__ : Le projet est identifié par son nom (`projectName`) sur la plateforme
+- __Retour structuré__ : La fonction retourne un objet `{ id, name, created?, updated? }` indiquant l'action effectuée
 
 #### Anti-Patterns pour le cycle de vie de projet NuExtract à éviter
 
-- **Création sans vérification** : Éviter de créer un projet sans vérifier son existence → **Solution** : Utiliser `findOrCreateProject()` → **Règle à adopter** : Recherche systématique avant création
-- **Création sans template** : Éviter de créer un projet sans template → **Solution** : Toujours fournir un template valide → **Règle à adopter** : Template obligatoire pour création
-- **Suppression automatique** : Éviter la suppression programmatique de projets → **Solution** : Suppression manuelle uniquement → **Règle à adopter** : Préserver les projets et leurs exemples sur la plateforme
-- **Hardcodage du nom** : Éviter de coder en dur le nom du projet → **Solution** : Paramétrer dans configuration → **Règle à adopter** : Utiliser `extraction-config.json`
-- **Ignorer templateReset** : Éviter de toujours mettre à jour ou jamais mettre à jour → **Solution** : Respecter le paramètre `templateReset` → **Règle à adopter** : Contrôle explicite via configuration
+- __Création sans vérification__ : Éviter de créer un projet sans vérifier son existence → __Solution__ : Utiliser `findOrCreateProject()` → __Règle à adopter__ : Recherche systématique avant création
+- __Création sans template__ : Éviter de créer un projet sans template → __Solution__ : Toujours fournir un template valide → __Règle à adopter__ : Template obligatoire pour création
+- __Suppression automatique__ : Éviter la suppression programmatique de projets → __Solution__ : Suppression manuelle uniquement → __Règle à adopter__ : Préserver les projets et leurs exemples sur la plateforme
+- __Hardcodage du nom__ : Éviter de coder en dur le nom du projet → __Solution__ : Paramétrer dans configuration → __Règle à adopter__ : Utiliser `extraction-config.json`
+- __Ignorer templateReset__ : Éviter de toujours mettre à jour ou jamais mettre à jour → __Solution__ : Respecter le paramètre `templateReset` → __Règle à adopter__ : Contrôle explicite via configuration
 
 #### État d'implémentation pour le cycle de vie de projet NuExtract
 
@@ -462,23 +462,23 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 #### Justification pour la structure et format des instructions d'extraction
 
-- **Format Markdown** : Naturel pour l'IA, instructions conversationnelles claires
-- **Fichiers séparés** : Maintenance facilitée, lisibilité optimale, évolution indépendante par concept
-- **Séparation des responsabilités** : Instructions d'extraction ≠ définition structure cible
-- **Contrat d'interface** : Synchronisation progressive entre instructions et schémas cibles
+- __Format Markdown__ : Naturel pour l'IA, instructions conversationnelles claires
+- __Fichiers séparés__ : Maintenance facilitée, lisibilité optimale, évolution indépendante par concept
+- __Séparation des responsabilités__ : Instructions d'extraction ≠ définition structure cible
+- __Contrat d'interface__ : Synchronisation progressive entre instructions et schémas cibles
 
 #### Patterns validés pour la structure et format des instructions d'extraction
 
-- **Un fichier par concept** : `/config/extraction-{concept}.md` pour chaque concept HERMES2022
-- **Instructions conversationnelles** : Prompts naturels adaptés à l'IA
-- **Synchronisation progressive** : Évolution conjointe des instructions et des schémas cibles
-- **Validation par schéma** : Contrôle de conformité via JSON Schema des fichiers intermédiaires
+- __Un fichier par concept__ : `/config/extraction-{concept}.md` pour chaque concept HERMES2022
+- __Instructions conversationnelles__ : Prompts naturels adaptés à l'IA
+- __Synchronisation progressive__ : Évolution conjointe des instructions et des schémas cibles
+- __Validation par schéma__ : Contrôle de conformité via JSON Schema des fichiers intermédiaires
 
 #### Anti-Patterns pour la structure et format des instructions d'extraction à éviter
 
-- **Fichier monolithique** : Éviter un seul fichier pour tous les concepts → **Solution** : Fichiers séparés par concept → **Règle à adopter** : Modularité conceptuelle
-- **Mélange des responsabilités** : Éviter de définir la structure cible dans les instructions → **Solution** : Séparation claire extraction/structure → **Règle à adopter** : Contrat d'interface via schémas
-- **Format technique** : Éviter JSON/YAML pour les instructions → **Solution** : Markdown conversationnel → **Règle à adopter** : Instructions naturelles pour l'IA
+- __Fichier monolithique__ : Éviter un seul fichier pour tous les concepts → __Solution__ : Fichiers séparés par concept → __Règle à adopter__ : Modularité conceptuelle
+- __Mélange des responsabilités__ : Éviter de définir la structure cible dans les instructions → __Solution__ : Séparation claire extraction/structure → __Règle à adopter__ : Contrat d'interface via schémas
+- __Format technique__ : Éviter JSON/YAML pour les instructions → __Solution__ : Markdown conversationnel → __Règle à adopter__ : Instructions naturelles pour l'IA
 
 #### État d'implémentation pour la structure et format des instructions d'extraction
 
@@ -494,16 +494,16 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 #### Justification pour le contrat d'interface
 
-- **Cohérence** : Garantit l'alignement entre extraction et consommation
-- **Évolutivité** : Permet l'adaptation progressive des deux côtés
-- **Validation** : Assure la conformité des données extraites
-- **Maintenance** : Facilite la gestion des changements
+- __Cohérence__ : Garantit l'alignement entre extraction et consommation
+- __Évolutivité__ : Permet l'adaptation progressive des deux côtés
+- __Validation__ : Assure la conformité des données extraites
+- __Maintenance__ : Facilite la gestion des changements
 
 #### Patterns validés pour le contrat d'interface
 
-- **Synchronisation progressive** : Évolution conjointe des instructions et schémas
-- **Validation automatique** : Contrôle de conformité via JSON Schema
-- **Documentation partagée** : Référence commune pour l'équipe
+- __Synchronisation progressive__ : Évolution conjointe des instructions et schémas
+- __Validation automatique__ : Contrôle de conformité via JSON Schema
+- __Documentation partagée__ : Référence commune pour l'équipe
 
 #### État d'implémentation pour le contrat d'interface
 
@@ -523,21 +523,21 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 #### Patterns validés pour le visa humain d'overview
 
-- **Sidecar d'approbation**: Fichier sidecar adjacent nommé comme l'artefact avec suffixe `.approval.json` généré par l'IA en post extraction
-- **Schéma d'approbation**: `shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts-approval.json`.
-- **Structure du visa**:
+- __Sidecar d'approbation__: Fichier sidecar adjacent nommé comme l'artefact avec suffixe `.approval.json` généré par l'IA en post extraction
+- __Schéma d'approbation__: `shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts-approval.json`.
+- __Structure du visa__:
   - Métadonnées globales: `artifact`, `reviewer`, `date`, `notes?`.
   - Détails par item: `target`, `rule`, `status` (`approved|rejected|pending`), `lastChecked`, `comment?`, `evidence?`.
-- **Initialisation status approbation** : Cible à valider générées selon liste ci-dessous avec status "pending" pour les cibles à valider en post extraction
+- __Initialisation status approbation__ : Cible à valider générées selon liste ci-dessous avec status "pending" pour les cibles à valider en post extraction
 
-**Cibles à valider par revue humaine (format JSON Pointer)** :
+__Cibles à valider par revue humaine (format JSON Pointer)__ :
 
 - `/concepts/overview`
 
 #### Anti-Patterns pour le visa humain d'overview à éviter
 
-- **Visa global unique**: éviter un statut global sans granularité par règle/cible.
-- **Absence de schéma**: éviter des fichiers d'approbation non validés.
+- __Visa global unique__: éviter un statut global sans granularité par règle/cible.
+- __Absence de schéma__: éviter des fichiers d'approbation non validés.
 
 #### État d'implémentation pour le visa humain d'overview
 
@@ -579,40 +579,40 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 #### Description détaillée pour le format du template NuExtract
 
 - [2025-10-21] L'API `/api/infer-template-async` transforme un schéma JSON Schema en template NuExtract avec des règles de conversion spécifiques
-- [2025-10-21] **Fixture de référence** : Template valide obtenu de la plateforme SaaS disponible dans `__tests__/fixtures/nuextract-template-valid.json`
-- [2025-10-21] **Types de base** : `"type": "string"` → `"string"`, `"type": "string", "pattern": "..."` → `"verbatim-string"`, `"type": "string", "format": "date"` → `"date-time"`
-- [2025-10-21] **Énumérations** : Les `enum` JSON Schema sont converties en **tableaux** dans le template NuExtract (ex: `"enum": ["de", "fr", "it", "en"]` → `["de", "fr", "it", "en"]`)
-- [2025-10-21] **Tableaux** : Les `"type": "array"` JSON Schema sont représentés avec **un seul élément type** dans le template
-- [2025-10-21] **Références $ref** : Les références sont **résolues et intégrées** dans le template final (pas de `$ref` dans le template NuExtract)
+- [2025-10-21] __Fixture de référence__ : Template valide obtenu de la plateforme SaaS disponible dans `__tests__/fixtures/nuextract-template-valid.json`
+- [2025-10-21] __Types de base__ : `"type": "string"` → `"string"`, `"type": "string", "pattern": "..."` → `"verbatim-string"`, `"type": "string", "format": "date"` → `"date-time"`
+- [2025-10-21] __Énumérations__ : Les `enum` JSON Schema sont converties en __tableaux__ dans le template NuExtract (ex: `"enum": ["de", "fr", "it", "en"]` → `["de", "fr", "it", "en"]`)
+- [2025-10-21] __Tableaux__ : Les `"type": "array"` JSON Schema sont représentés avec __un seul élément type__ dans le template
+- [2025-10-21] __Références $ref__ : Les références sont __résolues et intégrées__ dans le template final (pas de `$ref` dans le template NuExtract)
 
 #### Justification pour le format du template NuExtract
 
-- **Interopérabilité** : Format standardisé NuExtract pour les extractions futures
-- **Validation** : Template validé par la plateforme SaaS garantit la conformité
-- **Tests** : Fixture de référence permet la validation automatisée des générations de template
-- **Documentation par l'exemple** : Template valide sert de référence pour comprendre les transformations
+- __Interopérabilité__ : Format standardisé NuExtract pour les extractions futures
+- __Validation__ : Template validé par la plateforme SaaS garantit la conformité
+- __Tests__ : Fixture de référence permet la validation automatisée des générations de template
+- __Documentation par l'exemple__ : Template valide sert de référence pour comprendre les transformations
 
 #### Patterns validés pour le format du template NuExtract
 
-- **Conversion énumérations** : `"language": {"type": "string", "enum": ["de", "fr", "it", "en"]}` → `"language": ["de", "fr", "it", "en"]`
-- **Types NuExtract** : `"verbatim-string"` pour patterns, `"string"` pour texte libre, `"date-time"` pour dates
-- **Résolution références** : `"concept-phases": {"$ref": "./hermes2022-phases.json"}` → structure complète intégrée
-- **Arrays template** : `"phases": [{"id": "verbatim-string", "name": "string", ...}]` (un seul élément type)
-- **Fixture de test** : `__tests__/fixtures/nuextract-template-valid.json` comme référence pour validation
+- __Conversion énumérations__ : `"language": {"type": "string", "enum": ["de", "fr", "it", "en"]}` → `"language": ["de", "fr", "it", "en"]`
+- __Types NuExtract__ : `"verbatim-string"` pour patterns, `"string"` pour texte libre, `"date-time"` pour dates
+- __Résolution références__ : `"concept-phases": {"$ref": "./hermes2022-phases.json"}` → structure complète intégrée
+- __Arrays template__ : `"phases": [{"id": "verbatim-string", "name": "string", ...}]` (un seul élément type)
+- __Fixture de test__ : `__tests__/fixtures/nuextract-template-valid.json` comme référence pour validation
 
 #### Anti-Patterns pour le format du template NuExtract à éviter
 
-- **$ref non résolues** : Éviter de laisser des `$ref` dans le template → **Solution** : Résoudre toutes les références avant envoi à l'API → **Règle à adopter** : Utiliser le schéma résolu complet
-- **Énumérations non converties** : Éviter de tester avec `"enum": [...]` dans template → **Solution** : Valider que les énumérations sont des tableaux → **Règle à adopter** : Tests BDD vérifient la conversion
-- **Structure array incorrecte** : Éviter plusieurs éléments types dans array → **Solution** : Un seul élément type → **Règle à adopter** : Format NuExtract standard
+- __$ref non résolues__ : Éviter de laisser des `$ref` dans le template → __Solution__ : Résoudre toutes les références avant envoi à l'API → __Règle à adopter__ : Utiliser le schéma résolu complet
+- __Énumérations non converties__ : Éviter de tester avec `"enum": [...]` dans template → __Solution__ : Valider que les énumérations sont des tableaux → __Règle à adopter__ : Tests BDD vérifient la conversion
+- __Structure array incorrecte__ : Éviter plusieurs éléments types dans array → __Solution__ : Un seul élément type → __Règle à adopter__ : Format NuExtract standard
 
 #### État d'implémentation pour le format du template NuExtract
 
 ✅ [Fixture validée et tests adaptés]
 
-- ✅ **Fixture de référence** : `__tests__/fixtures/nuextract-template-valid.json` créée depuis plateforme SaaS
-- ✅ **Tests BDD améliorés** : Validation de la structure, des énumérations converties, des types NuExtract, et de la résolution des `$ref`
-- 🚧 **API retourne template vide** : Investigation en cours avec NuMind sur pourquoi l'API retourne `{}` alors que la plateforme SaaS fonctionne correctement
+- ✅ __Fixture de référence__ : `__tests__/fixtures/nuextract-template-valid.json` créée depuis plateforme SaaS
+- ✅ __Tests BDD améliorés__ : Validation de la structure, des énumérations converties, des types NuExtract, et de la résolution des `$ref`
+- 🚧 __API retourne template vide__ : Investigation en cours avec NuMind sur pourquoi l'API retourne `{}` alors que la plateforme SaaS fonctionne correctement
 
 ### Extraction de texte brut depuis HTML pour réduction de la taille du prompt
 
@@ -625,50 +625,50 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 #### Justification pour l'extraction de texte brut depuis HTML
 
-- **Limite de contexte NuExtract** : L'API NuExtract a une limite stricte de 32768 tokens en entrée, ce qui est insuffisant pour les pages HTML complètes (ex: 230 690 tokens avec HTML brut)
-- **Réduction de taille** : La conversion HTML→texte réduit significativement la taille (suppression des balises, attributs, scripts, styles) tout en préservant le contenu sémantique
-- **Adéquation au cas d'usage** : `html-to-text` est spécifiquement conçu pour convertir HTML en texte lisible, exactement ce qui est nécessaire pour réduire la taille du prompt
-- **Simplicité** : Une seule fonction `htmlToText()` suffit pour convertir le HTML, pas besoin de manipulation DOM complexe
-- **Qualité de sortie** : La bibliothèque préserve la structure (titres, listes, paragraphes) et le formatage (espaces, sauts de ligne) pour maintenir la lisibilité par l'IA
+- __Limite de contexte NuExtract__ : L'API NuExtract a une limite stricte de 32768 tokens en entrée, ce qui est insuffisant pour les pages HTML complètes (ex: 230 690 tokens avec HTML brut)
+- __Réduction de taille__ : La conversion HTML→texte réduit significativement la taille (suppression des balises, attributs, scripts, styles) tout en préservant le contenu sémantique
+- __Adéquation au cas d'usage__ : `html-to-text` est spécifiquement conçu pour convertir HTML en texte lisible, exactement ce qui est nécessaire pour réduire la taille du prompt
+- __Simplicité__ : Une seule fonction `htmlToText()` suffit pour convertir le HTML, pas besoin de manipulation DOM complexe
+- __Qualité de sortie__ : La bibliothèque préserve la structure (titres, listes, paragraphes) et le formatage (espaces, sauts de ligne) pour maintenir la lisibilité par l'IA
 
 #### Tableau comparatif : Cheerio vs html-to-text
 
 | Critère | Cheerio | html-to-text | Décision |
 |:--------|:--------|:-------------|:---------|
-| **Adéquation au cas d'usage** | Bibliothèque générale manipulation DOM (style jQuery) | Spécifiquement conçu pour HTML→texte | ✅ **html-to-text** (objectif exact) |
-| **Simplicité d'implémentation** | Nécessite sélection CSS et extraction manuelle texte | Fonction unique `htmlToText(html)` | ✅ **html-to-text** (1 ligne vs code custom) |
-| **Performance** | Rapide (parser léger) | Rapide (optimisé pour conversion) | ⚖️ Équivalent |
-| **Taille bibliothèque** | ~50KB (dépendances jQuery-like) | ~30KB (légèrement plus petit) | ⚖️ Équivalent |
-| **Maintenance** | Très active (50M téléchargements/semaine) | Active (5M téléchargements/semaine) | ⚖️ Les deux bien maintenus |
-| **Flexibilité** | Très flexible (manipulation DOM complète) | Focus conversion HTML→texte | ⚖️ Flexibilité non nécessaire |
-| **Qualité de sortie** | Formatage manuel (dépend de l'implémentation) | Formatage optimisé (titres, listes, paragraphes) | ✅ **html-to-text** (formatage spécialisé) |
-| **Dépendances** | jsdom (parser HTML) | Aucune dépendance lourde | ✅ **html-to-text** (plus léger) |
-| **Cas d'usage** | Web scraping, manipulation DOM | Conversion HTML→texte, emails | ✅ **html-to-text** (cas d'usage exact) |
+| __Adéquation au cas d'usage__ | Bibliothèque générale manipulation DOM (style jQuery) | Spécifiquement conçu pour HTML→texte | ✅ __html-to-text__ (objectif exact) |
+| __Simplicité d'implémentation__ | Nécessite sélection CSS et extraction manuelle texte | Fonction unique `htmlToText(html)` | ✅ __html-to-text__ (1 ligne vs code custom) |
+| __Performance__ | Rapide (parser léger) | Rapide (optimisé pour conversion) | ⚖️ Équivalent |
+| __Taille bibliothèque__ | ~50KB (dépendances jQuery-like) | ~30KB (légèrement plus petit) | ⚖️ Équivalent |
+| __Maintenance__ | Très active (50M téléchargements/semaine) | Active (5M téléchargements/semaine) | ⚖️ Les deux bien maintenus |
+| __Flexibilité__ | Très flexible (manipulation DOM complète) | Focus conversion HTML→texte | ⚖️ Flexibilité non nécessaire |
+| __Qualité de sortie__ | Formatage manuel (dépend de l'implémentation) | Formatage optimisé (titres, listes, paragraphes) | ✅ __html-to-text__ (formatage spécialisé) |
+| __Dépendances__ | jsdom (parser HTML) | Aucune dépendance lourde | ✅ __html-to-text__ (plus léger) |
+| __Cas d'usage__ | Web scraping, manipulation DOM | Conversion HTML→texte, emails | ✅ __html-to-text__ (cas d'usage exact) |
 
-**Conclusion** : `html-to-text` est plus adapté car il est spécifiquement conçu pour la conversion HTML→texte, ce qui correspond exactement au besoin (réduction de taille du prompt tout en préservant le contenu sémantique).
+__Conclusion__ : `html-to-text` est plus adapté car il est spécifiquement conçu pour la conversion HTML→texte, ce qui correspond exactement au besoin (réduction de taille du prompt tout en préservant le contenu sémantique).
 
 #### Patterns validés pour l'extraction de texte brut depuis HTML
 
-- **Installation** : `npm install --save-dev html-to-text`
-- **Import** : `const { convert } = require('html-to-text')`
-- **Conversion HTML→texte** : `const textContent = convert(htmlContent, { wordwrap: false, preserveNewlines: true })`
-- **Options de conversion** :
+- __Installation__ : `npm install --save-dev html-to-text`
+- __Import__ : `const { convert } = require('html-to-text')`
+- __Conversion HTML→texte__ : `const textContent = convert(htmlContent, { wordwrap: false, preserveNewlines: true })`
+- __Options de conversion__ :
   - `wordwrap: false` : Pas de limitation de longueur de ligne (évite la troncature)
   - `preserveNewlines: true` : Préserve les sauts de ligne pour maintenir la structure
-- **Intégration dans fetchHtmlContent** : Conversion après fetch HTML et avant retour dans `fetchHtmlContent()`
-- **Intégration dans buildExtractionPrompt** : Le texte brut est utilisé directement dans la construction du prompt
+- __Intégration dans fetchHtmlContent__ : Conversion après fetch HTML et avant retour dans `fetchHtmlContent()`
+- __Intégration dans buildExtractionPrompt__ : Le texte brut est utilisé directement dans la construction du prompt
 
 #### Anti-Patterns pour l'extraction de texte brut depuis HTML à éviter
 
-- **Utiliser Cheerio pour conversion** : Éviter d'utiliser Cheerio pour extraire le texte manuellement → **Solution** : Utiliser `html-to-text` → **Règle à adopter** : Bibliothèque spécialisée pour conversion HTML→texte
-- **Envoyer HTML brut** : Éviter d'envoyer le HTML brut à NuExtract → **Solution** : Toujours convertir en texte brut → **Règle à adopter** : Conversion systématique pour respecter limite tokens
-- **Options de conversion trop restrictives** : Éviter `wordwrap: 80` qui peut tronquer le contenu → **Solution** : `wordwrap: false` pour préserver le contenu complet → **Règle à adopter** : Préserver le contenu sémantique
-- **Conversion tardive** : Éviter de convertir après agrégation de tous les blocs → **Solution** : Convertir immédiatement après fetch HTML → **Règle à adopter** : Conversion dès réception HTML
+- __Utiliser Cheerio pour conversion__ : Éviter d'utiliser Cheerio pour extraire le texte manuellement → __Solution__ : Utiliser `html-to-text` → __Règle à adopter__ : Bibliothèque spécialisée pour conversion HTML→texte
+- __Envoyer HTML brut__ : Éviter d'envoyer le HTML brut à NuExtract → __Solution__ : Toujours convertir en texte brut → __Règle à adopter__ : Conversion systématique pour respecter limite tokens
+- __Options de conversion trop restrictives__ : Éviter `wordwrap: 80` qui peut tronquer le contenu → __Solution__ : `wordwrap: false` pour préserver le contenu complet → __Règle à adopter__ : Préserver le contenu sémantique
+- __Conversion tardive__ : Éviter de convertir après agrégation de tous les blocs → __Solution__ : Convertir immédiatement après fetch HTML → __Règle à adopter__ : Conversion dès réception HTML
 
 #### État d'implémentation pour l'extraction de texte brut depuis HTML
 
 🚧 [Décision documentée - 2025-11-04]
 
-- 🚧 **Installation** : `html-to-text` à installer dans `package.json`
-- 🚧 **Intégration** : Fonction `fetchHtmlContent()` à modifier pour convertir HTML→texte
-- 🚧 **Tests BDD** : Tests à adapter pour valider la conversion HTML→texte
+- 🚧 __Installation__ : `html-to-text` à installer dans `package.json`
+- 🚧 __Intégration__ : Fonction `fetchHtmlContent()` à modifier pour convertir HTML→texte
+- 🚧 __Tests BDD__ : Tests à adapter pour valider la conversion HTML→texte
