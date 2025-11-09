@@ -8,7 +8,7 @@ alwaysApply: true
 Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/__tests__/.cursor/rules/
 
 > Créé le : 2025-10-26
-> Dernière mise à jour : 2025-10-29
+> Dernière mise à jour : 2025-11-09
 
 ## Description générale
 
@@ -316,6 +316,31 @@ jest.spyOn(nuextractApi, 'inferTemplateFromDescriptionAsync')
 #### État d'implémentation pour Mocking
 
 ✅ [Fonctionnalité réalisée - 2025-10-26]
+
+### Usage des fixtures pour les tests d'erreurs NuExtract
+
+#### Description détaillée
+
+[2025-11-09] Les tests unitaires qui vérifient la bonne implémentation de la gestion des erreurs n'invoquent plus les endpoints NuExtract (modes sync ou async). Ils s'appuient exclusivement sur des mocks et sur des fixtures représentatives (ex. `__tests__/fixtures/nuextract-template-valid.json`) afin de :
+
+- valider la logique d'erreur sans dépendance réseau ;
+- maîtriser la consommation de quota NuExtract ;
+- garantir des exécutions rapides et déterministes.
+
+#### Patterns validés
+
+- Charger les entrées de référence (templates, réponses API) depuis des fixtures au lieu d'appeler `generateTemplate()` ou d'autres wrappers API.
+- Mock `nuextract-api.js` pour forcer les chemins d'erreur attendus.
+- Conserver les assertions existantes sur les messages et le wrapping Error Cause.
+
+#### Anti-patterns à éviter
+
+- Laisser un test unitaire invoquer `generateTemplate()` ou un appel NuExtract réel.
+- Dépendre d'un timeout réseau ou d'une erreur d'accès pour déclencher le scénario.
+
+#### État d'implémentation
+
+🚧 [Déploiement en cours - 2025-11-09] : transition progressive des scénarios unitaires vers cet usage systématique des fixtures.
 
 ### Timeouts différenciés selon type de test
 

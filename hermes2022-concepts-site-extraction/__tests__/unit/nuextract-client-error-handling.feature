@@ -146,7 +146,7 @@ Fonctionnalité: Gestion d'erreur robuste
     Quand on tente de mettre à jour le projet
     Alors une erreur "A valid NuExtractTemplate is required for template update" est générée
     Et le processus s'arrête proprement
-  
+
   Scénario: Erreur validation conformité projet existant sans template fourni
     Etant donné un projet existant sur la plateforme
     Et templateReset configuré à false
@@ -154,7 +154,7 @@ Fonctionnalité: Gestion d'erreur robuste
     Quand on tente de rechercher le projet
     Alors une erreur "A valid NuExtractTemplate is required for template conformity validation" est générée
     Et le processus s'arrête proprement
-  
+
   Scénario: Erreur projet existant sans template valide
     Etant donné un projet existant sur la plateforme
     Et le projet existant ne contient pas de template ou de template.schema
@@ -162,7 +162,7 @@ Fonctionnalité: Gestion d'erreur robuste
     Quand on tente de rechercher le projet
     Alors une erreur contenant "existe mais ne contient pas de template valide" est générée
     Et le processus s'arrête proprement
-  
+
   Scénario: Erreur template existant non conforme au JSON schema
     Etant donné un projet existant sur la plateforme avec un template non conforme
     Et templateReset configuré à false
@@ -186,36 +186,179 @@ Fonctionnalité: Gestion d'erreur robuste
     Alors une erreur contenant "Timeout sync" est générée
     Et le message suggère d'utiliser le mode async
 
-  Scénario: Erreur API NuExtract inaccessible
+  Scénario: Erreur API NuExtract infer-template inaccessible
     Etant donné une configuration avec baseUrl incorrect
-    Quand on tente d'appeler l'API NuExtract
-    Alors une erreur de connexion est générée
+    Quand on tente d'appeler l'API NuExtract infer-template
+    Alors une erreur contenant "Network error calling infer-template API" est générée
     Et le processus s'arrête proprement
   #
   # === Gestion des erreurs HTTP pour fetchHtmlContent ===
-  
+
   Scénario: Erreur réseau lors d'appel fetchHtmlContent
     Etant donné une erreur réseau simulée pour fetchHtmlContent
     Quand on tente d'appeler fetchHtmlContent
     Alors une erreur "Network error fetching HTML content" est générée
     Et l'erreur originale est préservée avec Error Cause
     Et le processus s'arrête proprement
-  
+
   Scénario: Timeout lors d'appel fetchHtmlContent
     Etant donné un timeout simulé après 30 secondes pour fetchHtmlContent
     Quand on tente d'appeler fetchHtmlContent
     Alors une erreur contenant "Timeout: La requête HTML a dépassé 30 secondes" est générée
     Et le processus s'arrête proprement
-  
+
   Scénario: Code HTTP non-200 pour fetchHtmlContent
     Etant donné une réponse HTTP 404 pour fetchHtmlContent
     Quand on tente d'appeler fetchHtmlContent
     Alors une erreur contenant "HTTP error: 404" est générée
     Et le processus s'arrête proprement
-  
+
   Scénario: URL invalide pour fetchHtmlContent
     Etant donné une URL invalide pour fetchHtmlContent
     Quand on tente d'appeler fetchHtmlContent
     Alors une erreur contenant "Invalid URL" est générée
+    Et le processus s'arrête proprement
+  #
+  # === Gestion des erreurs pour collectHtmlSourcesAndInstructions ===
+
+  Scénario: Schéma invalide (null) pour collectHtmlSourcesAndInstructions
+    Etant donné un schéma résolu null pour collectHtmlSourcesAndInstructions
+    Quand on tente d'appeler collectHtmlSourcesAndInstructions
+    Alors une erreur contenant "Invalid resolved schema" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: Schéma invalide (non-objet) pour collectHtmlSourcesAndInstructions
+    Etant donné un schéma résolu non-objet (string) pour collectHtmlSourcesAndInstructions
+    Quand on tente d'appeler collectHtmlSourcesAndInstructions
+    Alors une erreur contenant "Invalid resolved schema" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: Profondeur maximale atteinte pour collectHtmlSourcesAndInstructions
+    Etant donné un schéma résolu avec récursivité profonde
+    Et maxDepth configuré à 0 pour collectHtmlSourcesAndInstructions
+    Quand on tente d'appeler collectHtmlSourcesAndInstructions
+    Alors une erreur contenant "Maximum recursion depth" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: Instructions manquantes pour bloc avec sourceUrl
+    Etant donné un schéma résolu avec bloc sourceUrl sans extractionInstructions
+    Quand on tente d'appeler collectHtmlSourcesAndInstructions
+    Alors une erreur contenant "extractionInstructions is required" est générée
+    Et le JSON Pointer du bloc est inclus dans le message d'erreur
+    Et le processus s'arrête proprement
+
+  Scénario: Instructions invalides (type non-array) pour collectHtmlSourcesAndInstructions
+    Etant donné un schéma résolu avec extractionInstructions de type non-array
+    Quand on tente d'appeler collectHtmlSourcesAndInstructions
+    Alors une erreur contenant "extractionInstructions must be an array" est générée
+    Et le JSON Pointer du bloc est inclus dans le message d'erreur
+    Et le processus s'arrête proprement
+
+  Scénario: Instructions invalides (items.enum manquant) pour collectHtmlSourcesAndInstructions
+    Etant donné un schéma résolu avec extractionInstructions array sans items.enum
+    Quand on tente d'appeler collectHtmlSourcesAndInstructions
+    Alors une erreur contenant "extractionInstructions.items.enum is required" est générée
+    Et le JSON Pointer du bloc est inclus dans le message d'erreur
+    Et le processus s'arrête proprement
+
+  Scénario: Instructions invalides (array vide) pour collectHtmlSourcesAndInstructions
+    Etant donné un schéma résolu avec extractionInstructions array vide
+    Quand on tente d'appeler collectHtmlSourcesAndInstructions
+    Alors une erreur contenant "extractionInstructions array is empty" est générée
+    Et le JSON Pointer du bloc est inclus dans le message d'erreur
+    Et le processus s'arrête proprement
+
+  Scénario: Erreur chargement HTML (propagée depuis fetchHtmlContent) pour collectHtmlSourcesAndInstructions
+    Etant donné un schéma résolu avec sourceUrl valide
+    Et fetchHtmlContent simulé pour lever une erreur réseau
+    Quand on tente d'appeler collectHtmlSourcesAndInstructions
+    Alors une erreur contenant "Error loading HTML from" est générée
+    Et l'erreur originale est préservée avec Error Cause
+    Et le processus s'arrête proprement
+  #
+  # === Gestion des erreurs pour buildExtractionPrompt ===
+
+  Scénario: Blocks vide (aucun bloc extractible) pour buildExtractionPrompt
+    Etant donné une préparation avec blocks array vide
+    Quand on tente d'appeler buildExtractionPrompt
+    Alors une erreur contenant "preparation.blocks is empty" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: Structure invalide (preparation.blocks undefined) pour buildExtractionPrompt
+    Etant donné une préparation avec blocks undefined
+    Quand on tente d'appeler buildExtractionPrompt
+    Alors une erreur contenant "preparation.blocks is required" est générée
+    Et le processus s'arrête proprement
+  #
+  # === Gestion des erreurs pour buildBlockPrompt ===
+
+  Scénario: Bloc null pour buildBlockPrompt
+    Etant donné un bloc null pour buildBlockPrompt
+    Quand on tente d'appeler buildBlockPrompt
+    Alors une erreur contenant "Invalid block: block must be a non-null object" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: Bloc sans jsonPointer pour buildBlockPrompt
+    Etant donné un bloc sans jsonPointer pour buildBlockPrompt
+    Quand on tente d'appeler buildBlockPrompt
+    Alors une erreur contenant "block.jsonPointer is required" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: Instructions non-array pour buildBlockPrompt
+    Etant donné un bloc avec instructions de type non-array pour buildBlockPrompt
+    Quand on tente d'appeler buildBlockPrompt
+    Alors une erreur contenant "block.instructions must be an array" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: htmlContents vide pour buildBlockPrompt
+    Etant donné un bloc avec htmlContents array vide pour buildBlockPrompt
+    Quand on tente d'appeler buildBlockPrompt
+    Alors une erreur contenant "block.htmlContents is empty" est générée
+    Et le processus s'arrête proprement
+  #
+  # === Gestion des erreurs pour mergeJsonAtPath ===
+
+  Scénario: Target null pour mergeJsonAtPath
+    Etant donné un target null pour mergeJsonAtPath
+    Quand on tente d'appeler mergeJsonAtPath
+    Alors une erreur contenant "Invalid target: target must be a non-null object" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: Path invalide (vide) pour mergeJsonAtPath
+    Etant donné un path vide pour mergeJsonAtPath
+    Quand on tente d'appeler mergeJsonAtPath
+    Alors une erreur contenant "Invalid path: path must be a non-empty string" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: Index array hors limites pour mergeJsonAtPath
+    Etant donné un target array et un path avec index hors limites pour mergeJsonAtPath
+    Quand on tente d'appeler mergeJsonAtPath
+    Alors une erreur contenant "Array index out of bounds" est générée
+    Et le processus s'arrête proprement
+  #
+  # === Gestion des erreurs pour recomposeArtifact ===
+
+  Scénario: partialResults null pour recomposeArtifact
+    Etant donné des partialResults null pour recomposeArtifact
+    Quand on tente d'appeler recomposeArtifact
+    Alors une erreur contenant "Invalid partialResults: partialResults must be an array" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: partialResults vide pour recomposeArtifact
+    Etant donné des partialResults array vide pour recomposeArtifact
+    Quand on tente d'appeler recomposeArtifact
+    Alors une erreur contenant "partialResults is empty" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: jsonPointer manquant dans résultat partiel pour recomposeArtifact
+    Etant donné des partialResults avec résultat partiel sans jsonPointer pour recomposeArtifact
+    Quand on tente d'appeler recomposeArtifact
+    Alors une erreur contenant "Invalid jsonPointer in partial result" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: data invalide dans résultat partiel pour recomposeArtifact
+    Etant donné des partialResults avec résultat partiel avec data null pour recomposeArtifact
+    Quand on tente d'appeler recomposeArtifact
+    Alors une erreur contenant "Invalid data in partial result" est générée
     Et le processus s'arrête proprement
   #

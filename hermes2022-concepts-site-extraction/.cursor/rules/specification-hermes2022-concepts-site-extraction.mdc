@@ -8,7 +8,7 @@ alwaysApply: true
 Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rules/
 
 > Créé le : 2025-08-16
-> Dernière mise à jour : 2025-11-01
+> Dernière mise à jour : 2025-11-04
 
 ## Description générale
 
@@ -49,7 +49,7 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 | `/src/` | Répertoire | Code source de l'agent JavaScript pour l'extraction via APIs NuExtract |
 | `/src/nuextract-client.js` | Code | Client logique métier (orchestration, validation, transformation, fallbacks config) - Exports `_testOnly_` pour tests |
 | `/src/nuextract-api.js` | Code | Module API (appels HTTP vers APIs NuExtract) - Fonctions pures avec Dependency Injection - Exports normaux |
-| `/src/path-resolver.js` | Code | Résolution robuste des chemins depuis la racine du repository selon @root-directory-governance |
+| `find-up` + snippet racine | Pattern | Résolution robuste des chemins depuis la racine du repository selon @root-directory-governance (snippet `fullFilePath` + `repoRoot`) |
 | `/config/` | Répertoire | Configuration de l'extraction et paramètres pour l'agent JS |
 | `/config/extraction-config.schema.json` | Schéma | Schéma JSON Schema Draft-07 source de paramétrage avec pattern enum pour configuration technique |
 
@@ -133,7 +133,7 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 - [2025-10-26] L'agent est divisé en modules distincts selon les principes SOLID :
   - **`nuextract-api.js`** : Couche API/I/O - Appels HTTP purs vers les APIs NuExtract (fonctions pures avec Dependency Injection)
   - **`nuextract-client.js`** : Couche logique métier - Orchestration, validation, transformation, gestion des fallbacks de configuration
-  - **`path-resolver.js`** : Module utilitaire - Résolution robuste des chemins depuis la racine du repository
+  - **Snippet racine (`findUp.sync`)** : À appliquer dans chaque module pour déterminer `repoRoot` avant de charger la configuration ou les schémas
 - [2025-10-26] L'agent gère le cycle complet : chargement configuration, validation clé API, chargement instructions, résolution et validation schémas JSON, génération template, gestion projet NuExtract.
 - [2025-10-26] L'agent est conçu pour être modulaire, réutilisable et intégré à l'écosystème JArchi de Archi sans dépendances externes inutiles.
 
@@ -155,7 +155,7 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 - **Import module API** : `const nuextractApi = require('./nuextract-api.js')`
 - **Appels avec DI** : `await nuextractApi.inferTemplateAsync(hostname, port, path, apiKey, description, 60)`
 - **Fallbacks dans client** : `const hostname = config?.nuextract?.baseUrl || 'nuextract.ai'`
-- **Résolution chemins** : `resolveFromRepoRoot(config.nuextract.apiKeyFile)` depuis `path-resolver.js`
+- **Résolution chemins** : `resolveFromRepoRoot(config.nuextract.apiKeyFile)` avec le snippet présenté dans @root-directory-governance
 - **Requêtes HTTP natives** : Utilisation de `https` (Node.js) ou `java.net.http.HttpClient` (JArchi) pour les appels vers NuExtract
 - **Gestion asynchrone** : Promesses JavaScript pour les requêtes non-bloquantes
 - **Validation JSON Schema** : Utilisation de `@apidevtools/json-schema-ref-parser` pour résolution des `$ref` et `Ajv` pour validation conformité JSON Schema Draft-07
@@ -176,7 +176,7 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 - ✅ **Module API** : `nuextract-api.js` créé avec 7 fonctions pures (exports normaux)
 - ✅ **Module client** : `nuextract-client.js` refactorisé (logique métier uniquement, exports `_testOnly_`)
-- ✅ **Module path-resolver** : `path-resolver.js` créé selon @root-directory-governance
+- ✅ **Snippet racine** : Utilisation standardisée du bloc `findUp.sync('package.json', { cwd: __dirname })` selon @root-directory-governance
 - ✅ **Résolution schémas** : Intégration `@apidevtools/json-schema-ref-parser` et `Ajv` pour résolution/validation JSON Schema Draft-07
 
 ### Intégration des APIs NuExtract pour l'extraction structurée
@@ -613,3 +613,62 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 - ✅ **Fixture de référence** : `__tests__/fixtures/nuextract-template-valid.json` créée depuis plateforme SaaS
 - ✅ **Tests BDD améliorés** : Validation de la structure, des énumérations converties, des types NuExtract, et de la résolution des `$ref`
 - 🚧 **API retourne template vide** : Investigation en cours avec NuMind sur pourquoi l'API retourne `{}` alors que la plateforme SaaS fonctionne correctement
+
+### Extraction de texte brut depuis HTML pour réduction de la taille du prompt
+
+#### Description détaillée pour l'extraction de texte brut depuis HTML
+
+- [2025-11-04] Les pages HTML extraites du site HERMES2022 sont converties en texte brut avant d'être incluses dans le prompt envoyé à NuExtract pour réduire la taille du prompt et respecter la limite de 32768 tokens de l'API
+- [2025-11-04] La bibliothèque `html-to-text` est utilisée pour convertir le HTML en texte brut en conservant la structure sémantique (titres, listes, paragraphes) et en supprimant les balises HTML inutiles
+- [2025-11-04] La conversion HTML→texte permet de réduire significativement la taille du prompt (ex: ~88 000 caractères HTML → ~30 000 caractères texte) tout en préservant l'information pertinente pour l'extraction IA
+- [2025-11-04] La conversion est appliquée après le fetch HTML et avant la construction du prompt d'extraction dans `buildExtractionPrompt()`
+
+#### Justification pour l'extraction de texte brut depuis HTML
+
+- **Limite de contexte NuExtract** : L'API NuExtract a une limite stricte de 32768 tokens en entrée, ce qui est insuffisant pour les pages HTML complètes (ex: 230 690 tokens avec HTML brut)
+- **Réduction de taille** : La conversion HTML→texte réduit significativement la taille (suppression des balises, attributs, scripts, styles) tout en préservant le contenu sémantique
+- **Adéquation au cas d'usage** : `html-to-text` est spécifiquement conçu pour convertir HTML en texte lisible, exactement ce qui est nécessaire pour réduire la taille du prompt
+- **Simplicité** : Une seule fonction `htmlToText()` suffit pour convertir le HTML, pas besoin de manipulation DOM complexe
+- **Qualité de sortie** : La bibliothèque préserve la structure (titres, listes, paragraphes) et le formatage (espaces, sauts de ligne) pour maintenir la lisibilité par l'IA
+
+#### Tableau comparatif : Cheerio vs html-to-text
+
+| Critère | Cheerio | html-to-text | Décision |
+|:--------|:--------|:-------------|:---------|
+| **Adéquation au cas d'usage** | Bibliothèque générale manipulation DOM (style jQuery) | Spécifiquement conçu pour HTML→texte | ✅ **html-to-text** (objectif exact) |
+| **Simplicité d'implémentation** | Nécessite sélection CSS et extraction manuelle texte | Fonction unique `htmlToText(html)` | ✅ **html-to-text** (1 ligne vs code custom) |
+| **Performance** | Rapide (parser léger) | Rapide (optimisé pour conversion) | ⚖️ Équivalent |
+| **Taille bibliothèque** | ~50KB (dépendances jQuery-like) | ~30KB (légèrement plus petit) | ⚖️ Équivalent |
+| **Maintenance** | Très active (50M téléchargements/semaine) | Active (5M téléchargements/semaine) | ⚖️ Les deux bien maintenus |
+| **Flexibilité** | Très flexible (manipulation DOM complète) | Focus conversion HTML→texte | ⚖️ Flexibilité non nécessaire |
+| **Qualité de sortie** | Formatage manuel (dépend de l'implémentation) | Formatage optimisé (titres, listes, paragraphes) | ✅ **html-to-text** (formatage spécialisé) |
+| **Dépendances** | jsdom (parser HTML) | Aucune dépendance lourde | ✅ **html-to-text** (plus léger) |
+| **Cas d'usage** | Web scraping, manipulation DOM | Conversion HTML→texte, emails | ✅ **html-to-text** (cas d'usage exact) |
+
+**Conclusion** : `html-to-text` est plus adapté car il est spécifiquement conçu pour la conversion HTML→texte, ce qui correspond exactement au besoin (réduction de taille du prompt tout en préservant le contenu sémantique).
+
+#### Patterns validés pour l'extraction de texte brut depuis HTML
+
+- **Installation** : `npm install --save-dev html-to-text`
+- **Import** : `const { convert } = require('html-to-text')`
+- **Conversion HTML→texte** : `const textContent = convert(htmlContent, { wordwrap: false, preserveNewlines: true })`
+- **Options de conversion** :
+  - `wordwrap: false` : Pas de limitation de longueur de ligne (évite la troncature)
+  - `preserveNewlines: true` : Préserve les sauts de ligne pour maintenir la structure
+- **Intégration dans fetchHtmlContent** : Conversion après fetch HTML et avant retour dans `fetchHtmlContent()`
+- **Intégration dans buildExtractionPrompt** : Le texte brut est utilisé directement dans la construction du prompt
+
+#### Anti-Patterns pour l'extraction de texte brut depuis HTML à éviter
+
+- **Utiliser Cheerio pour conversion** : Éviter d'utiliser Cheerio pour extraire le texte manuellement → **Solution** : Utiliser `html-to-text` → **Règle à adopter** : Bibliothèque spécialisée pour conversion HTML→texte
+- **Envoyer HTML brut** : Éviter d'envoyer le HTML brut à NuExtract → **Solution** : Toujours convertir en texte brut → **Règle à adopter** : Conversion systématique pour respecter limite tokens
+- **Options de conversion trop restrictives** : Éviter `wordwrap: 80` qui peut tronquer le contenu → **Solution** : `wordwrap: false` pour préserver le contenu complet → **Règle à adopter** : Préserver le contenu sémantique
+- **Conversion tardive** : Éviter de convertir après agrégation de tous les blocs → **Solution** : Convertir immédiatement après fetch HTML → **Règle à adopter** : Conversion dès réception HTML
+
+#### État d'implémentation pour l'extraction de texte brut depuis HTML
+
+🚧 [Décision documentée - 2025-11-04]
+
+- 🚧 **Installation** : `html-to-text` à installer dans `package.json`
+- 🚧 **Intégration** : Fonction `fetchHtmlContent()` à modifier pour convertir HTML→texte
+- 🚧 **Tests BDD** : Tests à adapter pour valider la conversion HTML→texte

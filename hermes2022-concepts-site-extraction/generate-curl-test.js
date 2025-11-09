@@ -10,8 +10,11 @@ const path = require('path');
 
 // Utiliser find-up pour trouver la racine
 const { sync: findUpSync } = require('find-up');
-const packagePath = findUpSync('package.json', { cwd: __dirname });
-const repoRoot = path.dirname(packagePath);
+const fullFilePath = findUpSync('package.json', { cwd: __dirname });
+if (!fullFilePath) {
+  throw new Error('Impossible de localiser la racine du repository');
+}
+const repoRoot = path.dirname(fullFilePath);
 
 function resolveFromRepoRoot(...segments) {
   return path.resolve(repoRoot, ...segments);
