@@ -77,7 +77,7 @@
         },
         "mainJSONConfigurationFile": {
           "type": "string",
-          "enum": ["shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts-resolved.json"],
+          "enum": ["shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts.json"],
           "description": "Chemin relatif vers le fichier de schéma JSON principal"
         },
         "templateOutputDirectory": {
@@ -87,6 +87,7 @@
         },
         "templateReset": {
           "type": "boolean",
+          "enum": [true],
           "description": "Indique si le template doit être réinitialisé"
         },
         "templateMode": {

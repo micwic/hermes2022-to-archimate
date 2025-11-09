@@ -5,13 +5,21 @@ const fs = require('fs');
 const https = require('https');
 const http = require('http');
 const path = require('path');
+const findUp = require('find-up');
 const jwt = require('jsonwebtoken');
 const { URL } = require('url');
-const { resolveFromRepoRoot } = require('./path-resolver.js');
 const nuextractApi = require('./nuextract-api.js');
 const $RefParser = require('@apidevtools/json-schema-ref-parser');
 const Ajv = require('ajv');
 const addFormats = require('ajv-formats');
+const { convert } = require('html-to-text');
+
+const fullFilePath = findUp.sync('package.json', { cwd: __dirname });
+if (!fullFilePath) {
+  throw new Error('Impossible de localiser la racine du repository');
+}
+const repoRoot = path.dirname(fullFilePath);
+const resolveFromRepoRoot = (...segments) => path.resolve(repoRoot, ...segments);
 
 // Fonction helper pour transformer schéma JSON Schema en objet config JSON
 function transformJSONSchemaIntoJSONConfigFile(schema) {
@@ -434,7 +442,7 @@ async function findOrCreateProject(config, apiKey, templateObj) {
           throw new Error('A valid NuExtractTemplate is required for template conformity validation. Script stopped.');
         }
         
-        console.log(`[info] Vérification de la conformité du template existant avec le JSON schema`);
+        console.log(`[info] Paramètre de mise à jour du template : ${templateReset}, Vérification de la conformité du template existant avec le JSON schema`);
         
         // Le template est déjà disponible dans existingProject (retourné par getNuExtractProjects)
         if (!existingProject.template || !existingProject.template.schema) {
@@ -663,6 +671,174 @@ async function collectHtmlSourcesAndInstructions(resolvedSchema, config, baseUrl
 }
 
 /**
+ * Fusionne récursivement une valeur dans un objet cible au chemin spécifié (JSON Pointer)
+ * @param {object} target - Objet cible dans lequel fusionner
+ * @param {string} path - Chemin JSON Pointer (ex: "/concepts/overview" ou "/concepts/phases/0/description")
+ * @param {any} value - Valeur à fusionner
+ * @returns {object} - Objet cible modifié
+ */
+function mergeJsonAtPath(target, path, value) {
+  // Journalisation en entrée de fonction pour traçabilité
+  console.log(`[info] Fusion de valeur au chemin ${path}`);
+  
+  try {
+    // Validation paramètres
+    if (!target || typeof target !== 'object') {
+      throw new Error('Invalid target: target must be a non-null object. Script stopped.');
+    }
+    
+    if (!path || typeof path !== 'string') {
+      throw new Error('Invalid path: path must be a non-empty string. Script stopped.');
+    }
+    
+    // Parser le JSON Pointer (format: /path/to/property ou /path/to/array/0)
+    // Retirer le slash initial et diviser en segments
+    const segments = path.replace(/^\/+/, '').split('/').filter(seg => seg !== '');
+    
+    if (segments.length === 0) {
+      // Chemin racine : fusionner directement la valeur
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        Object.assign(target, value);
+      } else {
+        // Pour les valeurs simples ou arrays, remplacer complètement
+        // Note: Ce cas ne devrait pas arriver normalement car on fusionne toujours des objets
+        throw new Error(`Cannot merge non-object value at root path. Script stopped.`);
+      }
+      return target;
+    }
+    
+    // Parcourir récursivement les segments pour créer ou accéder aux objets intermédiaires
+    let current = target;
+    for (let i = 0; i < segments.length - 1; i++) {
+      const segment = segments[i];
+      
+      // Vérifier si le segment est un index d'array (nombre)
+      const arrayIndex = parseInt(segment, 10);
+      if (!isNaN(arrayIndex) && Array.isArray(current)) {
+        // Accéder à l'élément de l'array
+        if (arrayIndex < 0 || arrayIndex >= current.length) {
+          throw new Error(`Array index out of bounds: ${arrayIndex} at path ${path}. Script stopped.`);
+        }
+        current = current[arrayIndex];
+      } else {
+        // Créer l'objet intermédiaire s'il n'existe pas
+        if (!current[segment] || typeof current[segment] !== 'object') {
+          current[segment] = {};
+        }
+        current = current[segment];
+      }
+    }
+    
+    // Dernier segment : fusionner la valeur
+    const lastSegment = segments[segments.length - 1];
+    const arrayIndex = parseInt(lastSegment, 10);
+    
+    if (!isNaN(arrayIndex) && Array.isArray(current)) {
+      // Fusionner dans un élément d'array
+      if (arrayIndex < 0 || arrayIndex >= current.length) {
+        throw new Error(`Array index out of bounds: ${arrayIndex} at path ${path}. Script stopped.`);
+      }
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        // Fusionner objet dans l'élément de l'array
+        Object.assign(current[arrayIndex], value);
+      } else {
+        // Remplacer l'élément de l'array
+        current[arrayIndex] = value;
+      }
+    } else {
+      // Fusionner dans une propriété d'objet
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        // Fusionner objet récursivement
+        if (!current[lastSegment] || typeof current[lastSegment] !== 'object' || Array.isArray(current[lastSegment])) {
+          current[lastSegment] = {};
+        }
+        Object.assign(current[lastSegment], value);
+      } else {
+        // Remplacer la propriété
+        current[lastSegment] = value;
+      }
+    }
+    
+    return target;
+  } catch (error) {
+    // Message contextualisé pour identifier facilement la fonction
+    console.error(`Erreur lors de la fusion au chemin ${path}: ${error.message}`);
+    throw error; // Propagation simple avec préservation de la stack trace
+  }
+}
+
+/**
+ * Construit un prompt Markdown pour un seul bloc
+ * @param {{jsonPointer: string, instructions: Array<string>, htmlContents: Array<{url: string, content: string}>}} block - Bloc avec JSON Pointer, instructions et contenus HTML
+ * @returns {string} - Prompt Markdown pour ce bloc
+ */
+function buildBlockPrompt(block) {
+  // Journalisation en entrée de fonction pour traçabilité
+  console.log(`[info] Construction du prompt d'extraction pour bloc ${block?.jsonPointer || 'inconnu'}`);
+  
+  try {
+    // Validation structure bloc
+    if (!block || typeof block !== 'object') {
+      throw new Error('Invalid block: block must be a non-null object. Script stopped.');
+    }
+    
+    if (!block.jsonPointer) {
+      throw new Error('block.jsonPointer is required. Script stopped.');
+    }
+    
+    if (!Array.isArray(block.instructions)) {
+      throw new Error('block.instructions must be an array. Script stopped.');
+    }
+    
+    if (!Array.isArray(block.htmlContents)) {
+      throw new Error('block.htmlContents must be an array. Script stopped.');
+    }
+    
+    if (block.htmlContents.length === 0) {
+      throw new Error('block.htmlContents is empty. No HTML content found for this block. Script stopped.');
+    }
+    
+    // Construire sections Markdown pour ce bloc
+    const sections = [];
+    
+    // Pour chaque contenu HTML dans le bloc, créer une section avec instructions + contenu
+    for (const htmlContent of block.htmlContents) {
+      const section = [];
+      
+      // En-tête du bloc avec JSON Pointer
+      section.push(`## Block: ${block.jsonPointer}\n`);
+      
+      // Instructions d'extraction
+      section.push('### Extraction Instructions\n');
+      for (const instruction of block.instructions) {
+        section.push(`- ${instruction}`);
+      }
+      section.push('');
+      
+      // Contenu texte (déjà converti HTML→texte) pour cette URL spécifique
+      section.push(`### Text Content from ${htmlContent.url}\n`);
+      section.push('```text');
+      section.push(htmlContent.content);
+      section.push('```\n');
+      
+      sections.push(section.join('\n'));
+    }
+    
+    // Concaténation avec séparateurs clairs
+    const prompt = sections.join('\n---\n\n');
+    
+    // Journalisation en sortie de fonction pour validation du succès
+    console.log(`[info] Prompt d'extraction construit pour bloc ${block.jsonPointer} : ${prompt.length} caractères`);
+    
+    return prompt;
+  } catch (error) {
+    // Message contextualisé pour identifier facilement la fonction
+    console.error(`Erreur lors de la construction du prompt d'extraction pour bloc: ${error.message}`);
+    throw error; // Propagation simple avec préservation de la stack trace
+  }
+}
+
+/**
  * Construit un prompt Markdown agrégé depuis la préparation collectée
  * @param {{blocks: Array<{jsonPointer: string, instructions: Array<string>, htmlContents: Array<{url: string, content: string}>}>}} preparation - Préparation avec blocs collectés
  * @returns {string} - Prompt Markdown agrégé
@@ -733,6 +909,127 @@ function buildExtractionPrompt(preparation) {
 }
 
 /**
+ * Recompose l'artefact final en fusionnant les résultats partiels par bloc
+ * @param {Array<{jsonPointer: string, data: object}>} partialResults - Résultats partiels de l'extraction par bloc
+ * @param {object} resolvedSchema - Schéma résolu pour validation
+ * @param {object} config - Configuration complète
+ * @param {string} baseUrl - URL de base
+ * @returns {object} - Artefact final recomposé
+ */
+function recomposeArtifact(partialResults, resolvedSchema, config, baseUrl) {
+  // Journalisation en entrée de fonction pour traçabilité
+  console.log(`[info] Recomposition de l'artefact final depuis ${partialResults?.length || 0} résultat(s) partiel(s)`);
+  
+  try {
+    // Validation paramètres
+    if (!partialResults || !Array.isArray(partialResults)) {
+      throw new Error('Invalid partialResults: partialResults must be an array. Script stopped.');
+    }
+    
+    if (partialResults.length === 0) {
+      throw new Error('partialResults is empty. No extraction results to recompose. Script stopped.');
+    }
+    
+    // Initialiser artefact vide avec structure de base
+    const extractionSource = config?.extractionSource || {};
+    const artifact = {
+      config: {
+        extractionSource: extractionSource
+      },
+      method: {},
+      concepts: {},
+      metadata: {}
+    };
+    
+    // Fusionner chaque résultat partiel selon jsonPointer
+    for (const partialResult of partialResults) {
+      const { jsonPointer, data } = partialResult;
+      
+      if (!jsonPointer || typeof jsonPointer !== 'string') {
+        throw new Error(`Invalid jsonPointer in partial result: ${jsonPointer}. Script stopped.`);
+      }
+      
+      if (!data || typeof data !== 'object') {
+        throw new Error(`Invalid data in partial result for ${jsonPointer}. Script stopped.`);
+      }
+      
+      // Cas principal : NuExtract retourne uniquement le bloc demandé (grâce aux instructions ajustées)
+      // Fallback robuste : si data contient une structure complète (method/concepts), extraire la valeur au chemin jsonPointer
+      
+      let valueToMerge = data;
+      
+      // Détecter si data contient une structure complète (avec method/concepts) ou juste le bloc
+      const hasCompleteStructure = data.method !== undefined || (data.concepts !== undefined && typeof data.concepts === 'object');
+      
+      if (hasCompleteStructure) {
+        // Fallback : data contient la structure complète, extraire la valeur au chemin jsonPointer
+        const segments = jsonPointer.replace(/^\/+/, '').split('/').filter(seg => seg !== '');
+        let extractedValue = data;
+        let extractionSuccess = true;
+        
+        // Naviguer dans data selon les segments du jsonPointer
+        for (const segment of segments) {
+          const arrayIndex = parseInt(segment, 10);
+          if (!isNaN(arrayIndex) && Array.isArray(extractedValue)) {
+            if (arrayIndex < 0 || arrayIndex >= extractedValue.length) {
+              extractionSuccess = false;
+              break;
+            }
+            extractedValue = extractedValue[arrayIndex];
+          } else if (extractedValue && typeof extractedValue === 'object' && segment in extractedValue) {
+            extractedValue = extractedValue[segment];
+          } else {
+            extractionSuccess = false;
+            break;
+          }
+        }
+        
+        // Si l'extraction a réussi, utiliser la valeur extraite, sinon utiliser data tel quel
+        if (extractionSuccess && extractedValue !== undefined) {
+          valueToMerge = extractedValue;
+        }
+        // Sinon, valueToMerge reste = data (fusionner toute la structure)
+      }
+      // Sinon (cas principal), valueToMerge = data (bloc uniquement retourné par NuExtract)
+      
+      // Fusionner la valeur dans l'artefact au chemin jsonPointer
+      mergeJsonAtPath(artifact, jsonPointer, valueToMerge);
+    }
+    
+    // Construire métadonnées (identique à l'actuel)
+    const hermesVersion = config?.hermesVersion || '2022';
+    const metadata = {
+      extractionDate: new Date().toISOString().split('T')[0], // Format YYYY-MM-DD
+      extractionSource: extractionSource.baseUrl || baseUrl,
+      extractionLanguage: extractionSource.language || 'en',
+      schemaVersion: resolvedSchema.$schema || 'http://json-schema.org/draft-07/schema#',
+      extractionMethod: 'NuExtract',
+      extractionTool: 'hermes2022-concepts-site-extraction'
+    };
+    
+    artifact.metadata = metadata;
+    
+    // Ajouter hermesVersion au niveau method si présent dans les résultats partiels
+    // Chercher dans tous les résultats partiels pour trouver hermesVersion
+    for (const partialResult of partialResults) {
+      if (partialResult.data?.method?.hermesVersion) {
+        artifact.method.hermesVersion = partialResult.data.method.hermesVersion;
+        break;
+      }
+    }
+    
+    // Journalisation en sortie de fonction pour validation du succès
+    console.log(`[info] Recomposition de l'artefact final terminée avec succès`);
+    
+    return artifact;
+  } catch (error) {
+    // Message contextualisé pour identifier facilement la fonction
+    console.error(`Erreur lors de la recomposition de l'artefact: ${error.message}`);
+    throw error; // Propagation simple avec préservation de la stack trace
+  }
+}
+
+/**
  * Extrait les concepts HERMES2022 depuis les sources HTML via NuExtract
  * @param {object} resolvedSchema - Schéma JSON résolu (déjà déréférencé)
  * @param {object} config - Configuration complète avec nuextract, extractionSource, hermesVersion, etc.
@@ -752,8 +1049,14 @@ async function extractHermes2022ConceptsWithNuExtract(resolvedSchema, config, ap
     const baseUrl = config?.extractionSource?.baseUrl || 'https://www.hermes.admin.ch/en';
     
     // Phase 1 : Collecte des sources HTML et instructions
+    // IMPORTANT: Utiliser le schéma résolu (AVANT génération du template) qui contient les extractionInstructions
+    // Le template NuExtract généré ne contiendra pas les extractionInstructions (métadonnées d'extraction)
+    // mais les enum du schéma seront transformés en format template par l'API NuExtract via le prompt
+    // Si le schéma résolu a une structure JSON Schema standard avec properties au niveau racine,
+    // passer directement resolvedSchema.properties pour éviter de parcourir les métadonnées ($schema, $id, etc.)
+    const schemaToTraverse = resolvedSchema.properties ? resolvedSchema.properties : resolvedSchema;
     const preparation = await collectHtmlSourcesAndInstructions(
-      resolvedSchema,
+      schemaToTraverse,
       config,
       baseUrl,
       '/',
@@ -761,10 +1064,7 @@ async function extractHermes2022ConceptsWithNuExtract(resolvedSchema, config, ap
       maxDepth
     );
     
-    // Phase 2 : Construction du prompt agrégé
-    const aggregatedPrompt = buildExtractionPrompt(preparation);
-    
-    // Phase 3 : Extraction via API NuExtract
+    // Phase 2 : Extraction par bloc via API NuExtract
     // Récupérer les paramètres pour l'appel API
     const hostname = config?.nuextract?.baseUrl || 'nuextract.ai';
     const port = config?.nuextract?.port || 443;
@@ -772,55 +1072,41 @@ async function extractHermes2022ConceptsWithNuExtract(resolvedSchema, config, ap
     const pathPrefix = config?.nuextract?.pathPrefix || null;
     const timeoutMs = 120000; // 120s pour gros contenus
     
-    // Appel API NuExtract avec prompt agrégé
-    const extractedJson = await nuextractApi.inferTextFromContent(
-      hostname,
-      port,
-      path,
-      pathPrefix,
-      projectId,
-      apiKey,
-      aggregatedPrompt,
-      timeoutMs
-    );
+    // Boucle sur chaque bloc pour extraction individuelle
+    const partialResults = [];
+    for (const block of preparation.blocks) {
+      // Construire prompt pour ce bloc
+      const blockPrompt = buildBlockPrompt(block);
+      
+      // Extraction NuExtract pour ce bloc
+      const partialJson = await nuextractApi.inferTextFromContent(
+        hostname,
+        port,
+        path,
+        pathPrefix,
+        projectId,
+        apiKey,
+        blockPrompt,
+        timeoutMs
+      );
+      
+      // Stocker résultat partiel avec son jsonPointer
+      partialResults.push({ jsonPointer: block.jsonPointer, data: partialJson });
+    }
+    
+    // Phase 3 : Recomposition de l'artefact final
+    const artifact = recomposeArtifact(partialResults, resolvedSchema, config, baseUrl);
     
     // Phase 4 : Validation avec Ajv (schéma résolu)
     const ajv = new Ajv({ strict: false, allErrors: true });
     addFormats(ajv);
     
     const validate = ajv.compile(resolvedSchema);
-    const isValid = validate(extractedJson);
+    const isValid = validate(artifact);
     
     if (!isValid) {
       const errors = validate.errors?.map(err => `${err.instancePath}: ${err.message}`).join(', ') || 'Unknown validation error';
       throw new Error(`Extracted JSON does not conform to schema: ${errors}. Script stopped.`);
-    }
-    
-    // Phase 5 : Enrichir avec métadonnées
-    const hermesVersion = config?.hermesVersion || '2022';
-    const extractionSource = config?.extractionSource || {};
-    const metadata = {
-      extractionDate: new Date().toISOString().split('T')[0], // Format YYYY-MM-DD
-      extractionSource: extractionSource.baseUrl || baseUrl,
-      extractionLanguage: extractionSource.language || 'en',
-      schemaVersion: resolvedSchema.$schema || 'http://json-schema.org/draft-07/schema#',
-      extractionMethod: 'NuExtract',
-      extractionTool: 'hermes2022-concepts-site-extraction'
-    };
-    
-    // Construire artefact final avec structure conforme au schéma
-    const artifact = {
-      config: {
-        extractionSource: extractionSource
-      },
-      method: extractedJson.method || {},
-      concepts: extractedJson.concepts || {},
-      metadata: metadata
-    };
-    
-    // Ajouter hermesVersion au niveau racine si présent dans extractedJson
-    if (extractedJson.method?.hermesVersion) {
-      artifact.method.hermesVersion = extractedJson.method.hermesVersion;
     }
     
     // Journalisation en sortie de fonction pour validation du succès
@@ -835,6 +1121,62 @@ async function extractHermes2022ConceptsWithNuExtract(resolvedSchema, config, ap
 }
 
 /**
+ * Sauvegarde l'artefact JSON et initialise le fichier d'approbation associé
+ * @param {object} config - Configuration complète
+ * @param {object} artifact - Artefact JSON à persister
+ * @param {Date} [now=new Date()] - Date de référence (injectable pour les tests)
+ * @returns {{ artifactPath: string, approvalPath: string }} - Chemins des fichiers créés
+ */
+async function saveArtifact(config, artifact, now = new Date()) {
+  // Journalisation en entrée de fonction pour traçabilité
+  console.log('[info] Sauvegarde de l\'artefact et initialisation du fichier d\'approbation');
+
+  try {
+    if (!artifact || typeof artifact !== 'object') {
+      throw new Error('Invalid artifact: artifact must be a non-null object. Script stopped.');
+    }
+
+    const artifactBaseDir = process.env.HERMES2022_CONCEPTS_ARTIFACT_DIR
+      || config?.artifactBaseDirectory
+      || 'shared/hermes2022-extraction-files/data';
+    const artifactDir = resolveFromRepoRoot(artifactBaseDir);
+
+    if (!fs.existsSync(artifactDir)) {
+      fs.mkdirSync(artifactDir, { recursive: true });
+    }
+
+    const extractionDate = now.toISOString().split('T')[0];
+    const artifactFileName = `hermes2022-concepts-${extractionDate}.json`;
+    const artifactPath = path.join(artifactDir, artifactFileName);
+
+    fs.writeFileSync(artifactPath, JSON.stringify(artifact, null, 2), 'utf8');
+    console.log(`[info] Artefact sauvegardé dans ${artifactPath}`);
+
+    const approvalFileName = `hermes2022-concepts-${extractionDate}.approval.json`;
+    const approvalPath = path.join(artifactDir, approvalFileName);
+    const approvalPayload = {
+      artifact: artifactFileName,
+      approvals: [
+        {
+          target: '/concepts/overview',
+          rule: 'overview-quality',
+          status: 'pending',
+          lastChecked: extractionDate
+        }
+      ]
+    };
+
+    fs.writeFileSync(approvalPath, JSON.stringify(approvalPayload, null, 2), 'utf8');
+    console.log(`[info] Fichier d'approbation initialisé dans ${approvalPath}`);
+
+    return { artifactPath, approvalPath };
+  } catch (error) {
+    console.error(`Erreur lors de la sauvegarde de l'artefact: ${error.message}`);
+    throw error; // Propagation simple avec préservation de la stack trace
+  }
+}
+
+/**
  * Charge le contenu HTML depuis une URL
  * @param {string} url - URL complète de la page HTML à charger
  * @param {number} timeoutMs - Timeout en millisecondes (défaut: 30000)
@@ -842,7 +1184,7 @@ async function extractHermes2022ConceptsWithNuExtract(resolvedSchema, config, ap
  */
 async function fetchHtmlContent(url, timeoutMs = 30000) {
   // Journalisation en entrée de fonction pour traçabilité
-  console.log(`[info] Chargement du contenu HTML depuis ${url}`);
+  console.log(`[info] Chargement et conversion HTML→texte depuis ${url}`);
   
   try {
     // Parser l'URL pour extraire protocole, hostname, port et path
@@ -878,7 +1220,17 @@ async function fetchHtmlContent(url, timeoutMs = 30000) {
             reject(new Error(`HTTP error: ${res.statusCode} - ${data.substring(0, 200)}. Script stopped.`, { cause: new Error(`Status ${res.statusCode}`) }));
             return;
           }
-          resolve(data);
+          // Convertir HTML→texte avec html-to-text
+          try {
+            const textContent = convert(data, { 
+              wordwrap: false, 
+              preserveNewlines: true 
+            });
+            resolve(textContent);
+          } catch (convertError) {
+            console.error(`Erreur lors de la conversion HTML→texte pour ${url}: ${convertError.message}`);
+            reject(new Error(`Error converting HTML to text from ${url}. Script stopped.`, { cause: convertError }));
+          }
         });
       });
       
@@ -904,6 +1256,7 @@ async function fetchHtmlContent(url, timeoutMs = 30000) {
 
 // Point d'entrée du script qui exécute les fonctions séquentiellement
 async function main() {
+  console.log('[info] Démarrage du workflow principal hermes2022-concepts-site-extraction');
   try {
     const config = await loadGlobalConfig();
     const apiKey = await loadApiKey(config);
@@ -924,25 +1277,8 @@ async function main() {
       apiKey,
       projectResult.id
     );
-    
-    // Sauvegarder artefact dans artifactBaseDirectory
-    const artifactBaseDir = process.env.HERMES2022_CONCEPTS_ARTIFACT_DIR || config?.artifactBaseDirectory || 'shared/hermes2022-extraction-files/data';
-    const artifactDir = await resolveFromRepoRoot(artifactBaseDir);
-    
-    // Créer le répertoire s'il n'existe pas
-    if (!fs.existsSync(artifactDir)) {
-      fs.mkdirSync(artifactDir, { recursive: true });
-    }
-    
-    // Générer nom de fichier avec date YYYY-MM-DD
-    const extractionDate = new Date().toISOString().split('T')[0];
-    const artifactFileName = `hermes2022-concepts-${extractionDate}.json`;
-    const artifactPath = path.join(artifactDir, artifactFileName);
-    
-    // Sauvegarder artefact JSON
-    fs.writeFileSync(artifactPath, JSON.stringify(artifact, null, 2), 'utf8');
-    console.log(`[info] Artefact sauvegardé dans ${artifactPath}`);
-    
+    await saveArtifact(config, artifact);
+
     console.log('Extraction terminée avec succès');
   } catch (error) {
     console.error('Extraction a échoué:', error.message);
@@ -966,5 +1302,9 @@ module.exports = {
   _testOnly_fetchHtmlContent: fetchHtmlContent,
   _testOnly_collectHtmlSourcesAndInstructions: collectHtmlSourcesAndInstructions,
   _testOnly_buildExtractionPrompt: buildExtractionPrompt,
-  _testOnly_extractHermes2022ConceptsWithNuExtract: extractHermes2022ConceptsWithNuExtract
+  _testOnly_buildBlockPrompt: buildBlockPrompt,
+  _testOnly_recomposeArtifact: recomposeArtifact,
+  _testOnly_mergeJsonAtPath: mergeJsonAtPath,
+  _testOnly_extractHermes2022ConceptsWithNuExtract: extractHermes2022ConceptsWithNuExtract,
+  _testOnly_saveArtifact: saveArtifact
 };

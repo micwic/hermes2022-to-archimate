@@ -2,6 +2,7 @@
 import { defineFeature, loadFeature } from 'jest-cucumber';
 import { Given, When, Then } from 'jest-cucumber';
 import path from 'path';
+import findUp from 'find-up';
 import fs from 'fs';
 import https from 'https';
 import http from 'http';
@@ -12,6 +13,7 @@ jest.mock('../../src/nuextract-api.js', () => {
   const actual = jest.requireActual('../../src/nuextract-api.js');
   return {
     ...actual,
+    inferTemplateFromDescription: jest.fn(actual.inferTemplateFromDescription),
     inferTemplateFromDescriptionAsync: jest.fn(actual.inferTemplateFromDescriptionAsync),
     pollJobUntilComplete: jest.fn(actual.pollJobUntilComplete),
     getNuExtractProjects: jest.fn(actual.getNuExtractProjects),
@@ -30,9 +32,20 @@ import {
   _testOnly_loadAndResolveSchemas as loadAndResolveSchemas,
   _testOnly_generateTemplate as generateTemplate, 
   _testOnly_findOrCreateProject as findOrCreateProject,
-  _testOnly_fetchHtmlContent as fetchHtmlContent
+  _testOnly_fetchHtmlContent as fetchHtmlContent,
+  _testOnly_collectHtmlSourcesAndInstructions as collectHtmlSourcesAndInstructions,
+  _testOnly_buildExtractionPrompt as buildExtractionPrompt,
+  _testOnly_buildBlockPrompt as buildBlockPrompt,
+  _testOnly_recomposeArtifact as recomposeArtifact,
+  _testOnly_mergeJsonAtPath as mergeJsonAtPath
 } from '../../src/nuextract-client.js';
-import { resolveFromRepoRoot } from '../../src/path-resolver.js';
+
+const fullFilePath = findUp.sync('package.json', { cwd: __dirname });
+if (!fullFilePath) {
+  throw new Error('Impossible de localiser la racine du repository');
+}
+const repoRoot = path.dirname(fullFilePath);
+const resolveFromRepoRoot = (...segments: string[]) => path.resolve(repoRoot, ...segments);
 
 const feature = loadFeature(__dirname + '/nuextract-client-error-handling.feature');
 
@@ -84,7 +97,7 @@ defineFeature(feature, (test) => {
 
     then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toContain('Schema file not found');
+      expect(error.message).toContain(expectedMessage);
       expect(error.message).toContain('Script stopped');
     });
 
@@ -193,7 +206,7 @@ defineFeature(feature, (test) => {
 
     then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toContain('API_KEY is not set');
+      expect(error.message).toContain(expectedMessage);
     });
 
     and('le processus s\'arrête proprement', () => {
@@ -230,7 +243,7 @@ defineFeature(feature, (test) => {
 
     then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toContain('API key is empty after trimming');
+      expect(error.message).toContain(expectedMessage);
     });
 
     and('le processus s\'arrête proprement', () => {
@@ -335,7 +348,7 @@ defineFeature(feature, (test) => {
 
     then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toContain('templateTransformationInstructions.instructions non trouvé');
+      expect(error.message).toContain(expectedMessage);
     });
 
     and('le processus s\'arrête proprement', () => {
@@ -365,7 +378,7 @@ defineFeature(feature, (test) => {
 
     then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toContain('instructions invalide: type');
+      expect(error.message).toContain(expectedMessage);
     });
 
     and('le message indique le format attendu "array de strings"', () => {
@@ -402,7 +415,7 @@ defineFeature(feature, (test) => {
 
     then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toContain('templateMode invalide');
+      expect(error.message).toContain(expectedMessage);
     });
 
     and('le message indique les valeurs acceptées "sync" et "async"', () => {
@@ -784,15 +797,16 @@ defineFeature(feature, (test) => {
       config = await loadGlobalConfig();
       // Charger le schéma résolu pour generateTemplate
       resolvedJsonSchema = await loadAndResolveSchemas(config);
+      apiKey = 'fixture-api-key';
     });
 
     and('une API qui retourne un template vide', () => {
-      // On va simuler cela en vérifiant la réponse après l'appel
+      jest.spyOn(nuextractApi, 'inferTemplateFromDescription')
+        .mockResolvedValue({});
     });
 
     when('on tente de générer un template', async () => {
       try {
-        apiKey = await loadApiKey(config);
         const template = await generateTemplate(config, apiKey, resolvedJsonSchema);
         
         // Vérifier que le template n'est pas vide
@@ -808,7 +822,7 @@ defineFeature(feature, (test) => {
       // Dans le cas normal, l'API ne devrait pas retourner un template vide
       // Ce test vérifie la logique de validation
       if (error) {
-        expect(error.message).toContain('Empty template');
+        expect(error.message).toContain(expectedMessage);
       } else {
         // Si pas d'erreur, le template est valide
         expect(error).toBeUndefined();
@@ -820,12 +834,13 @@ defineFeature(feature, (test) => {
         expect(error).toBeInstanceOf(Error);
       }
     });
-  }, 60000);
+  }, 5000);
 
   test('Erreur timeout API génération template mode sync', ({ given, when, then, and }) => {
     let error;
     let config;
     let resolvedJsonSchema;
+    let apiKey;
 
     given('une configuration avec templateMode sync', async () => {
       config = await loadGlobalConfig();
@@ -834,15 +849,16 @@ defineFeature(feature, (test) => {
       config.nuextract.templateGenerationDuration = 1; // 1ms + 5000ms = timeout très court
       // Charger le schéma résolu pour generateTemplate
       resolvedJsonSchema = await loadAndResolveSchemas(config);
+      apiKey = 'fixture-api-key';
     });
 
     and('un schéma très volumineux causant un timeout', () => {
-      // Le schéma actuel est assez volumineux pour causer des timeouts en mode sync
+      jest.spyOn(nuextractApi, 'inferTemplateFromDescription')
+        .mockRejectedValue(new Error('Timeout sync après 5001ms. Pour schémas >4000 caractères, utilisez templateMode: \'async\'. Script stopped.'));
     });
 
     when('on tente de générer un template', async () => {
       try {
-        const apiKey = await loadApiKey(config);
         await generateTemplate(config, apiKey, resolvedJsonSchema);
       } catch (e) {
         error = e;
@@ -861,31 +877,35 @@ defineFeature(feature, (test) => {
     });
   }, 30000);
 
-  test('Erreur API NuExtract inaccessible', ({ given, when, then, and }) => {
+  test('Erreur API NuExtract infer-template inaccessible', ({ given, when, then, and }) => {
     let error;
     let config;
     let resolvedJsonSchema;
+    let apiKey;
 
     given('une configuration avec baseUrl incorrect', async () => {
       config = await loadGlobalConfig();
-      config.nuextract.baseUrl = 'localhost';
-      config.nuextract.port = 99999; // Port inaccessible
+      config.nuextract.baseUrl = 'http://127.0.0.1';
+      config.nuextract.port = 1; // Port plausible mais sans serveur → ECONNREFUSED
       // Charger le schéma résolu pour generateTemplate
       resolvedJsonSchema = await loadAndResolveSchemas(config);
+      apiKey = 'fixture-api-key';
+      jest.spyOn(nuextractApi, 'inferTemplateFromDescription')
+        .mockRejectedValue(new Error('Network error calling infer-template API. Script stopped.'));
     });
 
-    when('on tente d\'appeler l\'API NuExtract', async () => {
+    when('on tente d\'appeler l\'API NuExtract infer-template', async () => {
       try {
-        const apiKey = await loadApiKey(config);
         await generateTemplate(config, apiKey, resolvedJsonSchema);
       } catch (e) {
         error = e;
       }
     });
 
-    then('une erreur de connexion est générée', () => {
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toBeDefined();
+      expect(error.message).toContain('Network error calling infer-template API');
+      expect(error.message).toContain(expectedMessage);
     });
 
     and('le processus s\'arrête proprement', () => {
@@ -1080,32 +1100,19 @@ defineFeature(feature, (test) => {
   
   test('Erreur projet existant sans template valide', ({ given, when, then, and }) => {
     let error;
-    let validTemplate;
+    const validTemplate = { schema: { foo: 'bar' } };
     
-    given('un projet existant sur la plateforme', async () => {
-      // Mock getNuExtractProjects retournant un projet existant SANS template
+    given('un projet existant sur la plateforme', () => {
       jest.spyOn(nuextractApi, 'getNuExtractProjects')
-        .mockResolvedValue([
-          { 
-            id: 'proj-123', 
-            name: 'test-project',
-            // Pas de propriété template
-          }
-        ]);
-      
-      // Charger un template valide pour la comparaison
-      const config = await loadGlobalConfig();
-      const apiKey = await loadApiKey(config);
-      const resolvedJsonSchema = await loadAndResolveSchemas(config);
-      validTemplate = await generateTemplate(config, apiKey, resolvedJsonSchema);
+        .mockResolvedValue([{ id: 'proj-123', name: 'test-project' }]);
     });
     
     and('le projet existant ne contient pas de template ou de template.schema', () => {
-      // Le projet mocké ci-dessus n'a pas de template (déjà fait dans given)
+      // Mock déjà configuré pour renvoyer un projet sans template
     });
     
     and('templateReset configuré à false', () => {
-      // templateReset sera false dans l'appel
+      // Rien à faire, valeur utilisée dans l'appel
     });
     
     when('on tente de rechercher le projet', async () => {
@@ -1114,7 +1121,7 @@ defineFeature(feature, (test) => {
           nuextract: {
             projectName: 'test-project',
             projectDescription: 'Test project',
-            templateReset: false, // templateReset = false
+            templateReset: false,
             baseUrl: 'nuextract.ai',
             port: 443,
             projectsPath: '/api/projects',
@@ -1144,26 +1151,23 @@ defineFeature(feature, (test) => {
     let error;
     let validTemplate;
     let invalidTemplate;
+    let apiKey;
     
-    given('un projet existant sur la plateforme avec un template non conforme', async () => {
-      // Charger un template valide pour la comparaison
-      const config = await loadGlobalConfig();
-      const apiKey = await loadApiKey(config);
-      const resolvedJsonSchema = await loadAndResolveSchemas(config);
-      validTemplate = await generateTemplate(config, apiKey, resolvedJsonSchema);
+    given('un projet existant sur la plateforme avec un template non conforme', () => {
+      const fixturePath = resolveFromRepoRoot('hermes2022-concepts-site-extraction/__tests__/fixtures/nuextract-template-valid.json');
+      const fixtureContent = fs.readFileSync(fixturePath, 'utf8');
+      validTemplate = JSON.parse(fixtureContent);
+      invalidTemplate = { ...validTemplate, __nonConformant__: 'different value' };
+      apiKey = 'fixture-api-key';
       
-      // Créer un template non conforme (différent)
-      invalidTemplate = { ...validTemplate, differentProperty: 'different value' };
-      
-      // Mock getNuExtractProjects retournant un projet existant avec template NON conforme
       jest.spyOn(nuextractApi, 'getNuExtractProjects')
         .mockResolvedValue([
-          { 
-            id: 'proj-123', 
+          {
+            id: 'proj-123',
             name: 'test-project',
             template: {
               type: 'schema',
-              schema: invalidTemplate // Template différent (non conforme)
+              schema: invalidTemplate
             }
           }
         ]);
@@ -1187,7 +1191,7 @@ defineFeature(feature, (test) => {
             pathPrefix: null
           }
         };
-        await findOrCreateProject(config, 'fake-api-key', validTemplate); // Template de référence (conforme)
+        await findOrCreateProject(config, apiKey, validTemplate); // Template de référence (conforme)
       } catch (e) {
         error = e;
       }
@@ -1236,9 +1240,9 @@ defineFeature(feature, (test) => {
       }
     });
     
-    then('une erreur "Network error fetching HTML content" est générée', () => {
+    then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toContain('Network error fetching HTML content');
+      expect(error.message).toContain(expectedMessage);
     });
     
     and('l\'erreur originale est préservée avec Error Cause', () => {
@@ -1280,9 +1284,9 @@ defineFeature(feature, (test) => {
       }
     });
     
-    then('une erreur contenant "Timeout: La requête HTML a dépassé 30 secondes" est générée', () => {
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toContain('Timeout: La requête HTML a dépassé 30 secondes');
+      expect(error.message).toContain(expectedMessage);
     });
     
     and('le processus s\'arrête proprement', () => {
@@ -1323,9 +1327,9 @@ defineFeature(feature, (test) => {
       }
     });
     
-    then('une erreur contenant "HTTP error: 404" est générée', () => {
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toContain('HTTP error: 404');
+      expect(error.message).toContain(expectedMessage);
     });
     
     and('le processus s\'arrête proprement', () => {
@@ -1350,9 +1354,747 @@ defineFeature(feature, (test) => {
       }
     });
     
-    then('une erreur contenant "Invalid URL" est générée', () => {
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
       expect(error).toBeDefined();
-      expect(error.message).toContain('Invalid URL');
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  // === Gestion des erreurs pour collectHtmlSourcesAndInstructions ===
+  
+  test('Schéma invalide (null) pour collectHtmlSourcesAndInstructions', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un schéma résolu null pour collectHtmlSourcesAndInstructions', () => {
+      // Pas besoin de mock, la validation se fait avant tout appel HTTP
+    });
+    
+    when('on tente d\'appeler collectHtmlSourcesAndInstructions', async () => {
+      try {
+        await collectHtmlSourcesAndInstructions(
+          null,
+          { nuextract: { extractionBlocksMaxDepth: 10 } },
+          'https://www.hermes.admin.ch/en',
+          '/',
+          0,
+          10
+        );
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('Schéma invalide (non-objet) pour collectHtmlSourcesAndInstructions', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un schéma résolu non-objet (string) pour collectHtmlSourcesAndInstructions', () => {
+      // Pas besoin de mock, la validation se fait avant tout appel HTTP
+    });
+    
+    when('on tente d\'appeler collectHtmlSourcesAndInstructions', async () => {
+      try {
+        await collectHtmlSourcesAndInstructions(
+          'invalid schema' as any,
+          { nuextract: { extractionBlocksMaxDepth: 10 } },
+          'https://www.hermes.admin.ch/en',
+          '/',
+          0,
+          10
+        );
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('Profondeur maximale atteinte pour collectHtmlSourcesAndInstructions', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un schéma résolu avec récursivité profonde', () => {
+      // Pas besoin de mock, la validation se fait avant tout appel HTTP
+    });
+    
+    and('maxDepth configuré à 0 pour collectHtmlSourcesAndInstructions', () => {
+      // maxDepth sera 0 dans l'appel
+    });
+    
+    when('on tente d\'appeler collectHtmlSourcesAndInstructions', async () => {
+      try {
+        await collectHtmlSourcesAndInstructions(
+          { method: { properties: {} } },
+          { nuextract: { extractionBlocksMaxDepth: 10 } },
+          'https://www.hermes.admin.ch/en',
+          '/',
+          0,
+          0 // maxDepth = 0, profondeur actuelle = 0, donc depth >= maxDepth
+        );
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('Instructions manquantes pour bloc avec sourceUrl', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un schéma résolu avec bloc sourceUrl sans extractionInstructions', () => {
+      // Pas besoin de mock, la validation se fait avant tout appel HTTP
+    });
+    
+    when('on tente d\'appeler collectHtmlSourcesAndInstructions', async () => {
+      try {
+        await collectHtmlSourcesAndInstructions(
+          {
+            method: {
+              properties: {
+                sourceUrl: {
+                  enum: ['/']
+                }
+                // Pas d'extractionInstructions
+              }
+            }
+          },
+          { nuextract: { extractionBlocksMaxDepth: 10 } },
+          'https://www.hermes.admin.ch/en',
+          '/',
+          0,
+          10
+        );
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le JSON Pointer du bloc est inclus dans le message d\'erreur', () => {
+      expect(error.message).toContain('/method');
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('Instructions invalides (type non-array) pour collectHtmlSourcesAndInstructions', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un schéma résolu avec extractionInstructions de type non-array', () => {
+      // Pas besoin de mock, la validation se fait avant tout appel HTTP
+    });
+    
+    when('on tente d\'appeler collectHtmlSourcesAndInstructions', async () => {
+      try {
+        await collectHtmlSourcesAndInstructions(
+          {
+            method: {
+              properties: {
+                sourceUrl: {
+                  enum: ['/']
+                },
+                extractionInstructions: {
+                  type: 'string' // Type invalide (non-array)
+                }
+              }
+            }
+          },
+          { nuextract: { extractionBlocksMaxDepth: 10 } },
+          'https://www.hermes.admin.ch/en',
+          '/',
+          0,
+          10
+        );
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le JSON Pointer du bloc est inclus dans le message d\'erreur', () => {
+      expect(error.message).toContain('/method');
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('Instructions invalides (items.enum manquant) pour collectHtmlSourcesAndInstructions', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un schéma résolu avec extractionInstructions array sans items.enum', () => {
+      // Pas besoin de mock, la validation se fait avant tout appel HTTP
+    });
+    
+    when('on tente d\'appeler collectHtmlSourcesAndInstructions', async () => {
+      try {
+        await collectHtmlSourcesAndInstructions(
+          {
+            method: {
+              properties: {
+                sourceUrl: {
+                  enum: ['/']
+                },
+                extractionInstructions: {
+                  type: 'array'
+                  // Pas d'items.enum
+                }
+              }
+            }
+          },
+          { nuextract: { extractionBlocksMaxDepth: 10 } },
+          'https://www.hermes.admin.ch/en',
+          '/',
+          0,
+          10
+        );
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le JSON Pointer du bloc est inclus dans le message d\'erreur', () => {
+      expect(error.message).toContain('/method');
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('Instructions invalides (array vide) pour collectHtmlSourcesAndInstructions', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un schéma résolu avec extractionInstructions array vide', () => {
+      // Pas besoin de mock, la validation se fait avant tout appel HTTP
+    });
+    
+    when('on tente d\'appeler collectHtmlSourcesAndInstructions', async () => {
+      try {
+        await collectHtmlSourcesAndInstructions(
+          {
+            method: {
+              properties: {
+                sourceUrl: {
+                  enum: ['/']
+                },
+                extractionInstructions: {
+                  type: 'array',
+                  items: {
+                    enum: [] // Array vide
+                  }
+                }
+              }
+            }
+          },
+          { nuextract: { extractionBlocksMaxDepth: 10 } },
+          'https://www.hermes.admin.ch/en',
+          '/',
+          0,
+          10
+        );
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le JSON Pointer du bloc est inclus dans le message d\'erreur', () => {
+      expect(error.message).toContain('/method');
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('Erreur chargement HTML (propagée depuis fetchHtmlContent) pour collectHtmlSourcesAndInstructions', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un schéma résolu avec sourceUrl valide', () => {
+      // Pas besoin de mock spécifique, le mock sera fait dans le step suivant
+    });
+    
+    and('fetchHtmlContent simulé pour lever une erreur réseau', () => {
+      // Mock https.request pour simuler erreur réseau (fetchHtmlContent utilise https.request)
+      https.request = jest.fn().mockImplementation((options, callback) => {
+        const mockReq = new EventEmitter();
+        mockReq.write = jest.fn();
+        mockReq.end = jest.fn();
+        mockReq.setTimeout = jest.fn();
+        mockReq.destroy = jest.fn();
+        
+        setTimeout(() => {
+          const networkError = new Error('EHOSTUNREACH');
+          (networkError as any).code = 'EHOSTUNREACH';
+          mockReq.emit('error', networkError);
+        }, 10);
+        
+        return mockReq;
+      });
+    });
+    
+    when('on tente d\'appeler collectHtmlSourcesAndInstructions', async () => {
+      try {
+        await collectHtmlSourcesAndInstructions(
+          {
+            method: {
+              properties: {
+                sourceUrl: {
+                  enum: ['/']
+                },
+                extractionInstructions: {
+                  type: 'array',
+                  items: {
+                    enum: ['Extract overview']
+                  }
+                }
+              }
+            }
+          },
+          { nuextract: { extractionBlocksMaxDepth: 10 } },
+          'https://www.hermes.admin.ch/en',
+          '/',
+          0,
+          10
+        );
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('l\'erreur originale est préservée avec Error Cause', () => {
+      expect(error.cause).toBeDefined();
+      // L'erreur originale peut être soit "Network error fetching HTML content" soit "EHOSTUNREACH"
+      expect(error.cause.message || error.cause.code).toBeTruthy();
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  // === Gestion des erreurs pour buildExtractionPrompt ===
+  
+  test('Blocks vide (aucun bloc extractible) pour buildExtractionPrompt', ({ given, when, then, and }) => {
+    let error;
+    
+    given('une préparation avec blocks array vide', () => {
+      // Pas besoin de mock, la validation se fait avant toute construction
+    });
+    
+    when('on tente d\'appeler buildExtractionPrompt', () => {
+      try {
+        buildExtractionPrompt({ blocks: [] });
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('Structure invalide (preparation.blocks undefined) pour buildExtractionPrompt', ({ given, when, then, and }) => {
+    let error;
+    
+    given('une préparation avec blocks undefined', () => {
+      // Pas besoin de mock, la validation se fait avant toute construction
+    });
+    
+    when('on tente d\'appeler buildExtractionPrompt', () => {
+      try {
+        buildExtractionPrompt({} as any);
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  // === Gestion des erreurs pour buildBlockPrompt ===
+  
+  test('Bloc null pour buildBlockPrompt', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un bloc null pour buildBlockPrompt', () => {
+      // Pas besoin de mock, la validation se fait avant toute construction
+    });
+    
+    when('on tente d\'appeler buildBlockPrompt', () => {
+      try {
+        buildBlockPrompt(null);
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('Bloc sans jsonPointer pour buildBlockPrompt', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un bloc sans jsonPointer pour buildBlockPrompt', () => {
+      // Pas besoin de mock, la validation se fait avant toute construction
+    });
+    
+    when('on tente d\'appeler buildBlockPrompt', () => {
+      try {
+        buildBlockPrompt({ instructions: [], htmlContents: [] } as any);
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('Instructions non-array pour buildBlockPrompt', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un bloc avec instructions de type non-array pour buildBlockPrompt', () => {
+      // Pas besoin de mock, la validation se fait avant toute construction
+    });
+    
+    when('on tente d\'appeler buildBlockPrompt', () => {
+      try {
+        buildBlockPrompt({ jsonPointer: '/method', instructions: 'not an array', htmlContents: [] } as any);
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('htmlContents vide pour buildBlockPrompt', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un bloc avec htmlContents array vide pour buildBlockPrompt', () => {
+      // Pas besoin de mock, la validation se fait avant toute construction
+    });
+    
+    when('on tente d\'appeler buildBlockPrompt', () => {
+      try {
+        buildBlockPrompt({ jsonPointer: '/method', instructions: [], htmlContents: [] });
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  // === Gestion des erreurs pour mergeJsonAtPath ===
+  
+  test('Target null pour mergeJsonAtPath', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un target null pour mergeJsonAtPath', () => {
+      // Pas besoin de mock, la validation se fait avant toute fusion
+    });
+    
+    when('on tente d\'appeler mergeJsonAtPath', () => {
+      try {
+        mergeJsonAtPath(null, '/method', {});
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('Path invalide (vide) pour mergeJsonAtPath', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un path vide pour mergeJsonAtPath', () => {
+      // Pas besoin de mock, la validation se fait avant toute fusion
+    });
+    
+    when('on tente d\'appeler mergeJsonAtPath', () => {
+      try {
+        mergeJsonAtPath({}, '', {});
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('Index array hors limites pour mergeJsonAtPath', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un target array et un path avec index hors limites pour mergeJsonAtPath', () => {
+      // Pas besoin de mock, la validation se fait avant toute fusion
+    });
+    
+    when('on tente d\'appeler mergeJsonAtPath', () => {
+      try {
+        mergeJsonAtPath([], '/10', {}); // Index 10 hors limites pour array vide
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  // === Gestion des erreurs pour recomposeArtifact ===
+  
+  test('partialResults null pour recomposeArtifact', ({ given, when, then, and }) => {
+    let error;
+    
+    given('des partialResults null pour recomposeArtifact', () => {
+      // Pas besoin de mock, la validation se fait avant toute recomposition
+    });
+    
+    when('on tente d\'appeler recomposeArtifact', () => {
+      try {
+        recomposeArtifact(null, {}, {}, 'https://www.hermes.admin.ch/en');
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('partialResults vide pour recomposeArtifact', ({ given, when, then, and }) => {
+    let error;
+    
+    given('des partialResults array vide pour recomposeArtifact', () => {
+      // Pas besoin de mock, la validation se fait avant toute recomposition
+    });
+    
+    when('on tente d\'appeler recomposeArtifact', () => {
+      try {
+        recomposeArtifact([], {}, {}, 'https://www.hermes.admin.ch/en');
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('jsonPointer manquant dans résultat partiel pour recomposeArtifact', ({ given, when, then, and }) => {
+    let error;
+    
+    given('des partialResults avec résultat partiel sans jsonPointer pour recomposeArtifact', () => {
+      // Pas besoin de mock, la validation se fait avant toute recomposition
+    });
+    
+    when('on tente d\'appeler recomposeArtifact', () => {
+      try {
+        recomposeArtifact([{ data: {} }] as any, {}, {}, 'https://www.hermes.admin.ch/en');
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+  
+  test('data invalide dans résultat partiel pour recomposeArtifact', ({ given, when, then, and }) => {
+    let error;
+    
+    given('des partialResults avec résultat partiel avec data null pour recomposeArtifact', () => {
+      // Pas besoin de mock, la validation se fait avant toute recomposition
+    });
+    
+    when('on tente d\'appeler recomposeArtifact', () => {
+      try {
+        recomposeArtifact([{ jsonPointer: '/method', data: null }], {}, {}, 'https://www.hermes.admin.ch/en');
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
     });
     
     and('le processus s\'arrête proprement', () => {

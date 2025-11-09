@@ -3,15 +3,22 @@ import { defineFeature, loadFeature } from 'jest-cucumber';
 import { Given, When, Then } from 'jest-cucumber';
 import fs from 'fs';
 import path from 'path';
+import findUp from 'find-up';
 
-// Import des fonctions du script refactorisé
-import { 
-  _testOnly_loadGlobalConfig as loadGlobalConfig, 
-  _testOnly_loadApiKey as loadApiKey,
-  _testOnly_loadAndResolveSchemas as loadAndResolveSchemas,
-  _testOnly_generateTemplate as generateTemplate 
-} from '../../../src/nuextract-client.js';
-import { resolveFromRepoRoot } from '../../../src/path-resolver.js';
+const fullFilePath = findUp.sync('package.json', { cwd: __dirname });
+if (!fullFilePath) {
+  throw new Error('Impossible de localiser la racine du repository');
+}
+const repoRoot = path.dirname(fullFilePath);
+const resolveFromRepoRoot = (...segments: string[]) => path.resolve(repoRoot, ...segments);
+
+const nuextractClientModulePath = resolveFromRepoRoot('hermes2022-concepts-site-extraction/src/nuextract-client.js');
+const {
+  _testOnly_loadGlobalConfig: loadGlobalConfig,
+  _testOnly_loadApiKey: loadApiKey,
+  _testOnly_loadAndResolveSchemas: loadAndResolveSchemas,
+  _testOnly_generateTemplate: generateTemplate
+} = require(nuextractClientModulePath);
 
 const feature = loadFeature(__dirname + '/template-generation.feature');
 

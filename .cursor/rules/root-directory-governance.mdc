@@ -1,0 +1,49 @@
+---
+description: Principes appliqués pour déterminer le répertoire racine du projet dans l'écosystème Node.js/JavaScript
+alwaysApply: true
+---
+
+# root-directory-governance.mdc: Principes appliqués pour déterminer le répertoire racine
+
+> Créé le : 2025-10-20  
+> Dernière mise à jour : 2025-11-08
+
+## Objectifs
+
+- Utiliser un mécanisme unique et robuste pour retrouver la racine du dépôt (`package.json`)
+- Éviter les chemins fragiles tels que `../../../`
+- Simplifier la maintenance corrective et évolutive en centralisant le snippet recommandé
+
+## Snippet standard à appliquer
+
+```javascript
+const fullFilePath = findUp.sync('package.json', { cwd: __dirname });
+if (!fullFilePath) {
+  throw new Error('Impossible de localiser la racine du repository');
+}
+const repoRoot = path.dirname(fullFilePath);
+const resolveFromRepoRoot = (...segments) => path.resolve(repoRoot, ...segments);
+```
+
+- Importer `find-up` (version synchronisée) et `path`
+- Toujours vérifier que `fullFilePath` est défini avant d’utiliser `path.dirname`
+- Définir localement un helper `resolveFromRepoRoot` si nécessaire
+
+## Règles à appliquer
+
+- `find-up` est la méthode officielle pour remonter jusqu'à `package.json`
+- Les chemins consommés par le code doivent être construits avec `path.resolve(repoRoot, …)`
+- Aucun chemin absolu ou relatif en `../..` ne doit subsister
+- Documenter dans les spécifications l'utilisation de ce snippet lorsque pertinent
+
+## Anti-patterns
+
+- Réimplémenter une logique différente (ex. `process.cwd()` ou `path.resolve(__dirname, '../../..')`)
+- Dupliquer le snippet sans contrôle d'erreur sur `findUp.sync`
+- Conserver d’anciennes abstractions (`path-resolver.js`) qui refont la même logique
+
+## Validation
+
+- Rechercher les motifs `../..` et les remplacer par des appels à `resolveFromRepoRoot`
+- Vérifier que `find-up` figure dans les dépendances concernées
+- Lors des revues, s'assurer que tout nouveau module suit ce snippet
