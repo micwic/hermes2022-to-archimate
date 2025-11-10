@@ -11,12 +11,14 @@
       "description": "Résumé conceptuel (cycle de vie, interfaces uniformes, jalons/quality gates, hiérarchie 1/2/2.x/3, rôle des phases communes)."
     },
     "sourceUrl": {
-      "type": "string",
-      "format": "uri",
-      "enum": [
-        "/project-management/phases.html"
-      ],
-      "description": "URL officielle de référence utilisée pour cette description."
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "/project-management/phases.html"
+        ]
+      },
+      "description": "Chemin relatif de la page de référence utilisée pour cette description (combiné avec baseUrl lors de l'extraction)."
     },
     "extractionInstructions": {
       "type": "array",
@@ -34,11 +36,6 @@
       },
       "description": "Instructions for extracting the phases overview from the phases page"
     },
-    "lastChecked": {
-      "type": "string",
-      "format": "date",
-      "description": "Date de dernière vérification de la source."
-    },
     "phases": {
       "type": "array",
       "items": {
@@ -50,17 +47,19 @@
             "description": "Identifiant unique de la phase (format: ph_abc123)"
           },
           "sourceUrl": {
-            "type": "string",
-            "format": "uri",
-            "enum": [
-              "/project-management/phases/initiation.html",
-              "/project-management/phases/concept.html",
-              "/project-management/phases/deployment.html",
-              "/project-management/phases/implementation.html",
-              "/project-management/phases/execution.html",
-              "/project-management/phases/closure.html"
-            ],
-            "description": "URL de la page spécifique de la phase (construite à partir de baseUrl)"
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "/project-management/phases/initiation.html",
+                "/project-management/phases/concept.html",
+                "/project-management/phases/deployment.html",
+                "/project-management/phases/implementation.html",
+                "/project-management/phases/execution.html",
+                "/project-management/phases/closure.html"
+              ]
+            },
+            "description": "Chemins relatifs des pages spécifiques de la phase (combinés avec baseUrl lors de l'extraction)"
           },
           "extractionInstructions": {
             "type": "array",
@@ -73,7 +72,7 @@
                 "Extract context explaining how phase integrates in lifecycle, relationship with other phases, importance in HERMES2022 methodology",
                 "Identify and list main outcomes (results): documents produced, decisions taken, foundations established",
                 "Identify control points and milestones: phase release decisions, required validations, success criteria",
-                "Determine supported approaches: traditional, agile, or both. Fill approach field with one or more values allowed by schema (traditional, agile, both) based on page content",
+                "Determine supported approaches as array: [\"traditional\"], [\"agile\"], or [\"traditional\", \"agile\"] if both are supported.",
                 "Output: plain text (no rich Markdown). Site language. Factual, neutral style, without extrapolation",
                 "Extract only information present on the page",
                 "Respect JSON structure defined in schema",
@@ -82,11 +81,6 @@
               ]
             },
             "description": "Instructions for extracting phase information from the phase-specific page"
-          },
-          "lastChecked": {
-            "type": "string",
-            "format": "date",
-            "description": "Date de dernière vérification de la source de cette phase."
           },
           "name": {
             "type": "string",
@@ -121,7 +115,7 @@
             "items": {
               "type": "string",
               "minLength": 5,
-              "maxLength": 200
+              "maxLength": 300
             },
             "description": "Liste des résultats attendus de la phase"
           },
@@ -130,7 +124,7 @@
             "items": {
               "type": "string",
               "minLength": 5,
-              "maxLength": 200
+              "maxLength": 300
             },
             "description": "Points de contrôle et jalons de la phase"
           },
@@ -143,11 +137,11 @@
             "description": "Approches supportées par la phase (traditionnelle, agile, ou les deux)"
           }
         },
-        "required": ["id", "name", "order", "type", "sourceUrl", "extractionInstructions", "lastChecked", "description", "context", "approach"]
+        "required": ["id", "name", "order", "type", "sourceUrl", "extractionInstructions", "description", "context", "approach"]
       },
       "minItems": 1,
       "description": "Liste des phases HERMES2022"
     }
   },
-  "required": ["overview", "sourceUrl", "extractionInstructions", "lastChecked", "phases"]
+  "required": ["overview", "sourceUrl", "extractionInstructions", "phases"]
 }

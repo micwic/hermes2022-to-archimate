@@ -40,9 +40,50 @@ async function fetchHtmlContent(url, timeoutMs = 30000) {
             return;
           }
           try {
+            // Configuration optimisée pour hermes.admin.ch (2025-11-10)
             const textContent = convert(data, {
               wordwrap: false,
-              preserveNewlines: true
+              preserveNewlines: true,
+              
+              // Cibler le contenu principal
+              baseElements: {
+                selectors: ['main', '.container__main', '.vertical-spacing']
+              },
+              
+              selectors: [
+                // Ignorer navigation et UI
+                { selector: 'header', format: 'skip' },
+                { selector: 'nav', format: 'skip' },
+                { selector: 'footer', format: 'skip' },
+                { selector: '.top-bar', format: 'skip' },
+                { selector: '.breadcrumb', format: 'skip' },
+                { selector: '.main-navigation', format: 'skip' },
+                { selector: '.mobile-menu', format: 'skip' },
+                { selector: '.language-switcher', format: 'skip' },
+                { selector: '.search', format: 'skip' },
+                { selector: '.burger', format: 'skip' },
+                { selector: '.back-to-top-btn', format: 'skip' },
+                { selector: '.container__aside', format: 'skip' },
+                
+                // Ignorer metadata
+                { selector: 'script', format: 'skip' },
+                { selector: 'style', format: 'skip' },
+                { selector: 'noscript', format: 'skip' },
+                
+                // Ignorer images et SVG
+                { selector: 'img', format: 'skip' },
+                { selector: 'svg', format: 'skip' },
+                { selector: 'picture', format: 'skip' },
+                
+                // Préserver structure sémantique
+                { selector: 'h1', options: { uppercase: false, leadingLineBreaks: 2, trailingLineBreaks: 1 } },
+                { selector: 'h2', options: { uppercase: false, leadingLineBreaks: 2, trailingLineBreaks: 1 } },
+                { selector: 'h3', options: { uppercase: false, leadingLineBreaks: 1, trailingLineBreaks: 1 } },
+                { selector: 'p', format: 'paragraph' },
+                { selector: 'ul', format: 'unorderedList' },
+                { selector: 'ol', format: 'orderedList' },
+                { selector: 'a', options: { ignoreHref: true } }
+              ]
             });
             resolve(textContent);
           } catch (convertError) {
@@ -84,6 +125,7 @@ async function collectHtmlSourcesAndInstructions(resolvedSchema, config, baseUrl
     }
 
     const blocks = [];
+    let localBlocksCount = 0; // Compteur de blocs trouvés localement (à ce niveau)
 
     for (const [key, value] of Object.entries(resolvedSchema)) {
       const currentPointer = jsonPointer === '/' ? `/${key}` : `${jsonPointer}/${key}`;
@@ -111,15 +153,22 @@ async function collectHtmlSourcesAndInstructions(resolvedSchema, config, baseUrl
 
           const instructions = extractionInstructionsProp.items.enum;
 
+          // CORRECTION: sourceUrl est maintenant un array avec items.enum (propriété paramétrique)
           let sourceUrls = [];
-          if (sourceUrlProp.enum && Array.isArray(sourceUrlProp.enum)) {
+          if (sourceUrlProp.type === 'array' && sourceUrlProp.items?.enum && Array.isArray(sourceUrlProp.items.enum)) {
+            // Cas array avec items.enum (nouveau format paramétrique)
+            sourceUrls = sourceUrlProp.items.enum;
+          } else if (sourceUrlProp.enum && Array.isArray(sourceUrlProp.enum)) {
+            // Cas ancien format avec enum direct (rétrocompatibilité)
             sourceUrls = sourceUrlProp.enum;
           } else if (typeof sourceUrlProp.default === 'string') {
+            // Cas avec default (rétrocompatibilité)
             sourceUrls = [sourceUrlProp.default];
           } else if (sourceUrlProp.enum && sourceUrlProp.enum.length > 0) {
+            // Cas enum non-array (rétrocompatibilité)
             sourceUrls = [sourceUrlProp.enum[0]];
           } else {
-            throw new Error(`Invalid sourceUrl at JSON Pointer: ${currentPointer}. Must have enum or default. Script stopped.`);
+            throw new Error(`Invalid sourceUrl at JSON Pointer: ${currentPointer}. Must have items.enum, enum, or default. Script stopped.`);
           }
 
           const htmlContents = [];
@@ -139,6 +188,7 @@ async function collectHtmlSourcesAndInstructions(resolvedSchema, config, baseUrl
             instructions,
             htmlContents
           });
+          localBlocksCount++; // Bloc trouvé à ce niveau
         }
 
         const nestedResult = await collectHtmlSourcesAndInstructions(
@@ -176,13 +226,19 @@ async function collectHtmlSourcesAndInstructions(resolvedSchema, config, baseUrl
 
           const instructions = extractionInstructionsProp.items.enum;
 
+          // CORRECTION: sourceUrl est maintenant un array avec items.enum (propriété paramétrique)
           let sourceUrls = [];
-          if (sourceUrlProp.enum && Array.isArray(sourceUrlProp.enum)) {
+          if (sourceUrlProp.type === 'array' && sourceUrlProp.items?.enum && Array.isArray(sourceUrlProp.items.enum)) {
+            // Cas array avec items.enum (nouveau format paramétrique)
+            sourceUrls = sourceUrlProp.items.enum;
+          } else if (sourceUrlProp.enum && Array.isArray(sourceUrlProp.enum)) {
+            // Cas ancien format avec enum direct (rétrocompatibilité)
             sourceUrls = sourceUrlProp.enum;
           } else if (typeof sourceUrlProp.default === 'string') {
+            // Cas avec default (rétrocompatibilité)
             sourceUrls = [sourceUrlProp.default];
           } else {
-            throw new Error(`Invalid sourceUrl for array items at JSON Pointer: ${currentPointer}. Must have enum or default. Script stopped.`);
+            throw new Error(`Invalid sourceUrl for array items at JSON Pointer: ${currentPointer}. Must have items.enum, enum, or default. Script stopped.`);
           }
 
           const htmlContents = [];
@@ -202,6 +258,7 @@ async function collectHtmlSourcesAndInstructions(resolvedSchema, config, baseUrl
             instructions,
             htmlContents
           });
+          localBlocksCount++; // Bloc trouvé à ce niveau (array items)
         }
 
         const otherItemsProps = { ...itemsProps };
@@ -222,7 +279,17 @@ async function collectHtmlSourcesAndInstructions(resolvedSchema, config, baseUrl
       }
     }
 
-    console.log(`[info] Collecte terminée depuis ${jsonPointer} : ${blocks.length} bloc(s) trouvé(s)`);
+    // Message de log clair distinguant blocs locaux vs total (incluant sous-jacents)
+    const nestedBlocksCount = blocks.length - localBlocksCount;
+    if (localBlocksCount === 0 && nestedBlocksCount === 0) {
+      console.log(`[info] Collecte terminée depuis ${jsonPointer} : aucun bloc trouvé, passage à la propriété suivante`);
+    } else if (localBlocksCount > 0 && nestedBlocksCount === 0) {
+      console.log(`[info] Collecte terminée depuis ${jsonPointer} : ${localBlocksCount} bloc(s) trouvé(s) à ce niveau`);
+    } else if (localBlocksCount === 0 && nestedBlocksCount > 0) {
+      console.log(`[info] Collecte terminée depuis ${jsonPointer} : ${nestedBlocksCount} bloc(s) sous-jacent(s) trouvé(s) en profondeur`);
+    } else {
+      console.log(`[info] Collecte terminée depuis ${jsonPointer} : ${localBlocksCount} bloc(s) à ce niveau + ${nestedBlocksCount} sous-jacent(s) = ${blocks.length} total`);
+    }
 
     return { blocks };
   } catch (error) {

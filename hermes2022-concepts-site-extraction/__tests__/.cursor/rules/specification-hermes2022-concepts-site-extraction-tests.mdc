@@ -79,6 +79,8 @@ __Règle__ : Éviter la redondance en documentant uniquement les décisions et p
 | `/with-external-system-mocked/nuextract-project-management-mocked.steps.ts` | Step definitions | Implémentation correspondante (cycles création/mise à jour) |
 | `/with-external-system-mocked/extract-hermes2022-concepts-mocked.feature` | Feature Gherkin | Tests mockés de l'extraction complète des concepts |
 | `/with-external-system-mocked/extract-hermes2022-concepts-mocked.steps.ts` | Step definitions | Implémentation correspondante (agrégation blocs, erreurs API) |
+| `/with-external-system/extract-hermes2022-concepts.feature` | Feature Gherkin | Tests d'intégration réels de l'extraction complète des concepts |
+| `/with-external-system/extract-hermes2022-concepts.steps.ts` | Step definitions | Implémentation correspondante (workflow complet end-to-end avec API NuExtract réelle) |
 
 ## Décisions architecturales et techniques
 
@@ -620,3 +622,77 @@ indépendant du schéma exhaustif `hermes2022-concepts.json`.
   tests mockés (coût inutile et dépendance aux évolutions structurelles).
 - __Absence d'assertion__ : Toujours vérifier le nombre d'appels API et la
   propagation des erreurs (`Invalid JSON response`, etc.).
+
+#### État d'implémentation
+
+✅ [Fonctionnalité réalisée - 2025-11-09]
+
+### Tests d'intégration réels pour extractHermes2022ConceptsWithNuExtract
+
+#### Description détaillée pour tests d'intégration réels
+
+[2025-11-09] Les scénarios `extract-hermes2022-concepts` (sans suffixe `-mocked`) valident le workflow complet end-to-end avec appels API réels vers la plateforme SaaS NuExtract et fetch HTML réel depuis le site HERMES2022.
+
+[2025-11-09] Le test couvre l'intégralité du workflow :
+
+1. **Chargement configuration** : `loadGlobalConfig()` depuis `extraction-config.schema.json`
+2. **Validation clé API** : `loadApiKey()` avec validation JWT
+3. **Résolution schéma** : `loadAndResolveSchemas()` avec validation Ajv Draft-07
+4. **Génération template** : `generateTemplate()` avec mode sync/async
+5. **Gestion projet** : `findOrCreateProject()` avec création/mise à jour selon `templateReset`
+6. **Extraction complète** : `extractHermes2022ConceptsWithNuExtract()` avec :
+   - Collecte HTML réelle depuis site HERMES2022 (conversion HTML→texte)
+   - Appels API réels NuExtract pour chaque bloc (`inferTextFromContent`)
+   - Recomposition artefact final
+   - Validation conformité schéma avec Ajv
+
+[2025-11-09] Le test utilise le schéma complet `hermes2022-concepts.json` (contrairement aux tests mockés qui utilisent un schéma minimal), ce qui permet de valider la conformité réelle de l'extraction avec les exigences métier.
+
+#### Justification pour tests d'intégration réels
+
+- **Validation end-to-end** : Vérifie le workflow complet dans les conditions réelles d'exécution
+- **Détection problèmes API** : Identifie les incohérences entre le schéma attendu et les réponses réelles de l'API NuExtract
+- **Validation qualité sémantique** : Vérifie que les données extraites respectent les contraintes métier (ex: `overview.length > 10`)
+- **Feedback concret** : Révèle les vrais bugs (pas des bugs hypothétiques simulés par mocks)
+- **Conformité schéma complet** : Valide avec le schéma exhaustif `hermes2022-concepts.json` (contrairement aux tests mockés)
+
+#### Patterns validés pour tests d'intégration réels
+
+- **Workflow séquentiel complet** : Config → API key → Schéma → Template → Projet → Extraction
+- **Validation technique (Then)** : `expect(extractionError).toBeUndefined()` + `expect(extractionResult).toBeDefined()`
+- **Validation métier (And)** : Structure artefact + conformité schéma + qualité sémantique
+- **Timeout adapté** : 180s (3 minutes) pour extraction complète avec collecte HTML + appels API multiples
+- **Hooks d'isolation** : `beforeEach`/`afterEach` conformes à @test-mock-governance
+- **Imports avec alias** : `@src/` (moduleNameMapper) conforme à @root-directory-governance
+
+#### Anti-Patterns pour tests d'intégration réels à éviter
+
+- **Timeout insuffisant** : Éviter timeout <120s → **Solution** : 180s minimum pour extraction complète → **Règle à adopter** : Marge sécurité pour latence réseau + appels API multiples
+- **Validation uniquement technique** : Éviter de valider uniquement `extractionError === undefined` → **Solution** : Ajouter validations métier (structure, conformité schéma) → **Règle à adopter** : Distinction technique vs métier selon @bdd-governance
+- **Schéma minimal** : Éviter d'utiliser un schéma simplifié → **Solution** : Utiliser schéma complet `hermes2022-concepts.json` → **Règle à adopter** : Tests réels = validation exhaustive
+
+#### Résultats actuels et problèmes identifiés
+
+[2025-11-09] **État actuel** : ❌ Test échoue avec erreur de validation Ajv
+
+**Erreur identifiée** : L'artefact reconstruit ne respecte pas le schéma JSON Schema :
+- ❌ Propriétés manquantes : `hermesVersion`, `publicationDate`, `overview`, `sourceUrl`, `extractionInstructions`, `lastChecked`
+- ❌ Propriétés additionnelles non autorisées
+- ❌ Type incorrect pour `/concepts/concept-phases/phases` (doit être array)
+
+**Cause racine** : L'API NuExtract ne retourne pas les données dans le format attendu par le schéma. Les réponses partielles de l'API ne contiennent pas toutes les propriétés requises définies dans le schéma.
+
+**Prochaines étapes** :
+1. Analyser les réponses réelles de l'API NuExtract pour comprendre le format retourné
+2. Ajuster soit le schéma, soit les prompts d'extraction, soit la logique de recomposition
+3. Vérifier que les `extractionInstructions` dans le schéma sont bien utilisées pour construire les prompts
+4. Valider que la fonction `recomposeArtifact()` fusionne correctement les résultats partiels
+
+#### État d'implémentation pour tests d'intégration réels
+
+🚧 [Test créé, problème API identifié - 2025-11-09]
+
+- ✅ Fichiers créés : `extract-hermes2022-concepts.feature` et `.steps.ts`
+- ✅ Test exécuté avec succès (workflow complet)
+- ❌ Validation schéma échoue : API NuExtract ne retourne pas le format attendu
+- 🚧 À investiguer : Format réel des réponses API vs schéma attendu

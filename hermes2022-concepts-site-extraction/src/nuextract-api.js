@@ -455,7 +455,15 @@ async function inferTextFromContent(hostname, port, path, pathPrefix, projectId,
           return;
         }
         try {
-          resolve(JSON.parse(data));
+          const response = JSON.parse(data);
+          // L'API infer-text retourne { result: {...}, documentInfo, completionTokens, promptTokens, ... }
+          // Extraire uniquement result qui contient le JSON extrait
+          if (response.result !== undefined) {
+            resolve(response.result);
+          } else {
+            // Fallback : retourner la réponse complète si result absent (compatibilité)
+            resolve(response);
+          }
         } catch (err) {
           reject(new Error('Invalid JSON response from infer-text API. Script stopped.', { cause: err }));
         }

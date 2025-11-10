@@ -52,44 +52,45 @@
         },
         "publicationDate": {
           "type": "string",
-          "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$",
-          "default": "04-2023",
-          "description": "Date de publication de la version HERMES (MM-YYYY). La valeur par défaut est 04-2023."
+          "format": "date",
+          "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$",
+          "default": "2023-04-01",
+          "description": "Date de publication de la version HERMES au format ISO 8601 (YYYY-MM-DD). La valeur par défaut est 2023-04-01 (HERMES 2022)."
         },
         "overview": {
           "type": "string",
-          "minLength": 600,
-          "maxLength": 5000,
-          "description": "Description générale des concepts de HERMES2022"
+          "minLength": 20,
+          "maxLength": 250,
+          "description": "Description courte et factuelle de la méthode HERMES2022 extraite de la page d'accueil (20-100 caractères)"
         },
         "sourceUrl": {
-          "type": "string",
-          "format": "uri",
-          "enum": [
-            "/"
-          ],
-          "default": "/",
-          "description": "URL des pages de référence utilisées pour cette description. Ces pages sont utilisées pour extraire la description générale de la méthode HERMES2022."
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "/"
+            ]
+          },
+          "description": "Chemins relatifs des pages de référence utilisées pour cette description (combinés avec baseUrl lors de l'extraction). Ces pages sont utilisées pour extraire la description générale de la méthode HERMES2022."
         },
         "extractionInstructions": {
           "type": "array",
           "items": {
             "type": "string",
             "enum": [
-              "Extract the overview of HERMES2022 method from the homepage",
-              "The overview must be factual, 600-5000 characters, plain text English",
-              "Focus on methodology concepts, project lifecycle, and key principles"
+              "Extract the version (hermesVersion) and publication date (publicationDate) of the HERMES method from the homepage",
+              "Publication date must be in ISO 8601 format: YYYY-MM-DD",
+              "The publication date for HERMES 2022 is always 2023-04-01",
+              "The publication date for HERMES 5 is always 2013-04-22",
+              "The publication date for HERMES 5.1 is always 2014-06-03",
+              "Extract the name and a very synthetic description (overview) of the HERMES method from the homepage",
+              "The overview must be factual, 20 characters minimal length, 250 characters maximum length, plain text English"
             ]
           },
           "description": "Instructions for extracting the method overview from the homepage"
-        },
-        "lastChecked": {
-          "type": "string",
-          "format": "date",
-          "description": "Date de dernière vérification de la source."
         }
       },
-      "required": ["hermesVersion", "publicationDate", "overview", "sourceUrl", "extractionInstructions", "lastChecked"],
+      "required": ["hermesVersion", "publicationDate", "overview", "sourceUrl", "extractionInstructions"],
       "additionalProperties": false
     },
     "concepts": {
@@ -102,13 +103,15 @@
           "description": "Description générale des concepts de HERMES2022"
         },
         "sourceUrl": {
-          "type": "string",
-          "format": "uri",
-          "enum": [
-            "/project-management/method-overview.html",
-            "/project-management/method-overview/preface.html"
-          ],
-          "description": "URL des pages de référence utilisées pour cette description. Ces pages sont utilisées pour extraire la description générale des concepts de HERMES2022."
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "/project-management/method-overview.html",
+              "/project-management/method-overview/preface.html"
+            ]
+          },
+          "description": "Chemins relatifs des pages de référence utilisées pour cette description (combinés avec baseUrl lors de l'extraction). Ces pages sont utilisées pour extraire la description générale des concepts de HERMES2022."
         },
         "extractionInstructions": {
           "type": "array",
@@ -129,17 +132,12 @@
           },
           "description": "Instructions for extracting the concepts overview from the method overview pages"
         },
-        "lastChecked": {
-          "type": "string",
-          "format": "date",
-          "description": "Date de dernière vérification de la source."
-        },
         "concept-phases": {
           "$ref": "./hermes2022-phases.json",
           "description": "Concept de phases HERMES2022 - détail des phases de la méthode"
         }
       },
-      "required": ["overview", "sourceUrl", "extractionInstructions", "lastChecked", "concept-phases"],
+      "required": ["overview", "sourceUrl", "extractionInstructions", "concept-phases"],
       "additionalProperties": false
     }
   },

@@ -475,6 +475,8 @@ async function findOrCreateProject(config, apiKey, templateObj) {
 function mergeJsonAtPath(target, path, value) {
   // Journalisation en entrée de fonction pour traçabilité
   console.log(`[info] Fusion de valeur au chemin ${path}`);
+  console.log(`[debug] Type de valeur à fusionner : ${typeof value}, est objet : ${typeof value === 'object'}, est array : ${Array.isArray(value)}, est null : ${value === null}`);
+  console.log(`[debug] Clés de la valeur (si objet) :`, value && typeof value === 'object' ? Object.keys(value) : 'N/A');
   
   try {
     // Validation paramètres
@@ -593,37 +595,45 @@ function buildBlockPrompt(block) {
       throw new Error('block.htmlContents is empty. No HTML content found for this block. Script stopped.');
     }
     
-    // Construire sections Markdown pour ce bloc
-    const sections = [];
+    // Construire le prompt Markdown pour ce bloc
+    const promptParts = [];
     
-    // Pour chaque contenu HTML dans le bloc, créer une section avec instructions + contenu
+    // Log des instructions d'extraction pour ce bloc (une seule fois)
+    console.log(`[debug] Bloc ${block.jsonPointer} : ${block.instructions.length} instruction(s) d'extraction`);
+    console.log(`[debug] Instructions : ${block.instructions.join(' | ')}`);
+    
+    // En-tête du bloc avec JSON Pointer (une seule fois)
+    promptParts.push(`## Block: ${block.jsonPointer}\n`);
+    
+    // Instructions d'extraction (une seule fois pour tout le bloc)
+    promptParts.push('### Extraction Instructions\n');
+    for (const instruction of block.instructions) {
+      promptParts.push(`- ${instruction}`);
+    }
+    promptParts.push('\n');
+    
+    // Pour chaque contenu HTML dans le bloc, ajouter une section de contenu
     for (const htmlContent of block.htmlContents) {
-      const section = [];
-      
-      // En-tête du bloc avec JSON Pointer
-      section.push(`## Block: ${block.jsonPointer}\n`);
-      
-      // Instructions d'extraction
-      section.push('### Extraction Instructions\n');
-      for (const instruction of block.instructions) {
-        section.push(`- ${instruction}`);
-      }
-      section.push('');
-      
       // Contenu texte (déjà converti HTML→texte) pour cette URL spécifique
-      section.push(`### Text Content from ${htmlContent.url}\n`);
-      section.push('```text');
-      section.push(htmlContent.content);
-      section.push('```\n');
+      promptParts.push(`### Text Content from ${htmlContent.url}\n`);
+      promptParts.push('```text');
+      promptParts.push(htmlContent.content);
+      promptParts.push('```\n');
       
-      sections.push(section.join('\n'));
+      // Log pour chaque URL traitée (taille du contenu texte)
+      console.log(`[debug] Contenu ajouté pour ${htmlContent.url} : ${htmlContent.content.length} caractères texte`);
     }
     
-    // Concaténation avec séparateurs clairs
-    const prompt = sections.join('\n---\n\n');
+    // Concaténation en un seul prompt pour ce bloc
+    const prompt = promptParts.join('\n');
     
     // Journalisation en sortie de fonction pour validation du succès
     console.log(`[info] Prompt d'extraction construit pour bloc ${block.jsonPointer} : ${prompt.length} caractères`);
+    
+    // Log temporaire pour validation visuelle de la structure (premiers 800 caractères)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[debug] Extrait du prompt :\n${prompt.substring(0, 800)}...\n`);
+    }
     
     return prompt;
   } catch (error) {
@@ -787,6 +797,9 @@ function recomposeArtifact(partialResults, resolvedSchema, config, baseUrl) {
       }
       // Sinon (cas principal), valueToMerge = data (bloc uniquement retourné par NuExtract)
       
+      // Log de la valeur à fusionner pour debug
+      console.log(`[debug] Valeur à fusionner pour ${jsonPointer} :`, JSON.stringify(valueToMerge, null, 2));
+      
       // Fusionner la valeur dans l'artefact au chemin jsonPointer
       mergeJsonAtPath(artifact, jsonPointer, valueToMerge);
     }
@@ -821,6 +834,50 @@ function recomposeArtifact(partialResults, resolvedSchema, config, baseUrl) {
     // Message contextualisé pour identifier facilement la fonction
     console.error(`Erreur lors de la recomposition de l'artefact: ${error.message}`);
     throw error; // Propagation simple avec préservation de la stack trace
+  }
+}
+
+/**
+ * Normalise les valeurs enum dans l'artefact selon le schéma
+ * Force les valeurs définies dans items.enum du schéma pour les propriétés paramétriques (sourceUrl, extractionInstructions)
+ * IMPORTANT: Parcourt les propriétés du SCHÉMA (pas de l'artefact) pour ajouter les propriétés paramétriques manquantes
+ * @param {object} artifact - Artefact à normaliser (modifié en place)
+ * @param {object} schema - Schéma résolu avec les enum de référence
+ * @param {string} jsonPointer - Pointeur JSON courant (pour logs)
+ */
+function normalizeEnumValues(artifact, schema, jsonPointer = '') {
+  if (!schema || !schema.properties) return;
+  
+  const schemaProps = schema.properties;
+  
+  // CORRECTION: Parcourir les propriétés du SCHÉMA (pas de l'artefact)
+  // pour détecter et ajouter les propriétés paramétriques manquantes (sourceUrl, extractionInstructions)
+  for (const key in schemaProps) {
+    if (!schemaProps.hasOwnProperty(key)) continue;
+    
+    const schemaProp = schemaProps[key];
+    const currentPointer = jsonPointer ? `${jsonPointer}/${key}` : `/${key}`;
+    
+    // Cas 1 : Array avec items.enum (sourceUrl, extractionInstructions)
+    // Force l'array complet de toutes les valeurs items.enum (propriétés paramétriques)
+    // AJOUTE la propriété si elle n'existe pas dans l'artefact (NuExtract ne retourne pas les propriétés paramétriques)
+    if (schemaProp.type === 'array' && schemaProp.items?.enum && Array.isArray(schemaProp.items.enum)) {
+      const expectedArray = schemaProp.items.enum; // Array complet des valeurs paramétriques
+      console.log(`[debug] Normalisation items.enum pour ${currentPointer} : forcer ${JSON.stringify(expectedArray)}`);
+      artifact[key] = expectedArray; // Force la valeur (ajoute si manquante, écrase si présente)
+    }
+    // Cas 2 : Objet imbriqué (récursion)
+    // Si la propriété existe dans l'artefact ET est un objet, on descend récursivement
+    else if (artifact[key] && typeof artifact[key] === 'object' && !Array.isArray(artifact[key]) && schemaProp.properties) {
+      normalizeEnumValues(artifact[key], schemaProp, currentPointer);
+    }
+    // Cas 3 : Array d'objets (phases)
+    // Si la propriété existe dans l'artefact ET est un array d'objets, on descend récursivement
+    else if (artifact[key] && Array.isArray(artifact[key]) && schemaProp.items?.properties) {
+      artifact[key].forEach((item, index) => {
+        normalizeEnumValues(item, schemaProp.items, `${currentPointer}/${index}`);
+      });
+    }
   }
 }
 
@@ -885,12 +942,19 @@ async function extractHermes2022ConceptsWithNuExtract(resolvedSchema, config, ap
         timeoutMs
       );
       
+      // Log de la réponse brute de l'API NuExtract pour debug
+      console.log(`[debug] Réponse API NuExtract pour bloc ${block.jsonPointer} - Type:`, typeof partialJson, '- Est objet:', typeof partialJson === 'object', '- Clés:', partialJson ? Object.keys(partialJson).slice(0, 10) : 'null');
+      
       // Stocker résultat partiel avec son jsonPointer
       partialResults.push({ jsonPointer: block.jsonPointer, data: partialJson });
     }
     
     // Phase 3 : Recomposition de l'artefact final
     const artifact = recomposeArtifact(partialResults, resolvedSchema, config, baseUrl);
+    
+    // Normaliser les valeurs enum depuis le schéma (forcer sourceUrl, extractionInstructions selon concept enum paramétrique)
+    console.log(`[info] Normalisation des valeurs enum depuis le schéma`);
+    normalizeEnumValues(artifact, resolvedSchema);
     
     // Phase 4 : Validation avec Ajv (schéma résolu)
     const ajv = new Ajv({ strict: false, allErrors: true });
