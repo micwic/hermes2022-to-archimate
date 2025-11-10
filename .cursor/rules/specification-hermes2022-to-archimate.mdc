@@ -58,12 +58,16 @@ alwaysApply: true
 
 ## Conception générale
 
-- Le projet est divisé en deux modules distincts :
-  - __Script Javascript JArchi__
-    - 1a) Extraction/Transformation des concepts HERMES2022 à partir du site internet
-    - 1b) Chargement/Mise à jour des éléments et relations correspondant aux concepts HERMES2022 dans un modèle Archimate de Archi
-  - __Javascript__
-    - 2) Chargement/Mise à jour des noeuds d'une base de données graphe Neo4j correspondant aux concepts standards HERMES2022.
+- Le projet est divisé en trois modules distincts :
+  - **Module Node.js** (`hermes2022-concepts-site-extraction`)
+    - 1a) Extraction des concepts HERMES2022 depuis le site internet
+    - 1b) Transformation et validation via APIs NuExtract
+    - 1c) Production de fichiers JSON intermédiaires validés
+  - **Script JArchi** (`archimate-model-loader`)
+    - 2a) Lecture des fichiers JSON intermédiaires
+    - 2b) Chargement/Mise à jour dans un modèle Archimate d'Archi
+  - **Javascript** (`hermes2022-ia-loader`)
+    - 3) Chargement/Mise à jour des noeuds d'une base de données graphe Neo4j correspondant aux concepts standards HERMES2022.
 
 - L'Extraction/Transformation donne lieu à la création/mise à jour de fichiers intermédiaires structurés et vérifiables pour être partagés comme données de référence en entrée par les autres modules 1) pour le chargement initial et la mise à jour de modèles Archimate Archi 2) et pour le chargement des concepts HERMES2022 dans la base de données graphe Neo4j.
 
@@ -127,6 +131,63 @@ __Architecture modulaire :__
 #### État d'implémentation de la décision
 
 🚧 [En cours de conception et réalisation]
+
+### Architecture hybride Node.js + JArchi
+
+#### Description détaillée de l'architecture hybride
+
+[2025-11-09] Le projet adopte une architecture hybride en deux phases distinctes pour respecter les contraintes techniques et optimiser la maintenabilité :
+
+**Phase 1 : Extraction et transformation (Node.js)**
+
+- Module `hermes2022-concepts-site-extraction` exécuté en Node.js
+- Utilise l'écosystème npm pour robustesse (Ajv, jsonwebtoken, html-to-text, find-up, @apidevtools/json-schema-ref-parser)
+- Tests BDD complets avec Jest + jest-cucumber
+- Produit des fichiers JSON intermédiaires validés par JSON Schema
+
+**Phase 2 : Chargement dans Archi (JArchi)**
+
+- Module `archimate-model-loader` exécuté dans JArchi (plugin Archi)
+- Lit les fichiers JSON intermédiaires
+- Utilise l'API JArchi pour créer/mettre à jour les éléments Archimate
+- Pas de dépendances externes (pur JavaScript JArchi)
+
+#### Justification de l'architecture hybride
+
+- **Séparation des responsabilités** : Extraction/transformation complexe (Node.js) vs Manipulation Archi simple (JArchi)
+- **Testabilité** : Tests BDD Node.js exhaustifs pour la logique métier critique
+- **Maintenabilité** : Écosystème npm mature pour extraction vs API JArchi native pour Archi
+- **Réutilisabilité** : Fichiers JSON intermédiaires = interface propre et vérifiable
+- **Qualité** : Validation JSON Schema stricte entre les deux phases
+- **Leçon apprise** : Dérive architecturale JArchi→Node.js identifiée (2025-11-09) - Absence de tests de conformité JArchi dès le départ a permis l'introduction progressive de dépendances Node.js incompatibles avec JArchi
+
+#### Patterns validés pour l'architecture hybride
+
+- **Interface JSON** : Fichiers JSON validés par JSON Schema comme contrat entre Node.js et JArchi
+- **Human-in-the-loop** : Possibilité de vérifier/corriger les JSON avant chargement dans Archi
+- **Tests séparés** : Tests BDD Node.js pour extraction, tests manuels JArchi pour chargement
+- **Module Node.js** : Code avec dépendances npm (https, Ajv, jsonwebtoken, html-to-text)
+- **Module JArchi** : Code pur JavaScript compatible JArchi, lecture JSON + API JArchi
+
+#### Anti-Patterns pour l'architecture hybride
+
+- **Mélange Node.js/JArchi** : Éviter de tenter d'exécuter du code Node.js dans JArchi → **Solution** : Séparation stricte → **Règle** : Deux modules distincts
+- **Dépendances npm dans JArchi** : Éviter require() de packages npm dans scripts JArchi → **Solution** : Fichiers JSON intermédiaires → **Règle** : Interface propre
+- **Absence de tests architecturaux** : Éviter de ne pas tester les contraintes architecturales → **Solution** : Tests de conformité dès le départ → **Règle** : Voir @architectural-constraints-testing
+
+#### État d'implémentation de l'architecture hybride
+
+✅ [Phase 1 Node.js complétée - 2025-11-09]
+
+- ✅ Module `hermes2022-concepts-site-extraction` fonctionnel
+- ✅ Tests BDD complets (unit + integration)
+- ✅ Production fichiers JSON validés
+
+🚧 [Phase 2 JArchi à implémenter]
+
+- ❌ Module `archimate-model-loader` à créer
+- ❌ Script JArchi de lecture JSON à développer
+- ❌ Tests manuels JArchi à définir
 
 ### Structure et format du fichier intermédiaire
 

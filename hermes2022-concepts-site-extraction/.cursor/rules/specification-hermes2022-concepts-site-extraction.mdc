@@ -8,7 +8,7 @@ alwaysApply: true
 Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rules/
 
 > Créé le : 2025-08-16
-> Dernière mise à jour : 2025-11-04
+> Dernière mise à jour : 2025-11-10
 
 ## Description générale
 
@@ -36,7 +36,11 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 ## Conception générale
 
 - Un fichier de configuration JSON de l'extraction contient les propriétés utiles à celle-ci
-- Le processus d'extraction est un agent spécialisé :<br>- Javascript compatible comme plugin JArchi de Archi<br>- générique et configurable, son exécution conforme est basée sur le contenu du fichier de configuration et sur les définitions de structure du fichier intermédiaire cible
+- Le processus d'extraction est un agent spécialisé :
+  - **Javascript Node.js** avec écosystème npm (Jest, Ajv, jsonwebtoken, html-to-text, find-up)
+  - Produit des **fichiers JSON intermédiaires** validés et structurés
+  - Fichiers JSON consommés ensuite par un **script JArchi** pour chargement dans Archi (module `archimate-model-loader`)
+  - Générique et configurable, son exécution conforme est basée sur le contenu du fichier de configuration et sur les définitions de structure du fichier intermédiaire cible
 - L'extraction des contenus du site internet est assurée par l'agent spécialisé à partir des urls définies pour chaque concept dans le fichier de configuration
 - Les transformations sont effectuées par l'IA spécialisée NuExtract en faisant appel aux APIs disponibles en mode SaaS dans un projet nommé HERMES2022 qui peut comprendre des exemples ajustables propres à chaque contexte directement dans la plateforme SaaS en dehors du code de l'agent.
 - Les concept HERMES2022 jugés pertinents sont, en plus de la vue générale de la méthode dans son ensemble : 1) Les phases, 2) Les scénarios, 3) Les modules, 4) Les tâches, 5) Les résultats, 6) Les rôles
@@ -81,7 +85,8 @@ Chemin : hermes2022-to-archimate/hermes2022-concepts-site-extraction/.cursor/rul
 
 - [2025-10-14] L'extraction des concepts HERMES2022 utilise une approche hybride en deux phases : Phase 1 avec l'extraction de pages internet de références par Javascript qui aliment des appels à l'IA spécialisée NuExtract par les APIs disponibles dans le cloud pour synthétiser les contenus et assurer la transformation dans le format JSON.
 - [2025-08-16] L'approche doit permettre la réutilisation des comportements dans d'autres contextes que le projet actuel, notamment avec du paramétrage (autres contenants et contenus, autres instructions pour l'IA).
-- [2025-10-14] Le composant doit pouvoir s'exécuter dans Archi avec le plugin JArchi
+- [2025-11-09] Le composant s'exécute en **Node.js** pour l'extraction et la transformation
+- [2025-11-09] Les fichiers JSON produits sont chargés dans Archi via un **script JArchi séparé** (module `archimate-model-loader`)
 
 #### Justification pour l'approche hybride IA avec NuExtract
 
@@ -129,13 +134,14 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 #### Description détaillée pour l'architecture modulaire
 
-- [2025-10-26] L'extraction des concepts HERMES2022 est réalisée par un agent JavaScript modulaire exécuté dans JArchi (plugin d'Archi), qui articule les requêtes HTTP vers les APIs de NuExtract dans le cloud pour analyser et résumer le contenu des pages HTML, puis générer des fichiers JSON structurés avec les synthèses opérées.
+- [2025-10-26] L'extraction des concepts HERMES2022 est réalisée par un agent JavaScript modulaire exécuté en **Node.js**, qui articule les requêtes HTTP vers les APIs de NuExtract dans le cloud pour analyser et résumer le contenu des pages HTML, puis générer des fichiers JSON structurés avec les synthèses opérées.
 - [2025-10-26] L'agent est divisé en modules distincts selon les principes SOLID :
   - __`nuextract-api.js`__ : Couche API/I/O - Appels HTTP purs vers les APIs NuExtract (fonctions pures avec Dependency Injection)
   - __`nuextract-client.js`__ : Couche logique métier - Orchestration, validation, transformation, gestion des fallbacks de configuration
+  - __`html-collector-and-transformer.js`__ : Couche collecte HTML - Fetch et conversion HTML→texte
   - __Snippet racine (`findUp.sync`)__ : À appliquer dans chaque module pour déterminer `repoRoot` avant de charger la configuration ou les schémas
 - [2025-10-26] L'agent gère le cycle complet : chargement configuration, validation clé API, chargement instructions, résolution et validation schémas JSON, génération template, gestion projet NuExtract.
-- [2025-10-26] L'agent est conçu pour être modulaire, réutilisable et intégré à l'écosystème JArchi de Archi sans dépendances externes inutiles.
+- [2025-11-09] L'agent est conçu pour être modulaire, réutilisable et utilise l'écosystème npm mature (Ajv, jsonwebtoken, html-to-text, find-up) pour robustesse et maintenabilité.
 
 #### Justification pour l'architecture modulaire
 
@@ -145,7 +151,9 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 - __Testabilité__ : Logique métier testable avec API mockée, fonctions pures facilement testables
 - __Maintenabilité__ : Changements API isolés sans impact sur logique métier
 - __Réutilisabilité__ : Module API réutilisable dans d'autres contextes (pas de dépendance à une config spécifique)
-- __Simplicité et Intégration__ : Langage de référence qui permet d'utiliser les APIs Java natives (java.net.http.HttpClient) pour les requêtes HTTP et les appels aux APIs de NuExtract, évitant les dépendances Node.js ou Axios, et permettant une exécution directe dans JArchi de Archi.
+- __Écosystème Node.js__ : Utilisation de l'écosystème npm mature (https, Ajv, jsonwebtoken, html-to-text) pour robustesse et maintenabilité
+- __Tests BDD complets__ : Framework Jest + jest-cucumber pour validation comportementale
+- __Architecture hybride__ : Node.js pour extraction/transformation → JSON → JArchi pour chargement dans Archi
 
 #### Patterns validés pour l'architecture modulaire
 
@@ -156,9 +164,10 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 - __Appels avec DI__ : `await nuextractApi.inferTemplateAsync(hostname, port, path, apiKey, description, 60)`
 - __Fallbacks dans client__ : `const hostname = config?.nuextract?.baseUrl || 'nuextract.ai'`
 - __Résolution chemins__ : `resolveFromRepoRoot(config.nuextract.apiKeyFile)` avec le snippet présenté dans @root-directory-governance
-- __Requêtes HTTP natives__ : Utilisation de `https` (Node.js) ou `java.net.http.HttpClient` (JArchi) pour les appels vers NuExtract
+- __Requêtes HTTP Node.js__ : Utilisation de `https` (module Node.js) pour les appels vers NuExtract
 - __Gestion asynchrone__ : Promesses JavaScript pour les requêtes non-bloquantes
 - __Validation JSON Schema__ : Utilisation de `@apidevtools/json-schema-ref-parser` pour résolution des `$ref` et `Ajv` pour validation conformité JSON Schema Draft-07
+- __Conversion HTML→texte__ : Utilisation de `html-to-text` pour réduire la taille des prompts
 
 #### Anti-Patterns pour l'architecture modulaire à éviter
 
@@ -167,7 +176,7 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 - __Logique métier dans API__ : Éviter la logique de transformation ou fallbacks dans nuextract-api.js → __Solution__ : API = HTTP uniquement → __Règle__ : Separation of Concerns
 - __Exports _testOnly_ dans API__ : Éviter dans nuextract-api.js → __Solution__ : Exports normaux → __Règle__ : Interface publique claire
 - __God Module__ : Éviter d'ajouter d'autres responsabilités (parsing, validation) dans nuextract-api.js → __Solution__ : Créer modules dédiés → __Règle__ : Single Responsibility
-- __Dépendances externes lourdes__ : Éviter Axios ou libs Node.js inutiles → __Solution__ : APIs Java natives pour JArchi → __Règle à adopter__ : Minimalisme pour intégration JArchi
+- __Dépendances npm injustifiées__ : Éviter d'ajouter des packages npm sans justification → __Solution__ : Utiliser packages standards reconnus (Ajv, jsonwebtoken, html-to-text) → __Règle à adopter__ : Équilibre entre robustesse et simplicité
 - __Gestion d'erreurs insuffisante__ : Éviter les timeouts infinis → __Solution__ : Timeouts explicites → __Règle à adopter__ : Robustesse et non-blocage de l'UI
 
 #### État d'implémentation pour l'architecture modulaire
@@ -197,7 +206,7 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 
 - __Précision et Fiabilité__ : Modèle spécialisé pour extraction HTML→JSON, surpassant les modèles généralistes pour cette tâche, avec validation automatique du JSON.
 - __Sécurité et Conformité__ : Utilisation de la clé API personnelle (pas de stockage sensible externe), respect des licences MIT et lois suisses.
-- __Intégration avec JArchi__ : APIs REST simples, compatibles avec java.net.http.HttpClient, sans dépendances supplémentaires.
+- __APIs REST simples__ : Compatible avec Node.js (https) et potentiellement JArchi (java.net.http.HttpClient) pour consommation des fichiers JSON
 - __Évolutivité__ : Support de schémas personnalisés pour différents concepts HERMES2022, et possibilité d'extension à d'autres modèles IA.
 
 #### Patterns validés pour l'intégration des APIs NuExtract
@@ -220,6 +229,86 @@ L'ensemble des APIs NuExtract sont décrites dans @hermes2022-concepts-site-extr
 - ✅ __Gestion timeouts__ : Timeouts explicites pour toutes les requêtes HTTP (sync: 35s, async: 10s, jobs: 5s, projects: 10s)
 - ✅ __Authentification Bearer__ : En-tête `Authorization: Bearer <clé JWT>` sur toutes les requêtes
 - ✅ __Gestion erreurs__ : Messages d'erreur contextualisés avec Error Cause (ES2022) pour préserver stack trace
+
+### Conversion HTML→texte avec html-to-text
+
+#### Description détaillée pour la conversion HTML→texte
+
+- [2025-11-10] La conversion HTML→texte utilise exclusivement la bibliothèque `html-to-text` (pas de Cheerio)
+- [2025-11-10] La configuration est optimisée spécifiquement pour la structure HTML de `hermes.admin.ch` identifiée par analyse du HTML réel
+- [2025-11-10] Les sélecteurs ciblent le contenu principal (`main`, `.container__main`, `.vertical-spacing`) et ignorent les éléments non pertinents (navigation, footer, sidebar, metadata, images)
+- [2025-11-10] La structure sémantique est préservée (titres H1/H2/H3 avec hiérarchie, paragraphes, listes) pour faciliter l'interprétation par l'IA NuExtract
+
+#### Justification pour la conversion HTML→texte
+
+- __Réduction taille prompts__ : Élimination du bruit HTML (navigation, footer, sidebar, images, scripts) réduit significativement la taille des prompts envoyés à NuExtract
+- __Préservation sémantique__ : Structure hiérarchique des titres et paragraphes préservée pour maintenir le contexte et la logique du contenu HERMES2022
+- __Simplicité architecture__ : Utilisation de `html-to-text` uniquement (pas de Cheerio) pour éviter la complexité et respecter l'écosystème npm minimal
+- __Configuration spécifique__ : Sélecteurs adaptés à la structure HTML réelle de `hermes.admin.ch` (analysée via logs d'exécution)
+
+#### Patterns validés pour la conversion HTML→texte
+
+```javascript
+const textContent = convert(data, {
+  wordwrap: false,
+  preserveNewlines: true,
+  
+  // Cibler le contenu principal
+  baseElements: {
+    selectors: ['main', '.container__main', '.vertical-spacing']
+  },
+  
+  selectors: [
+    // Ignorer navigation et UI
+    { selector: 'header', format: 'skip' },
+    { selector: 'nav', format: 'skip' },
+    { selector: 'footer', format: 'skip' },
+    { selector: '.top-bar', format: 'skip' },
+    { selector: '.breadcrumb', format: 'skip' },
+    { selector: '.main-navigation', format: 'skip' },
+    { selector: '.mobile-menu', format: 'skip' },
+    { selector: '.language-switcher', format: 'skip' },
+    { selector: '.search', format: 'skip' },
+    { selector: '.burger', format: 'skip' },
+    { selector: '.back-to-top-btn', format: 'skip' },
+    { selector: '.container__aside', format: 'skip' },
+    
+    // Ignorer metadata
+    { selector: 'script', format: 'skip' },
+    { selector: 'style', format: 'skip' },
+    { selector: 'noscript', format: 'skip' },
+    
+    // Ignorer images et SVG
+    { selector: 'img', format: 'skip' },
+    { selector: 'svg', format: 'skip' },
+    { selector: 'picture', format: 'skip' },
+    
+    // Préserver structure sémantique
+    { selector: 'h1', options: { uppercase: false, leadingLineBreaks: 2, trailingLineBreaks: 1 } },
+    { selector: 'h2', options: { uppercase: false, leadingLineBreaks: 2, trailingLineBreaks: 1 } },
+    { selector: 'h3', options: { uppercase: false, leadingLineBreaks: 1, trailingLineBreaks: 1 } },
+    { selector: 'p', format: 'paragraph' },
+    { selector: 'ul', format: 'unorderedList' },
+    { selector: 'ol', format: 'orderedList' },
+    { selector: 'a', options: { ignoreHref: true } }
+  ]
+});
+```
+
+#### Anti-Patterns pour la conversion HTML→texte à éviter
+
+- __Cheerio__ : Éviter d'ajouter Cheerio pour nettoyage HTML → __Solution__ : Utiliser sélecteurs `html-to-text` uniquement → __Règle à adopter__ : Simplicité et écosystème npm minimal
+- __Configuration générique__ : Éviter configuration basique sans sélecteurs → __Solution__ : Configuration spécifique à `hermes.admin.ch` → __Règle à adopter__ : Analyse HTML réel pour optimisation
+- __Perte structure sémantique__ : Éviter conversion plate sans hiérarchie → __Solution__ : Préserver titres H1/H2/H3 avec espacement → __Règle à adopter__ : Structure sémantique pour IA
+
+#### État d'implémentation pour la conversion HTML→texte
+
+✅ [Configuration appliquée dans html-collector-and-transformer.js - 2025-11-10]
+
+- ✅ __Sélecteurs spécifiques__ : Configuration adaptée à la structure HTML de `hermes.admin.ch`
+- ✅ __Contenu principal ciblé__ : `baseElements` avec `main`, `.container__main`, `.vertical-spacing`
+- ✅ __Bruit éliminé__ : Navigation, footer, sidebar, metadata, images ignorés
+- ✅ __Structure préservée__ : Titres H1/H2/H3, paragraphes, listes avec espacement sémantique
 
 ### Validation de la clé API avec jsonwebtoken
 
