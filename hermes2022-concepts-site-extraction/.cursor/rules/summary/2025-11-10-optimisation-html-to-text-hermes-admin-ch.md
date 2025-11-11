@@ -142,3 +142,4 @@ const textContent = convert(data, {
 - Gouvernance : `@cursor-rules-summary-governance`, `@markdown-formatting-standards`
 - Documentation `html-to-text` : https://github.com/html-to-text/node-html-to-text
 
+

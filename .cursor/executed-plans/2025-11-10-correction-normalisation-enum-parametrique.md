@@ -217,3 +217,4 @@ Les erreurs suivantes sont des problèmes de **qualité d'extraction NuExtract**
 - `shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts.json`
 - `shared/hermes2022-extraction-files/config/json-schemas/hermes2022-phases.json`
 
+
