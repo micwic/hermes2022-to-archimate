@@ -2,6 +2,8 @@
 
 **Date d'exécution** : 2025-11-10
 
+**Plan original** : `tests-08c2447b.plan.md`
+
 **Contexte** : Résolution des erreurs de validation Ajv causées par l'incompatibilité entre les valeurs retournées par NuExtract et les schémas JSON. Les propriétés paramétriques (`sourceUrl`, `extractionInstructions`) ne sont pas retournées par NuExtract mais doivent être forcées depuis le schéma.
 
 ## Objectif
