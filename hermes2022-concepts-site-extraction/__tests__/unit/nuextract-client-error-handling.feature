@@ -362,3 +362,33 @@ Fonctionnalité: Gestion d'erreur robuste
     Alors une erreur contenant "Invalid data in partial result" est générée
     Et le processus s'arrête proprement
   #
+  # === Gestion des erreurs pour saveArtifact ===
+
+  Scénario: Erreur artefact null pour saveArtifact
+    Etant donné un artefact null pour saveArtifact
+    Quand on tente de sauvegarder l'artefact
+    Alors une erreur contenant "Invalid artifact: artifact must be a non-null object" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: Erreur artefact non-objet (array) pour saveArtifact
+    Etant donné un artefact de type array pour saveArtifact
+    Quand on tente de sauvegarder l'artefact
+    Alors une erreur contenant "Invalid artifact: artifact must be a non-null object" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: Erreur artefact non-objet (string) pour saveArtifact
+    Etant donné un artefact de type string pour saveArtifact
+    Quand on tente de sauvegarder l'artefact
+    Alors une erreur contenant "Invalid artifact: artifact must be a non-null object" est générée
+    Et le processus s'arrête proprement
+  #
+  # === Gestion des erreurs pour extractHermes2022ConceptsWithNuExtract ===
+
+  Scénario: Erreur validation Ajv échouée pour extractHermes2022ConceptsWithNuExtract
+    Etant donné un schéma résolu valide
+    Et une extraction NuExtract qui retourne un artefact non conforme au schéma
+    Quand on tente d'extraire les concepts HERMES2022
+    Alors une erreur contenant "Extracted JSON does not conform to schema" est générée
+    Et le message contient les détails des erreurs de validation
+    Et le processus s'arrête proprement
+  #

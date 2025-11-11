@@ -991,7 +991,7 @@ async function saveArtifact(config, artifact, now = new Date()) {
   console.log('[info] Sauvegarde de l\'artefact et initialisation du fichier d\'approbation');
 
   try {
-    if (!artifact || typeof artifact !== 'object') {
+    if (!artifact || typeof artifact !== 'object' || Array.isArray(artifact)) {
       throw new Error('Invalid artifact: artifact must be a non-null object. Script stopped.');
     }
 

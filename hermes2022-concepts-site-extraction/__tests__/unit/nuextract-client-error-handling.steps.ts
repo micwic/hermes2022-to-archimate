@@ -17,7 +17,18 @@ jest.mock('../../src/nuextract-api.js', () => {
     inferTemplateFromDescriptionAsync: jest.fn(actual.inferTemplateFromDescriptionAsync),
     pollJobUntilComplete: jest.fn(actual.pollJobUntilComplete),
     getNuExtractProjects: jest.fn(actual.getNuExtractProjects),
-    putProjectTemplate: jest.fn(actual.putProjectTemplate)
+    putProjectTemplate: jest.fn(actual.putProjectTemplate),
+    inferTextFromContent: jest.fn(actual.inferTextFromContent)
+  };
+});
+
+// Mock du module html-collector-and-transformer pour éviter les appels HTTP réels dans extractHermes2022ConceptsWithNuExtract
+jest.mock('../../src/html-collector-and-transformer.js', () => {
+  const actual = jest.requireActual('../../src/html-collector-and-transformer.js');
+  return {
+    ...actual,
+    collectHtmlSourcesAndInstructions: jest.fn(actual.collectHtmlSourcesAndInstructions),
+    fetchHtmlContent: jest.fn(actual.fetchHtmlContent)
   };
 });
 
@@ -37,7 +48,9 @@ import {
   _testOnly_buildExtractionPrompt as buildExtractionPrompt,
   _testOnly_buildBlockPrompt as buildBlockPrompt,
   _testOnly_recomposeArtifact as recomposeArtifact,
-  _testOnly_mergeJsonAtPath as mergeJsonAtPath
+  _testOnly_mergeJsonAtPath as mergeJsonAtPath,
+  _testOnly_saveArtifact as saveArtifact,
+  _testOnly_extractHermes2022ConceptsWithNuExtract as extractHermes2022ConceptsWithNuExtract
 } from '../../src/nuextract-client.js';
 
 const fullFilePath = findUp.sync('package.json', { cwd: __dirname });
@@ -2101,6 +2114,159 @@ defineFeature(feature, (test) => {
       expect(error).toBeInstanceOf(Error);
       expect(error.message).toContain('Script stopped');
       jest.clearAllMocks();
+    });
+  });
+
+  // === Gestion des erreurs pour saveArtifact ===
+
+  test('Erreur artefact null pour saveArtifact', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un artefact null pour saveArtifact', () => {
+      // Pas besoin de mock, la validation se fait avant toute opération fs
+    });
+    
+    when('on tente de sauvegarder l\'artefact', async () => {
+      try {
+        const config = { artifactBaseDirectory: 'test-dir' };
+        await saveArtifact(config, null);
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+
+  test('Erreur artefact non-objet (array) pour saveArtifact', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un artefact de type array pour saveArtifact', () => {
+      // Pas besoin de mock, la validation se fait avant toute opération fs
+    });
+    
+    when('on tente de sauvegarder l\'artefact', async () => {
+      try {
+        const config = { artifactBaseDirectory: 'test-dir' };
+        await saveArtifact(config, [1, 2, 3]);
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+
+  test('Erreur artefact non-objet (string) pour saveArtifact', ({ given, when, then, and }) => {
+    let error;
+    
+    given('un artefact de type string pour saveArtifact', () => {
+      // Pas besoin de mock, la validation se fait avant toute opération fs
+    });
+    
+    when('on tente de sauvegarder l\'artefact', async () => {
+      try {
+        const config = { artifactBaseDirectory: 'test-dir' };
+        await saveArtifact(config, 'not an object');
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Script stopped');
+      jest.clearAllMocks();
+    });
+  });
+
+  // === Gestion des erreurs pour extractHermes2022ConceptsWithNuExtract ===
+
+  test('Erreur validation Ajv échouée pour extractHermes2022ConceptsWithNuExtract', ({ given, when, then, and }) => {
+    let error;
+    let config;
+    let apiKey;
+    let resolvedSchema;
+    
+    given('un schéma résolu valide', async () => {
+      config = await loadGlobalConfig();
+      apiKey = await loadApiKey(config);
+      resolvedSchema = await loadAndResolveSchemas(config);
+    });
+    
+    and('une extraction NuExtract qui retourne un artefact non conforme au schéma', () => {
+      // Mock collectHtmlSourcesAndInstructions pour retourner des blocs valides (évite appels HTTP réels)
+      const htmlCollectorModule = require('../../src/html-collector-and-transformer.js');
+      jest.spyOn(htmlCollectorModule, 'collectHtmlSourcesAndInstructions')
+        .mockResolvedValue({
+          blocks: [
+            {
+              jsonPointer: '/concepts',
+              instructions: ['Extract concepts'],
+              htmlContents: [{ url: 'https://test.com', content: 'test content' }]
+            }
+          ]
+        });
+      
+      // Mock nuextractApi.inferTextFromContent pour retourner un artefact NON CONFORME
+      // L'artefact retourné sera recomposé par recomposeArtifact (fonction interne)
+      // et le résultat final sera non conforme au schéma, déclenchant l'erreur Ajv
+      (nuextractApi.inferTextFromContent as jest.Mock)
+        .mockResolvedValue({
+          // Structure non conforme : propriété supplémentaire non autorisée, type invalide
+          concepts: {
+            invalidProperty: 'not in schema', // Propriété non autorisée dans le schéma
+            overview: 123 // Type invalide (devrait être string, pas number)
+          }
+        });
+    });
+    
+    when('on tente d\'extraire les concepts HERMES2022', async () => {
+      try {
+        await extractHermes2022ConceptsWithNuExtract(resolvedSchema, config, apiKey, 'test-project-id');
+      } catch (e) {
+        error = e;
+      }
+    });
+    
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+    
+    and('le message contient les détails des erreurs de validation', () => {
+      expect(error.message).toContain('Script stopped');
+      // Le message doit contenir les détails Ajv (format: "must have required property", "must NOT have additional properties", etc.)
+      expect(error.message).toMatch(/must have required property|must NOT have additional properties|must be/);
+    });
+    
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      jest.clearAllMocks();
+      jest.restoreAllMocks();
     });
   });
 });
