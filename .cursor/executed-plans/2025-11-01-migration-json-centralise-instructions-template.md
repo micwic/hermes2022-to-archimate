@@ -1,8 +1,10 @@
-# Plan : Migration instructions template vers extraction-config.schema.json
+# Plan exécuté : Migration instructions template vers extraction-config.schema.json
 
-**Date** : 2025-11-01
+**Date d'exécution** : 2025-11-01
 
 **Statut** : ✅ Complété (Phase 1 uniquement)
+
+**Plan original** : `migration-json-centr-c775dbda.plan.md`
 
 ## Contexte
 
