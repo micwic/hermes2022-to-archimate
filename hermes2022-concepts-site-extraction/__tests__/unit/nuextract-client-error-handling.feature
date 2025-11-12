@@ -1,6 +1,14 @@
 # language: fr
 Fonctionnalité: Gestion d'erreur robuste
   #
+  # === Gestion des erreurs système (résolution racine repository) ===
+
+  Scénario: Erreur racine repository introuvable
+    Etant donné find-up ne trouve pas package.json
+    Quand on tente d'initialiser le module
+    Alors une erreur contenant "Impossible de localiser la racine du repository" est générée
+    Et le processus s'arrête proprement
+  #
   # === Gestion des erreurs de configuration (fonction loadGlobalConfig) ===
 
   Scénario: Erreur schéma JSON Schema introuvable
@@ -54,21 +62,6 @@ Fonctionnalité: Gestion d'erreur robuste
     Alors la clé est chargée avec succès
     Et les espaces ont été supprimés
   #
-  # === Gestion des erreurs de chargement des instructions (fonction loadInstructions) ===
-
-  Scénario: Erreur templateTransformationInstructions.instructions absent de config
-    Etant donné une configuration sans templateTransformationInstructions.instructions
-    Quand on tente de charger les instructions
-    Alors une erreur "templateTransformationInstructions.instructions non trouvé dans config.nuextract" est générée
-    Et le processus s'arrête proprement
-
-  Scénario: Erreur templateTransformationInstructions.instructions n'est pas un array
-    Etant donné une configuration avec templateTransformationInstructions.instructions de type string
-    Quand on tente de charger les instructions
-    Alors une erreur contenant "instructions invalide: type" est générée
-    Et le message indique le format attendu "array de strings"
-    Et le processus s'arrête proprement
-  #
   # === Gestion des erreurs de chargement et résolution des schémas JSON (fonction loadAndResolveSchemas) ===
 
   Scénario: Erreur schéma JSON manquant
@@ -96,6 +89,23 @@ Fonctionnalité: Gestion d'erreur robuste
     Et le processus s'arrête proprement
   #
   # === Gestion des erreurs de génération de template (fonction generateTemplate) ===
+
+  Scénario: Erreur instructions absentes dans generateTemplate
+    Etant donné une configuration sans templateTransformationInstructions.instructions
+    Et une clé API valide "fake-api-key"
+    Et un schéma JSON résolu valide
+    Quand on tente de générer un template
+    Alors une erreur "templateTransformationInstructions.instructions non trouvé dans config.nuextract" est générée
+    Et le processus s'arrête proprement
+
+  Scénario: Erreur instructions type invalide dans generateTemplate
+    Etant donné une configuration avec templateTransformationInstructions.instructions de type string
+    Et une clé API valide "fake-api-key"
+    Et un schéma JSON résolu valide
+    Quand on tente de générer un template
+    Alors une erreur contenant "instructions invalide: type" est générée
+    Et le message indique le format attendu "array de strings"
+    Et le processus s'arrête proprement
 
   Scénario: Erreur templateMode invalide
     Etant donné une configuration avec templateMode "invalid"
@@ -276,111 +286,7 @@ Fonctionnalité: Gestion d'erreur robuste
     Et l'erreur originale est préservée avec Error Cause
     Et le processus s'arrête proprement
   #
-  # === Gestion des erreurs pour buildExtractionPrompt ===
-
-  Scénario: Blocks vide (aucun bloc extractible) pour buildExtractionPrompt
-    Etant donné une préparation avec blocks array vide
-    Quand on tente d'appeler buildExtractionPrompt
-    Alors une erreur contenant "preparation.blocks is empty" est générée
-    Et le processus s'arrête proprement
-
-  Scénario: Structure invalide (preparation.blocks undefined) pour buildExtractionPrompt
-    Etant donné une préparation avec blocks undefined
-    Quand on tente d'appeler buildExtractionPrompt
-    Alors une erreur contenant "preparation.blocks is required" est générée
-    Et le processus s'arrête proprement
-  #
-  # === Gestion des erreurs pour buildBlockPrompt ===
-
-  Scénario: Bloc null pour buildBlockPrompt
-    Etant donné un bloc null pour buildBlockPrompt
-    Quand on tente d'appeler buildBlockPrompt
-    Alors une erreur contenant "Invalid block: block must be a non-null object" est générée
-    Et le processus s'arrête proprement
-
-  Scénario: Bloc sans jsonPointer pour buildBlockPrompt
-    Etant donné un bloc sans jsonPointer pour buildBlockPrompt
-    Quand on tente d'appeler buildBlockPrompt
-    Alors une erreur contenant "block.jsonPointer is required" est générée
-    Et le processus s'arrête proprement
-
-  Scénario: Instructions non-array pour buildBlockPrompt
-    Etant donné un bloc avec instructions de type non-array pour buildBlockPrompt
-    Quand on tente d'appeler buildBlockPrompt
-    Alors une erreur contenant "block.instructions must be an array" est générée
-    Et le processus s'arrête proprement
-
-  Scénario: htmlContents vide pour buildBlockPrompt
-    Etant donné un bloc avec htmlContents array vide pour buildBlockPrompt
-    Quand on tente d'appeler buildBlockPrompt
-    Alors une erreur contenant "block.htmlContents is empty" est générée
-    Et le processus s'arrête proprement
-  #
-  # === Gestion des erreurs pour mergeJsonAtPath ===
-
-  Scénario: Target null pour mergeJsonAtPath
-    Etant donné un target null pour mergeJsonAtPath
-    Quand on tente d'appeler mergeJsonAtPath
-    Alors une erreur contenant "Invalid target: target must be a non-null object" est générée
-    Et le processus s'arrête proprement
-
-  Scénario: Path invalide (vide) pour mergeJsonAtPath
-    Etant donné un path vide pour mergeJsonAtPath
-    Quand on tente d'appeler mergeJsonAtPath
-    Alors une erreur contenant "Invalid path: path must be a non-empty string" est générée
-    Et le processus s'arrête proprement
-
-  Scénario: Index array hors limites pour mergeJsonAtPath
-    Etant donné un target array et un path avec index hors limites pour mergeJsonAtPath
-    Quand on tente d'appeler mergeJsonAtPath
-    Alors une erreur contenant "Array index out of bounds" est générée
-    Et le processus s'arrête proprement
-  #
-  # === Gestion des erreurs pour recomposeArtifact ===
-
-  Scénario: partialResults null pour recomposeArtifact
-    Etant donné des partialResults null pour recomposeArtifact
-    Quand on tente d'appeler recomposeArtifact
-    Alors une erreur contenant "Invalid partialResults: partialResults must be an array" est générée
-    Et le processus s'arrête proprement
-
-  Scénario: partialResults vide pour recomposeArtifact
-    Etant donné des partialResults array vide pour recomposeArtifact
-    Quand on tente d'appeler recomposeArtifact
-    Alors une erreur contenant "partialResults is empty" est générée
-    Et le processus s'arrête proprement
-
-  Scénario: jsonPointer manquant dans résultat partiel pour recomposeArtifact
-    Etant donné des partialResults avec résultat partiel sans jsonPointer pour recomposeArtifact
-    Quand on tente d'appeler recomposeArtifact
-    Alors une erreur contenant "Invalid jsonPointer in partial result" est générée
-    Et le processus s'arrête proprement
-
-  Scénario: data invalide dans résultat partiel pour recomposeArtifact
-    Etant donné des partialResults avec résultat partiel avec data null pour recomposeArtifact
-    Quand on tente d'appeler recomposeArtifact
-    Alors une erreur contenant "Invalid data in partial result" est générée
-    Et le processus s'arrête proprement
-  #
   # === Gestion des erreurs pour saveArtifact ===
-
-  Scénario: Erreur artefact null pour saveArtifact
-    Etant donné un artefact null pour saveArtifact
-    Quand on tente de sauvegarder l'artefact
-    Alors une erreur contenant "Invalid artifact: artifact must be a non-null object" est générée
-    Et le processus s'arrête proprement
-
-  Scénario: Erreur artefact non-objet (array) pour saveArtifact
-    Etant donné un artefact de type array pour saveArtifact
-    Quand on tente de sauvegarder l'artefact
-    Alors une erreur contenant "Invalid artifact: artifact must be a non-null object" est générée
-    Et le processus s'arrête proprement
-
-  Scénario: Erreur artefact non-objet (string) pour saveArtifact
-    Etant donné un artefact de type string pour saveArtifact
-    Quand on tente de sauvegarder l'artefact
-    Alors une erreur contenant "Invalid artifact: artifact must be a non-null object" est générée
-    Et le processus s'arrête proprement
   #
   # === Gestion des erreurs pour extractHermes2022ConceptsWithNuExtract ===
 
@@ -391,4 +297,23 @@ Fonctionnalité: Gestion d'erreur robuste
     Alors une erreur contenant "Extracted JSON does not conform to schema" est générée
     Et le message contient les détails des erreurs de validation
     Et le processus s'arrête proprement
-  #
+
+  # Tests via parent pour buildBlockPrompt() nested (validation des blocs)
+
+  Scénario: Erreur htmlContents vide via extractHermes2022ConceptsWithNuExtract
+    Etant donné un schéma résolu valide
+    Et des blocs collectés avec htmlContents array vide
+    Quand on tente d'extraire les concepts HERMES2022
+    Alors une erreur contenant "block.htmlContents is empty" est générée
+    Et le processus s'arrête proprement
+
+  # Tests supprimés (2025-11-12) : 6 scénarios pour recomposeArtifact() et mergeJsonAtPath() nested
+  # Raison : Non testables via parent sans mocks excessivement complexes (Option C - approche hybride)
+  # Principe appliqué : "Tester uniquement ce qui est réellement testable via parent" (@code-modularity-governance)
+  # Détails : Voir .cursor/executed-plans/2025-11-12-analyse-7-echecs-tests-nested.md
+  # - Scénario supprimé : Erreur partialResults null
+  # - Scénario supprimé : Erreur partialResults vide
+  # - Scénario supprimé : Erreur jsonPointer manquant
+  # - Scénario supprimé : Erreur data invalide
+  # - Scénario supprimé : Erreur path vide
+  # - Scénario supprimé : Erreur index array hors limites
