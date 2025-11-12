@@ -52,8 +52,8 @@ defineFeature(feature, (test) => {
     });
 
     and('des instructions de transformation depuis config', () => {
-      // Validation redondante supprimée : loadInstructions() valide déjà la présence et le type array
-      // Si les instructions sont absentes ou invalides, loadInstructions() lèvera une erreur
+      // Validation redondante supprimée : loadTemplateTransformationInstructions() valide déjà la présence et le type array
+      // Si les instructions sont absentes ou invalides, loadTemplateTransformationInstructions() lèvera une erreur
     });
 
     and('un schéma JSON de concepts HERMES2022', () => {
@@ -114,8 +114,8 @@ defineFeature(feature, (test) => {
     });
 
     and('des instructions de transformation depuis config', () => {
-      // Validation redondante supprimée : loadInstructions() valide déjà la présence et le type array
-      // Si les instructions sont absentes ou invalides, loadInstructions() lèvera une erreur
+      // Validation redondante supprimée : loadTemplateTransformationInstructions() valide déjà la présence et le type array
+      // Si les instructions sont absentes ou invalides, loadTemplateTransformationInstructions() lèvera une erreur
     });
 
     and('un schéma JSON de concepts HERMES2022', () => {
