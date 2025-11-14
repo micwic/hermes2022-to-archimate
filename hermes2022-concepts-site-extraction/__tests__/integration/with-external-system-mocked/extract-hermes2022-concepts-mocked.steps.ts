@@ -71,12 +71,9 @@ defineFeature(feature, (test) => {
         },
         required: ['overview'],
         additionalProperties: false
-      },
-      metadata: {
-        type: 'object'
       }
     },
-    required: ['config', 'method', 'concepts', 'metadata'],
+    required: ['config', 'method', 'concepts'],
     additionalProperties: false
   });
 

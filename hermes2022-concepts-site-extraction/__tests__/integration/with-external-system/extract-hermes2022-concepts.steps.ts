@@ -104,7 +104,6 @@ defineFeature(feature, (test) => {
       expect(extractionResult.config.extractionSource).toBeDefined();
       expect(extractionResult.method).toBeDefined();
       expect(extractionResult.concepts).toBeDefined();
-      expect(extractionResult.metadata).toBeDefined();
     });
 
     and('l\'artefact est conforme au schéma JSON Schema', () => {

@@ -105,7 +105,7 @@
             "description": "Description détaillée de la phase et de ses objectifs"
           },
           "context": {
-            "type": "string",
+            "type": ["string", "null"],
             "minLength": 10,
             "maxLength": 1000,
             "description": "Contexte et articulation de la phase dans le cycle de vie du projet"

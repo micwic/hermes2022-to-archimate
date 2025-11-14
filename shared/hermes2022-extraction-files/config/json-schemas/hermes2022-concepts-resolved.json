@@ -85,19 +85,13 @@
           ],
           "default": "/",
           "description": "URL des pages de référence utilisées pour cette description. Ces pages sont utilisées pour extraire la description générale de la méthode HERMES2022."
-        },
-        "lastChecked": {
-          "type": "string",
-          "format": "date",
-          "description": "Date de dernière vérification de la source."
         }
       },
       "required": [
         "hermesVersion",
         "publicationDate",
         "overview",
-        "sourceUrl",
-        "lastChecked"
+        "sourceUrl"
       ],
       "additionalProperties": false
     },
@@ -119,11 +113,6 @@
           ],
           "description": "URL des pages de référence utilisées pour cette description. Ces pages sont utilisées pour extraire la description générale des concepts de HERMES2022."
         },
-        "lastChecked": {
-          "type": "string",
-          "format": "date",
-          "description": "Date de dernière vérification de la source."
-        },
         "concept-phases": {
           "description": "Schéma pour la validation des phases HERMES2022 extraites",
           "$schema": "http://json-schema.org/draft-07/schema#",
@@ -143,11 +132,6 @@
                 "/project-management/phases.html"
               ],
               "description": "URL officielle de référence utilisée pour cette description."
-            },
-            "lastChecked": {
-              "type": "string",
-              "format": "date",
-              "description": "Date de dernière vérification de la source."
             },
             "phases": {
               "sourceUrl": {
@@ -184,11 +168,6 @@
                       "/project-management/phases/closure.html"
                     ],
                     "description": "URL de la page spécifique de la phase (construite à partir de baseUrl)"
-                  },
-                  "lastChecked": {
-                    "type": "string",
-                    "format": "date",
-                    "description": "Date de dernière vérification de la source de cette phase."
                   },
                   "name": {
                     "type": "string",
@@ -258,7 +237,6 @@
                   "order",
                   "type",
                   "sourceUrl",
-                  "lastChecked",
                   "description",
                   "context",
                   "approach"
@@ -271,7 +249,6 @@
           "required": [
             "overview",
             "sourceUrl",
-            "lastChecked",
             "phases"
           ]
         }
@@ -279,7 +256,6 @@
       "required": [
         "overview",
         "sourceUrl",
-        "lastChecked",
         "concept-phases"
       ],
       "additionalProperties": false

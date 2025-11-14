@@ -171,3 +171,6 @@ Synchroniser complètement les fichiers de tests BDD en :
 
 **Problème identifié pour traitement séparé** : Problème technique Ajv pré-existant affectant 18 tests (non lié à la synchronisation)
 
+
+
+

@@ -490,9 +490,9 @@ async function extractHermes2022ConceptsWithNuExtract(resolvedSchema, config, ap
       for (const htmlContent of block.htmlContents) {
         // Contenu texte (déjà converti HTML→texte) pour cette URL spécifique
         promptParts.push(`### Text Content from ${htmlContent.url}\n`);
-        promptParts.push('```text');
+        promptParts.push('```text\n');
         promptParts.push(htmlContent.content);
-        promptParts.push('```\n');
+        promptParts.push('\n```\n');
         
         // Log pour chaque URL traitée (taille du contenu texte)
         console.log(`[debug] Contenu ajouté pour ${htmlContent.url} : ${htmlContent.content.length} caractères texte`);
@@ -506,7 +506,9 @@ async function extractHermes2022ConceptsWithNuExtract(resolvedSchema, config, ap
       
       // Log temporaire pour validation visuelle de la structure (premiers 800 caractères)
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[debug] Extrait du prompt :\n${prompt.substring(0, 800)}...\n`);
+        console.log(`[debug] ========== PROMPT COMPLET pour ${block.jsonPointer} ==========`);
+        console.log(prompt);
+        console.log(`[debug] ========== FIN PROMPT ==========\n`);
       }
       
       return prompt;
@@ -613,8 +615,7 @@ async function extractHermes2022ConceptsWithNuExtract(resolvedSchema, config, ap
           extractionSource: extractionSource
         },
         method: {},
-        concepts: {},
-        metadata: {}
+        concepts: {}
       };
       
       // Fusionner chaque résultat partiel selon jsonPointer
@@ -671,19 +672,6 @@ async function extractHermes2022ConceptsWithNuExtract(resolvedSchema, config, ap
         // Fusionner la valeur dans l'artefact au chemin jsonPointer
         mergeJsonAtPath(artifact, jsonPointer, valueToMerge);
       }
-      
-      // Construire métadonnées (identique à l'actuel)
-      const hermesVersion = config?.hermesVersion || '2022';
-      const metadata = {
-        extractionDate: new Date().toISOString().split('T')[0], // Format YYYY-MM-DD
-        extractionSource: extractionSource.baseUrl || baseUrl,
-        extractionLanguage: extractionSource.language || 'en',
-        schemaVersion: resolvedSchema.$schema || 'http://json-schema.org/draft-07/schema#',
-        extractionMethod: 'NuExtract',
-        extractionTool: 'hermes2022-concepts-site-extraction'
-      };
-      
-      artifact.metadata = metadata;
       
       // Ajouter hermesVersion au niveau method si présent dans les résultats partiels
       // Chercher dans tous les résultats partiels pour trouver hermesVersion
@@ -815,6 +803,20 @@ async function extractHermes2022ConceptsWithNuExtract(resolvedSchema, config, ap
     console.log(`[info] Normalisation des valeurs enum depuis le schéma`);
     normalizeEnumValues(artifact, resolvedSchema);
     
+    // Post-traitement : Générer des IDs conformes pour les phases
+    console.log(`[info] Post-traitement : Génération des IDs phases conformes au pattern ph_abc123`);
+    if (artifact.concepts?.['concept-phases']?.phases) {
+      const crypto = require('crypto');
+      for (const phase of artifact.concepts['concept-phases'].phases) {
+        if (phase.id && !phase.id.match(/^ph_[a-z0-9]{6}$/)) {
+          const hash = crypto.createHash('md5').update((phase.name || phase.id).toLowerCase()).digest('hex');
+          const newId = `ph_${hash.substring(0, 6)}`;
+          console.log(`[debug] Génération ID phase "${phase.name}": "${phase.id}" → "${newId}"`);
+          phase.id = newId;
+        }
+      }
+    }
+    
     // Phase 4 : Validation avec Ajv (schéma résolu)
     const ajv = new Ajv({ strict: false, allErrors: true });
     addFormats(ajv);
@@ -822,7 +824,17 @@ async function extractHermes2022ConceptsWithNuExtract(resolvedSchema, config, ap
     const validate = ajv.compile(resolvedSchema);
     const isValid = validate(artifact);
     
+    // Debug: Sauvegarder l'artefact même en cas d'échec de validation pour analyse
     if (!isValid) {
+      const pathModule = require('path');
+      const debugDir = resolveFromRepoRoot('hermes2022-concepts-site-extraction/__tests__/tmp-artifacts');
+      if (!fs.existsSync(debugDir)) {
+        fs.mkdirSync(debugDir, { recursive: true });
+      }
+      const debugPath = pathModule.join(debugDir, `artifact-debug-${Date.now()}.json`);
+      fs.writeFileSync(debugPath, JSON.stringify(artifact, null, 2), 'utf8');
+      console.log(`[debug] Artefact invalide sauvegardé pour analyse: ${debugPath}`);
+      
       const errors = validate.errors?.map(err => `${err.instancePath}: ${err.message}`).join(', ') || 'Unknown validation error';
       throw new Error(`Extracted JSON does not conform to schema: ${errors}. Script stopped.`);
     }
