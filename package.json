@@ -17,7 +17,8 @@
     "test": "jest",
     "test:all": "jest",
     "test:integration": "jest --testPathPatterns=__tests__/integration",
-    "test:unit": "jest --testPathPatterns=__tests__/unit"
+    "test:unit": "jest --testPathPatterns=__tests__/unit",
+    "test:e2e": "jest --testPathPatterns=__tests__/e2e"
   },
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^14.2.1"

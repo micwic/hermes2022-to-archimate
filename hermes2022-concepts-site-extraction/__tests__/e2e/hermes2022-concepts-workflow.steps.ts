@@ -129,10 +129,17 @@ defineFeature(feature, (test) => {
         const artifactRaw = await fs.promises.readFile(artifactPath, 'utf8');
         const artifactData = JSON.parse(artifactRaw);
 
-        expect(artifactData?.metadata?.extractionDate).toBe(today);
-        const extractionSource = artifactData?.metadata?.extractionSource;
-        expect(typeof extractionSource).toBe('string');
-        expect(extractionSource.length).toBeGreaterThan(0);
+        // Valider la structure de base de l'artefact
+        expect(artifactData?.config).toBeDefined();
+        expect(artifactData?.method).toBeDefined();
+        expect(artifactData?.concepts).toBeDefined();
+        
+        // Valider les informations d'extraction dans config.extractionSource
+        const extractionSource = artifactData?.config?.extractionSource;
+        expect(extractionSource).toBeDefined();
+        expect(extractionSource.baseUrl).toBeDefined();
+        expect(typeof extractionSource.baseUrl).toBe('string');
+        expect(extractionSource.baseUrl.length).toBeGreaterThan(0);
       });
 
       and('le fichier d\'approbation hermes2022-concepts du jour est initialisé à pending', async () => {
@@ -161,10 +168,18 @@ defineFeature(feature, (test) => {
         const artifactRaw = await fs.promises.readFile(artifactPath, 'utf8');
         const artifactData = JSON.parse(artifactRaw);
 
-        expect(artifactData?.metadata?.extractionDate).toBe(today);
-        expect(artifactData?.metadata?.extractionSource).toBeDefined();
-        expect(typeof artifactData.metadata.extractionSource).toBe('string');
-        expect(artifactData.metadata.extractionSource.length).toBeGreaterThan(0);
+        // La date d'extraction est déductible du nom du fichier (hermes2022-concepts-YYYY-MM-DD.json)
+        const fileNameDate = path.basename(artifactPath).match(/hermes2022-concepts-(\d{4}-\d{2}-\d{2})\.json/)?.[1];
+        expect(fileNameDate).toBe(today);
+        
+        // Valider la source d'extraction dans config.extractionSource
+        expect(artifactData?.config?.extractionSource?.baseUrl).toBeDefined();
+        expect(typeof artifactData.config.extractionSource.baseUrl).toBe('string');
+        expect(artifactData.config.extractionSource.baseUrl.length).toBeGreaterThan(0);
+        
+        // Valider la langue d'extraction
+        expect(artifactData?.config?.extractionSource?.language).toBeDefined();
+        expect(['de', 'fr', 'it', 'en']).toContain(artifactData.config.extractionSource.language);
       });
     },
     120000

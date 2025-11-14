@@ -236,3 +236,6 @@ npm test -- --testPathPatterns="unit" --verbose
 - Phase précédente : `.cursor/executed-plans/2025-11-12-option-c-correction-test1-suppression-tests2-7.md`
 - Document principal : `.cursor/executed-plans/2025-11-12-refactoring-nested-functions-validations-defensives.md`
 
+
+
+

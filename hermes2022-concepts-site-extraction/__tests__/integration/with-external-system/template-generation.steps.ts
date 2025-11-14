@@ -89,7 +89,7 @@ defineFeature(feature, (test) => {
       expect(Array.isArray(template?.method?.hermesVersion)).toBe(true);
       expect(template?.config?.extractionSource?.baseUrl).toBe('verbatim-string');
       expect(template?.method?.publicationDate).toBe('date-time');
-      expect(template?.method?.lastChecked).toBe('date-time');
+      // lastChecked a été supprimé car il fait double emploi avec le sidecar d'approbation
       expect(template?.concepts).toHaveProperty('concept-phases');
     });
   }, 120000);
@@ -151,7 +151,7 @@ defineFeature(feature, (test) => {
       expect(Array.isArray(template?.method?.hermesVersion)).toBe(true);
       expect(template?.config?.extractionSource?.baseUrl).toBe('verbatim-string');
       expect(template?.method?.publicationDate).toBe('date-time');
-      expect(template?.method?.lastChecked).toBe('date-time');
+      // lastChecked a été supprimé car il fait double emploi avec le sidecar d'approbation
       expect(template?.concepts).toHaveProperty('concept-phases');
     });
   }, 45000);

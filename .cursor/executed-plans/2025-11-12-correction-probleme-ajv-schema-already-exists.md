@@ -219,3 +219,6 @@ cd /home/micwic/gitRepositories/hermes2022-to-archimate && npm test -- --testPat
 - 7 tests nécessitent ajustement (validation finale Ajv intercepte avant validations nested)
 - 2 échecs techniques de cleanup (problème mineur non lié)
 
+
+
+
