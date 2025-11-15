@@ -4,6 +4,12 @@
   "description": "Schéma pour la validation des phases HERMES2022 extraites",
   "type": "object",
   "properties": {
+    "extractionModel": {
+      "type": "string",
+      "enum": ["claude", "nuextract"],
+      "default": "claude",
+      "description": "Modèle LLM à utiliser pour l'extraction de ce bloc"
+    },
     "overview": {
       "type": "string",
       "minLength": 50,
@@ -45,6 +51,12 @@
             "type": "string",
             "pattern": "^ph_[a-z0-9]{6}$",
             "description": "Identifiant unique de la phase (format: ph_abc123)"
+          },
+          "extractionModel": {
+            "type": "string",
+            "enum": ["claude", "nuextract"],
+            "default": "claude",
+            "description": "Modèle LLM à utiliser pour l'extraction de ce bloc"
           },
           "sourceUrl": {
             "type": "array",
@@ -137,11 +149,11 @@
             "description": "Approches supportées par la phase (traditionnelle, agile, ou les deux)"
           }
         },
-        "required": ["id", "name", "order", "type", "sourceUrl", "extractionInstructions", "description", "context", "approach"]
+        "required": ["id", "name", "order", "type", "extractionModel", "sourceUrl", "extractionInstructions", "description", "context", "approach"]
       },
       "minItems": 1,
       "description": "Liste des phases HERMES2022"
     }
   },
-  "required": ["overview", "sourceUrl", "extractionInstructions", "phases"]
+      "required": ["overview", "extractionModel", "sourceUrl", "extractionInstructions", "phases"]
 }

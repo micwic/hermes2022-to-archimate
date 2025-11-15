@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/micwic/hermes2022-to-archimate/hermes2022-concepts-site-extraction/config/extraction-config.schema.json",
   "title": "Extraction Configuration Schema",
-  "description": "Schéma de validation pour extraction-config.json (configuration technique NuExtract)",
+  "description": "Schéma de validation pour extraction-config.json (configuration technique multi-LLM)",
   "type": "object",
   "properties": {
     "hermesVersion": {
@@ -38,164 +38,198 @@
       "required": ["baseUrl", "language", "description"],
       "additionalProperties": false
     },
-    "nuextract": {
+    "llm": {
       "type": "object",
       "properties": {
-        "apiKeyFile": {
-          "type": "string",
-          "enum": ["hermes2022-concepts-site-extraction/config/nuextract-api-key.key"],
-          "description": "Chemin relatif vers le fichier contenant la clé API NuExtract"
-        },
-        "projectName": {
-          "type": "string",
-          "enum": ["HERMES2022"],
-          "description": "Nom du projet NuExtract"
-        },
-        "projectDescription": {
-          "type": "string",
-          "enum": ["Project for HERMES2022 concepts extraction by using NuExtact LLM AI"],
-          "description": "Description du projet NuExtract"
-        },
-        "templateTransformationInstructions": {
+        "nuextract": {
           "type": "object",
-          "description": "Instructions pour la transformation du schéma json en template par et pour le modèle NuExtract",
           "properties": {
-            "instructions": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "- transformes le schéma JSON en template NuExtract",
-                  "- considères les énumérations JSON comme par exemple \"language\": {\"type\": \"string\",\"enum\": [\"de\", \"fr\", \"it\", \"en\"]} comme des énumérations dans le format de template NuExtract \"language\": [\"de\", \"fr\", \"it\", \"en\"]"
-                ]
+            "apiKeyFile": {
+              "type": "string",
+              "enum": ["hermes2022-concepts-site-extraction/config/nuextract-api-key.key"],
+              "description": "Chemin relatif vers le fichier contenant la clé API NuExtract"
+            },
+            "projectName": {
+              "type": "string",
+              "enum": ["HERMES2022"],
+              "description": "Nom du projet NuExtract"
+            },
+            "projectDescription": {
+              "type": "string",
+              "enum": ["Project for HERMES2022 concepts extraction by using NuExtact LLM AI"],
+              "description": "Description du projet NuExtract"
+            },
+            "templateTransformationInstructions": {
+              "type": "object",
+              "description": "Instructions pour la transformation du schéma json en template par et pour le modèle NuExtract",
+              "properties": {
+                "instructions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "- transformes le schéma JSON en template NuExtract",
+                      "- considères les énumérations JSON comme par exemple \"language\": {\"type\": \"string\",\"enum\": [\"de\", \"fr\", \"it\", \"en\"]} comme des énumérations dans le format de template NuExtract \"language\": [\"de\", \"fr\", \"it\", \"en\"]"
+                    ]
+                  },
+                  "description": "Array d'instructions sélectionnées pour la transformation en template NuExtract"
+                }
               },
-              "description": "Array d'instructions sélectionnées pour la transformation en template NuExtract"
+              "required": ["instructions"],
+              "additionalProperties": false
+            },
+            "mainJSONConfigurationFile": {
+              "type": "string",
+              "enum": ["shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts.json"],
+              "description": "Chemin relatif vers le fichier de schéma JSON principal"
+            },
+            "templateOutputDirectory": {
+              "type": "string",
+              "enum": ["shared/hermes2022-extraction-files/config/nuextract-template-generated"],
+              "description": "Répertoire de sortie pour les templates générés"
+            },
+            "templateReset": {
+              "type": "boolean",
+              "enum": [true],
+              "description": "Indique si le template doit être réinitialisé"
+            },
+            "templateMode": {
+              "type": "string",
+              "enum": ["sync", "async"],
+              "description": "Mode de génération de template (sync ou async)"
+            },
+            "templateGenerationDuration": {
+              "type": "number",
+              "enum": [30000],
+              "description": "Durée estimée de génération du template en millisecondes"
+            },
+            "model": {
+              "type": "string",
+              "enum": ["nuextract-large"],
+              "description": "Modèle NuExtract à utiliser"
+            },
+            "baseUrl": {
+              "type": "string",
+              "enum": ["nuextract.ai"],
+              "description": "URL de base de l'API NuExtract"
+            },
+            "port": {
+              "type": "number",
+              "enum": [443],
+              "description": "Port de l'API NuExtract"
+            },
+            "pathPrefix": {
+              "type": ["string", "null"],
+              "enum": [null, ""],
+              "description": "Préfixe optionnel pour versionning des APIs (null ou vide si absent)"
+            },
+            "projectsPath": {
+              "type": "string",
+              "enum": ["/api/projects"],
+              "description": "Chemin de l'endpoint de gestion des projets"
+            },
+            "infer-templatePath": {
+              "type": "string",
+              "enum": ["/api/infer-template"],
+              "description": "Chemin de l'endpoint de génération de template synchrone"
+            },
+            "infer-templateAsyncPath": {
+              "type": "string",
+              "enum": ["/api/infer-template-async"],
+              "description": "Chemin de l'endpoint de génération de template asynchrone"
+            },
+            "infer-textPath": {
+              "type": "string",
+              "enum": ["/api/projects/{projectId}/infer-text"],
+              "description": "Chemin de l'endpoint de génération de texte"
+            },
+            "extractPath": {
+              "type": "string",
+              "enum": ["/api/projects/{projectId}/extract"],
+              "description": "Chemin de l'endpoint d'extraction"
+            },
+            "jobsPath": {
+              "type": "string",
+              "enum": ["/api/jobs/{jobId}"],
+              "description": "Chemin de l'endpoint de statut des jobs"
+            },
+            "projectPath": {
+              "type": "string",
+              "enum": ["/api/projects/{projectId}"],
+              "description": "Chemin de l'endpoint de gestion d'un projet spécifique"
+            },
+            "projectTemplatePath": {
+              "type": "string",
+              "enum": ["/api/projects/{projectId}/template"],
+              "description": "Chemin de l'endpoint de mise à jour du template d'un projet"
+            },
+            "extractionBlocksMaxDepth": {
+              "type": "number",
+              "enum": [10],
+              "description": "Profondeur maximale de récursivité pour éviter les boucles infinies"
+            },
+            "description": {
+              "type": "string",
+              "enum": ["Configuration pour l'utilisation des APIs NuExtract"],
+              "description": "Description générale de la configuration NuExtract"
             }
           },
-          "required": ["instructions"],
+          "required": [
+            "apiKeyFile",
+            "projectName",
+            "projectDescription",
+            "templateTransformationInstructions",
+            "mainJSONConfigurationFile",
+            "templateOutputDirectory",
+            "templateReset",
+            "templateMode",
+            "templateGenerationDuration",
+            "model",
+            "baseUrl",
+            "port",
+            "pathPrefix",
+            "projectsPath",
+            "infer-templatePath",
+            "infer-templateAsyncPath",
+            "infer-textPath",
+            "extractPath",
+            "jobsPath",
+            "projectPath",
+            "projectTemplatePath",
+            "extractionBlocksMaxDepth",
+            "description"
+          ],
           "additionalProperties": false
         },
-        "mainJSONConfigurationFile": {
-          "type": "string",
-          "enum": ["shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts.json"],
-          "description": "Chemin relatif vers le fichier de schéma JSON principal"
-        },
-        "templateOutputDirectory": {
-          "type": "string",
-          "enum": ["shared/hermes2022-extraction-files/config/nuextract-template-generated"],
-          "description": "Répertoire de sortie pour les templates générés"
-        },
-        "templateReset": {
-          "type": "boolean",
-          "enum": [true],
-          "description": "Indique si le template doit être réinitialisé"
-        },
-        "templateMode": {
-          "type": "string",
-          "enum": ["sync", "async"],
-          "description": "Mode de génération de template (sync ou async)"
-        },
-        "templateGenerationDuration": {
-          "type": "number",
-          "enum": [30000],
-          "description": "Durée estimée de génération du template en millisecondes"
-        },
-        "model": {
-          "type": "string",
-          "enum": ["nuextract-large"],
-          "description": "Modèle NuExtract à utiliser"
-        },
-        "baseUrl": {
-          "type": "string",
-          "enum": ["nuextract.ai"],
-          "description": "URL de base de l'API NuExtract"
-        },
-        "port": {
-          "type": "number",
-          "enum": [443],
-          "description": "Port de l'API NuExtract"
-        },
-        "pathPrefix": {
-          "type": ["string", "null"],
-          "enum": [null, ""],
-          "description": "Préfixe optionnel pour versionning des APIs (null ou vide si absent)"
-        },
-        "projectsPath": {
-          "type": "string",
-          "enum": ["/api/projects"],
-          "description": "Chemin de l'endpoint de gestion des projets"
-        },
-        "infer-templatePath": {
-          "type": "string",
-          "enum": ["/api/infer-template"],
-          "description": "Chemin de l'endpoint de génération de template synchrone"
-        },
-        "infer-templateAsyncPath": {
-          "type": "string",
-          "enum": ["/api/infer-template-async"],
-          "description": "Chemin de l'endpoint de génération de template asynchrone"
-        },
-        "infer-textPath": {
-          "type": "string",
-          "enum": ["/api/projects/{projectId}/infer-text"],
-          "description": "Chemin de l'endpoint de génération de texte"
-        },
-        "extractPath": {
-          "type": "string",
-          "enum": ["/api/projects/{projectId}/extract"],
-          "description": "Chemin de l'endpoint d'extraction"
-        },
-        "jobsPath": {
-          "type": "string",
-          "enum": ["/api/jobs/{jobId}"],
-          "description": "Chemin de l'endpoint de statut des jobs"
-        },
-        "projectPath": {
-          "type": "string",
-          "enum": ["/api/projects/{projectId}"],
-          "description": "Chemin de l'endpoint de gestion d'un projet spécifique"
-        },
-        "projectTemplatePath": {
-          "type": "string",
-          "enum": ["/api/projects/{projectId}/template"],
-          "description": "Chemin de l'endpoint de mise à jour du template d'un projet"
-        },
-        "extractionBlocksMaxDepth": {
-          "type": "number",
-          "enum": [10],
-          "description": "Profondeur maximale de récursivité pour éviter les boucles infinies"
-        },
-        "description": {
-          "type": "string",
-          "enum": ["Configuration pour l'utilisation des APIs NuExtract"],
-          "description": "Description générale de la configuration NuExtract"
+        "claude": {
+          "type": "object",
+          "properties": {
+            "apiKeyFile": {
+              "type": "string",
+              "enum": ["hermes2022-concepts-site-extraction/config/claude-api-key.key"],
+              "description": "Chemin relatif vers le fichier contenant la clé API Claude (Anthropic)"
+            },
+            "model": {
+              "type": "string",
+              "enum": ["claude-3-5-sonnet-20241022", "claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"],
+              "description": "Modèle Claude à utiliser pour l'extraction"
+            },
+            "maxTokens": {
+              "type": "number",
+              "enum": [4096, 8192, 16384],
+              "description": "Nombre maximum de tokens en sortie"
+            },
+            "temperature": {
+              "type": "number",
+              "enum": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+              "description": "Température pour la génération (0.0 = déterministe, 1.0 = créatif)"
+            }
+          },
+          "required": ["apiKeyFile"],
+          "additionalProperties": false
         }
       },
-      "required": [
-        "apiKeyFile",
-        "projectName",
-        "projectDescription",
-        "templateTransformationInstructions",
-        "mainJSONConfigurationFile",
-        "templateOutputDirectory",
-        "templateReset",
-        "templateMode",
-        "templateGenerationDuration",
-        "model",
-        "baseUrl",
-        "port",
-        "pathPrefix",
-        "projectsPath",
-        "infer-templatePath",
-        "infer-templateAsyncPath",
-        "infer-textPath",
-        "extractPath",
-        "jobsPath",
-        "projectPath",
-        "projectTemplatePath",
-        "extractionBlocksMaxDepth",
-        "description"
-      ],
+      "required": ["nuextract"],
       "additionalProperties": false
     },
     "requireHumanApproval": {
@@ -220,7 +254,7 @@
   "required": [
     "hermesVersion",
     "extractionSource",
-    "nuextract",
+    "llm",
     "requireHumanApproval",
     "approvalTargets",
     "artifactBaseDirectory"

@@ -484,7 +484,11 @@ async function inferTextFromContent(hostname, port, path, pathPrefix, projectId,
   });
 }
 
-// EXPORTS NORMAUX (interface publique du module API)
+// ============================================================================
+// EXPORTS
+// ============================================================================
+
+// Exports normaux (interface publique du module API selon @code-modularity-governance)
 module.exports = {
   inferTemplateFromDescription,
   inferTemplateFromDescriptionAsync,

@@ -12,11 +12,18 @@ if (!fullFilePath) {
 const repoRoot = path.dirname(fullFilePath);
 const resolveFromRepoRoot = (...segments: string[]) => path.resolve(repoRoot, ...segments);
 
+// REFACTORING BDD Phase 1 & 2 - Import depuis orchestrateur
+const orchestratorModulePath = resolveFromRepoRoot('hermes2022-concepts-site-extraction/src/concepts-site-extraction-orchestrator.js');
+const { 
+  loadAndResolveSchemas,
+  loadGlobalConfig
+} = require(orchestratorModulePath);
+
 const nuextractClientModulePath = resolveFromRepoRoot('hermes2022-concepts-site-extraction/src/nuextract-client.js');
 const {
-  _testOnly_loadGlobalConfig: loadGlobalConfig,
+  // _testOnly_loadGlobalConfig migrée vers orchestrateur (voir import ci-dessus)
   _testOnly_loadApiKey: loadApiKey,
-  _testOnly_loadAndResolveSchemas: loadAndResolveSchemas,
+  // _testOnly_loadAndResolveSchemas migrée vers orchestrateur (voir import ci-dessus)
   _testOnly_generateTemplate: generateTemplate
 } = require(nuextractClientModulePath);
 

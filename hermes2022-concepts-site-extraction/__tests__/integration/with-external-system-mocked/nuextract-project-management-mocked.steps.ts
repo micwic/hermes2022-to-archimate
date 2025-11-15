@@ -13,8 +13,11 @@ jest.mock('@src/nuextract-api.js', () => {
   };
 });
 
+// REFACTORING BDD Phase 2 - Import loadGlobalConfig depuis orchestrateur
+import { loadGlobalConfig } from '@src/concepts-site-extraction-orchestrator.js';
+
 import {
-  _testOnly_loadGlobalConfig as loadGlobalConfig,
+  // _testOnly_loadGlobalConfig migrée vers orchestrateur (voir import ci-dessus)
   _testOnly_findOrCreateProject as findOrCreateProject
 } from '@src/nuextract-client.js';
 

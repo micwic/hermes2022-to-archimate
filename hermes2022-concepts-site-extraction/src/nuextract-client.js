@@ -1,15 +1,9 @@
 // nuextract-client.js - Script JavaScript pour extraire le HTML et exécuter les APIs NuExtract
 // Basé sur extraction-config.schema.json (configuration technique NuExtract) et les schémas JSON de hermes2022-concepts.json et sous-jacents ($ref)
 
-const fs = require('fs');
 const path = require('path');
 const findUp = require('find-up');
-const jwt = require('jsonwebtoken');
 const nuextractApi = require('./nuextract-api.js');
-const $RefParser = require('@apidevtools/json-schema-ref-parser');
-const Ajv = require('ajv');
-const addFormats = require('ajv-formats');
-const { collectHtmlSourcesAndInstructions, fetchHtmlContent } = require('./html-collector-and-transformer.js');
 
 const fullFilePath = findUp.sync('package.json', { cwd: __dirname });
 if (!fullFilePath) {
@@ -18,356 +12,24 @@ if (!fullFilePath) {
 const repoRoot = path.dirname(fullFilePath);
 const resolveFromRepoRoot = (...segments) => path.resolve(repoRoot, ...segments);
 
-// Charger la configuration depuis le schéma JSON Schema
-async function loadGlobalConfig() {
-  // Fonction helper interne pour transformer le schéma JSON en objet config
-  function transformJSONSchemaIntoJSONConfigFile(schema) {
-    function extractValueFromProperty(property) {
-      // Pour propriété simple avec enum : utiliser enum[0]
-      // Note: Gère aussi les union types comme ["string", "null"] car property.type !== 'array' reste vrai
-      if (property.enum && property.type !== 'array') {
-        return property.enum[0];
-      }
-      
-      // Pour array avec items.enum : utiliser items.enum (array complet)
-      if (property.type === 'array' && property.items?.enum) {
-        return property.items.enum;
-      }
-      
-      // Pour objet : construire récursivement
-      if (property.type === 'object' && property.properties) {
-        const obj = {};
-        for (const [key, value] of Object.entries(property.properties)) {
-          obj[key] = extractValueFromProperty(value);
-        }
-        return obj;
-      }
-      
-      // Pour array avec items object : construire array avec un élément
-      if (property.type === 'array' && property.items?.type === 'object' && property.items.properties) {
-        const obj = {};
-        for (const [key, value] of Object.entries(property.items.properties)) {
-          obj[key] = extractValueFromProperty(value);
-        }
-        return [obj];
-      }
-      
-      // Pour chaînes simples sans enum : retourner null
-      if (property.type === 'string' && !property.enum) {
-        return null;
-      }
-      
-      // Pour boolean : false par défaut
-      if (property.type === 'boolean') {
-        return false;
-      }
-      
-      // Pour number : null par défaut
-      if (property.type === 'number') {
-        return null;
-      }
-      
-      // Par défaut
-      return null;
-    }
-    
-    // Construire l'objet config à partir du schéma
-    const config = {};
-    if (schema.properties) {
-      for (const [key, property] of Object.entries(schema.properties)) {
-        config[key] = extractValueFromProperty(property);
-      }
-    }
-    
-    return config;
-  }
+// Cache du projectId NuExtract (immutable après initialisation)
+let _projectId = null;
 
-  console.log(`[info] Chargement de la configuration à partir du schéma JSON Schema`);
-  
-  try {
-    // Étape 1: Lire le schéma JSON Schema
-    const schemaPath = resolveFromRepoRoot('hermes2022-concepts-site-extraction/config/extraction-config.schema.json');
-    let schemaContent;
-    try {
-      schemaContent = fs.readFileSync(schemaPath, 'utf8');
-    } catch (error) {
-      console.error(`Erreur lors de la lecture du schéma JSON Schema : ${error.message}`);
-      throw new Error('Schema file not found. Script stopped.', { cause: error });
-    }
-    
-    // Étape 2: Parser le schéma JSON Schema
-    let schema;
-    try {
-      schema = JSON.parse(schemaContent);
-    } catch (error) {
-      console.error(`Erreur lors du parsing JSON du schéma : ${error.message}`);
-      throw new Error('Invalid JSON in schema file. Script stopped.', { cause: error });
-    }
-    
-    // Étape 3: Transformer le schéma en objet config JSON
-    const config = transformJSONSchemaIntoJSONConfigFile(schema);
-    
-    // Étape 4: Valider l'objet config transformé avec Ajv
-    try {
-      const ajv = new Ajv({ strict: false, allErrors: true });
-      addFormats(ajv);
-      const validate = ajv.compile(schema);
-      const valid = validate(config);
-      
-      if (!valid) {
-        const errorMessages = validate.errors.map(err => `${err.instancePath} ${err.message}`).join('; ');
-        console.error(`Erreur critique : Le config transformé n'est pas conforme au schéma: ${errorMessages}`);
-        throw new Error('Config validation failed after transformation. Script stopped.');
-      }
-    } catch (error) {
-      if (error.message === 'Config validation failed after transformation. Script stopped.') {
-        throw error;
-      }
-      console.error(`Erreur critique : Échec de la validation du config avec Ajv: ${error.message}`);
-      throw new Error('Config validation failed after transformation. Script stopped.', { cause: error });
-    }
-    
-    console.log('[info] Configuration chargée avec succès depuis le schéma JSON Schema');
-    return config;
-  } catch (error) {
-    console.error(`Erreur lors du chargement de la configuration: ${error.message}`);
-    throw error;
-  }
-};
 
-// Lire la clé API depuis un fichier externe si elle n'est pas déjà dans l'environnement
-async function loadApiKey(config) {
-  let apiKey = null;
-  console.log(`[info] Chargement de la clé API NuExtract à partir de : ${config.nuextract.apiKeyFile}`);
-  
-  // Priorité 1 : Variable d'environnement
-  if (process.env.NUEXTRACT_API_KEY) {
-    apiKey = process.env.NUEXTRACT_API_KEY;
-  } else {
-    // Priorité 2/3 : Fichier (config ou fallback)
-    const keyFile = config?.nuextract?.apiKeyFile || 'hermes2022-concepts-site-extraction/config/nuextract-api-key.key';
-    const keyPath = resolveFromRepoRoot(keyFile);
-    try {
-      apiKey = fs.readFileSync(keyPath, 'utf8');
-    } catch (error) {
-      console.error(`Impossible de lire la clé API NuExtract (env NUEXTRACT_API_KEY ou fichier ${keyPath}) : ${error.message}`);
-      throw new Error('API_KEY is not set. Script stopped.');
-    }
-  }
-  
-  // Trim unique sur la clé chargée
-  apiKey = apiKey.trim();
-  
-  // Vérifier que la clé n'est pas vide après trim
-  if (!apiKey || apiKey.length === 0) {
-    throw new Error('API key is empty after trimming whitespace. Script stopped.');
-  }
-  
-  // Validation JWT avec jsonwebtoken (décodage sans vérification de signature)
-  try {
-    const decoded = jwt.decode(apiKey, { complete: true });
-    
-    if (!decoded || !decoded.header || !decoded.payload) {
-      throw new Error('JWT structure is invalid (could not decode header or payload)');
-    }
-    
-    // Vérification optionnelle : format header standard
-    if (!decoded.header.typ || !decoded.header.alg) {
-      throw new Error('JWT header missing required fields (typ, alg)');
-    }
-    
-  } catch (error) {
-    throw new Error('API key format is invalid. Script stopped.', { cause: error });
-  }
-  
-  console.log(`[info] Clé API NuExtract chargée avec succès`);
-  return apiKey;
-};
 
-// Fonction pour charger et résoudre les schémas JSON
-async function loadAndResolveSchemas(config) {
-  const mainSchemaFileName = config?.nuextract?.mainJSONConfigurationFile || 'shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts.json';
-  const mainSchemaFile = resolveFromRepoRoot(mainSchemaFileName);
-  
-  console.log(`[info] Chargement et résolution du schéma JSON à partir de : ${mainSchemaFile}`);
-  
-  let resolvedSchema;
-  
-  // Bloc 1: Résolution des $ref avec $RefParser
-  try {
-    resolvedSchema = await $RefParser.dereference(mainSchemaFile, {
-      dereference: {
-        circular: 'ignore'
-      }
-    });
-  } catch (error) {
-    console.error(`Erreur critique : Échec du chargement ou de la résolution des références du schéma JSON: ${error.message}`);
-    throw new Error('Invalid JSON schema structure or content. Script stopped.', { cause: error });
-  }
-  
-  // Bloc 2: Validation de conformité JSON Schema avec Ajv
-  try {
-    const ajv = new Ajv({ strict: false, allErrors: true });
-    addFormats(ajv);
-    
-    // Valider que resolvedSchema est conforme à JSON Schema Draft-07
-    const valid = ajv.validateSchema(resolvedSchema);
-    
-    if (!valid) {
-      const errorMessages = ajv.errors.map(err => `${err.instancePath} ${err.message}`).join('; ');
-      const validationError = new Error(`Schema validation failed: ${errorMessages}`);
-      console.error(`Erreur critique : Le schéma résolu n'est pas conforme à JSON Schema Draft-07: ${errorMessages}`);
-      throw new Error('Invalid JSON schema structure or content. Script stopped.', { cause: validationError });
-    }
-  } catch (error) {
-    // Si l'erreur vient déjà du bloc de validation ci-dessus, la relancer
-    if (error.message === 'Invalid JSON schema structure or content. Script stopped.') {
-      throw error;
-    }
-    // Sinon, c'est une erreur inattendue dans Ajv lui-même
-    console.error(`Erreur critique : Échec de la validation du schéma avec Ajv: ${error.message}`);
-    throw new Error('Invalid JSON schema structure or content. Script stopped.', { cause: error });
-  }
-  
-  console.log(`[info] Schéma JSON chargé, résolu et validé avec succès`);
-  return resolvedSchema;
-}
-
-// Générer un template via /api/infer-template (sync) ou /api/infer-template-async (async)
-async function generateTemplate(config, apiKey, resolvedJsonSchema) {
-  // Fonction helper interne pour charger les instructions de transformation
-  async function loadInstructions(config) {
-    console.log(`[info] Chargement des instructions depuis config.nuextract.templateTransformationInstructions.instructions`);
-    
-    // Instructions depuis config déjà chargée (SRP : extraction uniquement, pas de chargement fichier)
-    if (!config?.nuextract?.templateTransformationInstructions?.instructions) {
-      throw new Error('templateTransformationInstructions.instructions non trouvé dans config.nuextract. Script stopped.');
-    }
-    
-    const instructionsArray = config.nuextract.templateTransformationInstructions.instructions;
-    
-    // Valider que c'est un array (Pattern 1 : erreur de validation selon @error-handling-governance)
-    if (!Array.isArray(instructionsArray)) {
-      const actualType = typeof instructionsArray;
-      throw new Error(`templateTransformationInstructions.instructions invalide: type "${actualType}". Format attendu: array de strings. Script stopped.`);
-    }
-    
-    // Joindre les valeurs de l'array avec \n pour concaténation
-    const instructions = instructionsArray.join('\n');
-    console.log(`[info] Instructions chargées depuis config.nuextract.templateTransformationInstructions.instructions (${instructionsArray.length} instructions)`);
-    return instructions;
-  }
-  
-  try {
-    const instructions = await loadInstructions(config);
-    // Stringifier le schéma résolu uniquement pour construire la description API
-    const mainSchema = JSON.stringify(resolvedJsonSchema, null, 2);
-    const description = mainSchema + '\n' + instructions;
-
-    console.log(`[info] Génération du template avec la description NuExtract suivante : ${description}`);
-
-    // Déterminer le mode (sync par défaut)
-    const templateMode = config?.nuextract?.templateMode || 'sync';
-    
-    // Validation du mode
-    if (templateMode !== 'sync' && templateMode !== 'async') {
-      throw new Error(`templateMode invalide: "${templateMode}". Valeurs acceptées: "sync", "async"`);
-    }
-    
-    // Récupérer templateGenerationDuration (défaut 30000ms)
-    const templateGenerationDuration = config?.nuextract?.templateGenerationDuration || 30000;
-    
-    // Gestion des fallbacks de configuration (Dependency Injection)
-    const hostname = config?.nuextract?.baseUrl || 'nuextract.ai';
-    const port = config?.nuextract?.port || 443;
-    const pathPrefix = config?.nuextract?.pathPrefix || null;
-    
-    let template;
-    
-    if (templateMode === 'async') {
-      // Mode async
-      const pathAsync = config?.nuextract?.['infer-templateAsyncPath'] || '/api/infer-template-async';
-      const pathJobs = config?.nuextract?.jobsPath || '/api/jobs/{jobId}';
-      
-      console.log(`Mode async: Lancement génération template asynchrone (timeout API: 60s, sleep initial: ${templateGenerationDuration}ms)...`);
-      
-      // Appel API avec tous les paramètres explicites
-      const asyncResponse = await nuextractApi.inferTemplateFromDescriptionAsync(
-        hostname, port, pathAsync, pathPrefix, apiKey, description, 60
-      );
-      
-      const jobId = asyncResponse.jobId;
-      
-      if (!jobId) {
-        throw new Error('Pas de jobId reçu de l\'API async');
-      }
-      
-      console.log(`Job lancé avec ID: ${jobId}`);
-      
-      // Polling avec tous les paramètres explicites
-      const templateData = await nuextractApi.pollJobUntilComplete(
-        hostname, port, pathJobs, pathPrefix, apiKey, jobId, 20, 3000, templateGenerationDuration
-      );
-      
-      // Vérifier et valider le type de templateData
-      if (typeof templateData === 'string') {
-        try {
-          template = JSON.parse(templateData);
-        } catch (error) {
-          throw new Error('Invalid JSON in template data returned by async API. Script stopped.', { cause: error });
-        }
-      } else if (templateData && typeof templateData === 'object' && !Array.isArray(templateData)) {
-        template = templateData;
-      } else {
-        const actualType = templateData === null ? 'null' : Array.isArray(templateData) ? 'array' : typeof templateData;
-        throw new Error(`Invalid template data type: expected object or JSON string, got ${actualType}. Script stopped.`);
-      }
-    } else {
-      // Mode sync
-      const pathSync = config?.nuextract?.['infer-templatePath'] || '/api/infer-template';
-      const syncTimeout = templateGenerationDuration + 5000; // Marge de sécurité +5s
-      
-      console.log(`Mode sync: Génération template synchrone (timeout HTTP: ${syncTimeout}ms)...`);
-      
-      // Appel API avec tous les paramètres explicites
-      template = await nuextractApi.inferTemplateFromDescription(
-        hostname, port, pathSync, pathPrefix, apiKey, description, syncTimeout
-      );
-    }
-    
-    // Sauvegarder le template généré
-    const templateDirConfig = config?.nuextract?.templateOutputDirectory || 'shared/hermes2022-extraction-files/config/nuextract-template-generated';
-    const templateDir = resolveFromRepoRoot(templateDirConfig);
-    if (!fs.existsSync(templateDir)) {
-      fs.mkdirSync(templateDir, { recursive: true });
-    }
-    const templatePath = path.join(templateDir, 'nuextract-template.json');
-    fs.writeFileSync(templatePath, JSON.stringify(template, null, 2), 'utf8');
-    console.log(`Template sauvegardé dans : ${templatePath}`);
-    
-    console.log('Template NuExtract généré avec succès');
-    return template;
-  } catch (error) {
-    console.error(`Erreur lors de la génération du template: ${error.message}`);
-    throw error;
-  }
-}
-
-// Gestion du projet NuExtract, il est recherché et mis à jour avec le template si le projet existe déjà ou créé avec le template généré si le projet n'existe pas encore
-async function findOrCreateProject(config, apiKey, templateObj) {
-  // Journalisation en entrée de fonction pour traçabilité
+// Gestion du projet NuExtract : recherche ou création (template appliqué par bloc)
+async function findOrCreateProject(config, apiKey) {
   console.log(`[info] Gestion du projet NuExtract`);
   
   try {
     // Résoudre tous les paramètres depuis config avec fallbacks
-    const templateReset = config?.nuextract?.templateReset ?? false;
-    const projectName = config?.nuextract?.projectName || 'HERMES2022';
-    const projectDescription = config?.nuextract?.projectDescription || 'Project for HERMES2022 concepts extraction';
-    const hostname = config?.nuextract?.baseUrl || 'nuextract.ai';
-    const port = config?.nuextract?.port || 443;
-    const pathProjects = config?.nuextract?.projectsPath || '/api/projects';
-    const pathProjectTemplate = config?.nuextract?.projectTemplatePath || '/api/projects/{projectId}/template';
-    const pathPrefix = config?.nuextract?.pathPrefix || null;
+    const nuextractConfig = config?.llm?.nuextract || config?.nuextract || {};
+    const projectName = nuextractConfig.projectName || 'HERMES2022';
+    const projectDescription = nuextractConfig.projectDescription || 'Project for HERMES2022 concepts extraction';
+    const hostname = nuextractConfig.baseUrl || 'nuextract.ai';
+    const port = nuextractConfig.port || 443;
+    const pathProjects = nuextractConfig.projectsPath || '/api/projects';
+    const pathPrefix = nuextractConfig.pathPrefix || null;
     
     // Validation projectName
     if (!projectName || typeof projectName !== 'string' || projectName.trim() === '') {
@@ -382,88 +44,156 @@ async function findOrCreateProject(config, apiKey, templateObj) {
     
     if (!existingProject) {
       console.log(`[info] Pas de projet existant trouvé sur la plateforme NuExtract : ${projectName}`);
-      // Créer le projet - le template est obligatoire pour un nouveau projet
-      if (!templateObj) {
-        throw new Error('A valid NuExtractTemplate is required for project creation. Script stopped.');
-      }
+      console.log(`Création du projet ${projectName} (template sera appliqué par bloc)`);
       
-      console.log(`Création du projet ${projectName} avec template ${templateObj}`);
+      // Créer le projet sans template (sera appliqué par bloc)
+      const projectPayload = {
+        name: projectName,
+        description: projectDescription
+      };
       
       // Appel API avec tous les paramètres explicites
       const created = await nuextractApi.createNuExtractProject(
-        hostname, port, pathProjects, pathPrefix, apiKey, {
-          name: projectName,
-          description: projectDescription,
-          template: templateObj
-        }
+        hostname, port, pathProjects, pathPrefix, apiKey, projectPayload
       );
       
+      _projectId = created?.id;  // Cache interne
       return { id: created?.id, name: projectName, created: true };
     }
     
-    if (existingProject) {
-      console.log(`[info] Projet existant trouvé sur la plateforme NuExtract : ${projectName} (id: ${existingProject.id})`);
-      
-      if (templateReset) {
-        // Mise à jour du template demandée
-        if (!templateObj) {
-          throw new Error('A valid NuExtractTemplate is required for template update. Script stopped.');
-        }
-        // Utiliser le path passé en paramètre
-        await nuextractApi.putProjectTemplate(hostname, port, pathProjectTemplate, pathPrefix, apiKey, existingProject.id, templateObj);
-        console.log(`[info] Template mis à jour pour le projet ${projectName} (id: ${existingProject.id})`);
-        return { id: existingProject.id, name: projectName, updated: true };
-      } else {
-        // Réutilisation du projet existant sans modification
-        // Vérifier la conformité du template existant avec le template fourni (conforme au JSON schema)
-        if (!templateObj) {
-          throw new Error('A valid NuExtractTemplate is required for template conformity validation. Script stopped.');
-        }
-        
-        console.log(`[info] Paramètre de mise à jour du template : ${templateReset}, Vérification de la conformité du template existant avec le JSON schema`);
-        
-        // Le template est déjà disponible dans existingProject (retourné par getNuExtractProjects)
-        if (!existingProject.template || !existingProject.template.schema) {
-          throw new Error(`Le projet ${projectName} existe mais ne contient pas de template valide. Script stopped.`);
-        }
-        
-        // Comparaison profonde du template existant avec le template de référence (conforme au JSON schema)
-        const existingTemplateSchema = JSON.stringify(existingProject.template.schema);
-        const expectedTemplateSchema = JSON.stringify(templateObj);
-        
-        if (existingTemplateSchema !== expectedTemplateSchema) {
-          throw new Error(`Le template existant du projet ${projectName} n'est pas conforme au JSON schema attendu. Script stopped.`);
-        }
-        
-        console.log(`[info] Template existant conforme au JSON schema - projet ${projectName} (id: ${existingProject.id})`);
-        console.log(`Projet ${projectName} trouvé, réutilisation sans modification`);
-        return { id: existingProject.id, name: projectName, existing: true };
-      }
-    }
+    // Projet existant trouvé, réutilisation
+    console.log(`[info] Projet existant trouvé sur la plateforme NuExtract : ${projectName} (id: ${existingProject.id})`);
+    console.log(`Projet ${projectName} trouvé, réutilisation (template appliqué par bloc)`);
+    _projectId = existingProject.id;  // Cache interne
+    return { id: existingProject.id, name: projectName, existing: true };
+    
   } catch (error) {
     console.error(`Erreur lors de la gestion du projet NuExtract: ${error.message}`);
     throw error;
   }
 }
+
 /**
- * Extrait les concepts HERMES2022 depuis les sources HTML via NuExtract
- * @param {object} resolvedSchema - Schéma JSON résolu (déjà déréférencé)
- * @param {object} config - Configuration complète avec nuextract, extractionSource, hermesVersion, etc.
+ * Génère template NuExtract pour UN SEUL bloc
+ * @param {object} blockSchema - Schéma JSON du bloc
+ * @param {object} config - Configuration complète
  * @param {string} apiKey - Clé API NuExtract
- * @param {string} projectId - ID du projet NuExtract
- * @returns {Promise<object>} - Artefact JSON validé avec métadonnées enrichies
+ * @returns {Promise<object>} Template NuExtract
  */
-async function extractHermes2022ConceptsWithNuExtract(resolvedSchema, config, apiKey, projectId) {
-  /**
-   * Fonction helper interne : Construit un prompt Markdown pour un seul bloc
-   * @param {{jsonPointer: string, instructions: Array<string>, htmlContents: Array<{url: string, content: string}>}} block - Bloc avec JSON Pointer, instructions et contenus HTML
-   * @returns {string} - Prompt Markdown pour ce bloc
-   */
-  function buildBlockPrompt(block) {
-    // Journalisation en entrée de fonction pour traçabilité
-    console.log(`[info] Construction du prompt d'extraction pour bloc ${block?.jsonPointer || 'inconnu'}`);
+async function generateTemplateForBlock(blockSchema, config, apiKey) {
+  console.log(`[info] Génération du template NuExtract pour un bloc`);
+  
+  try {
+    // Charger les instructions depuis config
+    const nuextractConfig = config?.llm?.nuextract || config?.nuextract || {};
+    if (!nuextractConfig.templateTransformationInstructions?.instructions) {
+      throw new Error('templateTransformationInstructions.instructions non trouvé dans config.llm.nuextract. Script stopped.');
+    }
     
-    try {
+    const instructionsArray = nuextractConfig.templateTransformationInstructions.instructions;
+    
+    if (!Array.isArray(instructionsArray)) {
+      const actualType = typeof instructionsArray;
+      throw new Error(`templateTransformationInstructions.instructions invalide: type "${actualType}". Format attendu: array de strings. Script stopped.`);
+    }
+    
+    const instructions = instructionsArray.join('\n');
+    
+    // Stringifier le schéma du bloc uniquement
+    const schemaStr = JSON.stringify(blockSchema, null, 2);
+    const description = schemaStr + '\n\n' + instructions;
+    
+    // Déterminer le mode (sync par défaut)
+    const templateMode = nuextractConfig.templateMode || 'sync';
+    
+    if (templateMode !== 'sync' && templateMode !== 'async') {
+      throw new Error(`templateMode invalide: "${templateMode}". Valeurs acceptées: "sync", "async". Script stopped.`);
+    }
+    
+    // Récupérer templateGenerationDuration (défaut 30000ms)
+    const templateGenerationDuration = nuextractConfig.templateGenerationDuration || 30000;
+    
+    // Gestion des fallbacks de configuration
+    const hostname = nuextractConfig.baseUrl || 'nuextract.ai';
+    const port = nuextractConfig.port || 443;
+    const pathPrefix = nuextractConfig.pathPrefix || null;
+    
+    let template;
+    
+    if (templateMode === 'async') {
+      // Mode async
+      const pathAsync = nuextractConfig['infer-templateAsyncPath'] || '/api/infer-template-async';
+      const pathJobs = nuextractConfig.jobsPath || '/api/jobs/{jobId}';
+      
+      console.log(`Mode async: Lancement génération template asynchrone pour bloc (timeout API: 60s, sleep initial: ${templateGenerationDuration}ms)...`);
+      
+      const asyncResponse = await nuextractApi.inferTemplateFromDescriptionAsync(
+        hostname, port, pathAsync, pathPrefix, apiKey, description, 60
+      );
+      
+      const jobId = asyncResponse.jobId;
+      
+      if (!jobId) {
+        throw new Error('Pas de jobId reçu de l\'API async. Script stopped.');
+      }
+      
+      console.log(`Job lancé avec ID: ${jobId}`);
+      
+      const templateData = await nuextractApi.pollJobUntilComplete(
+        hostname, port, pathJobs, pathPrefix, apiKey, jobId, 20, 3000, templateGenerationDuration
+      );
+      
+      if (typeof templateData === 'string') {
+        try {
+          template = JSON.parse(templateData);
+        } catch (error) {
+          throw new Error('Invalid JSON in template data returned by async API. Script stopped.', { cause: error });
+        }
+      } else if (templateData && typeof templateData === 'object' && !Array.isArray(templateData)) {
+        template = templateData;
+      } else {
+        const actualType = templateData === null ? 'null' : Array.isArray(templateData) ? 'array' : typeof templateData;
+        throw new Error(`Invalid template data type: expected object or JSON string, got ${actualType}. Script stopped.`);
+      }
+    } else {
+      // Mode sync
+      const pathSync = nuextractConfig['infer-templatePath'] || '/api/infer-template';
+      const syncTimeout = templateGenerationDuration + 5000; // Marge de sécurité +5s
+      
+      console.log(`Mode sync: Génération template synchrone pour bloc (timeout HTTP: ${syncTimeout}ms)...`);
+      
+      template = await nuextractApi.inferTemplateFromDescription(
+        hostname, port, pathSync, pathPrefix, apiKey, description, syncTimeout
+      );
+    }
+    
+    console.log('Template NuExtract généré avec succès pour bloc');
+    return template;
+  } catch (error) {
+    console.error(`Erreur lors de la génération du template pour bloc: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Extrait UN SEUL bloc avec NuExtract (utilise _projectId interne)
+ * @param {object} block - {jsonPointer, schema, instructions, htmlContents}
+ * @param {object} config - Configuration complète
+ * @param {string} apiKey - Clé API NuExtract
+ * @returns {Promise<{jsonPointer: string, data: object}>} Résultat extraction
+ */
+async function extractSingleBlock(block, config, apiKey) {
+  console.log(`[info] Extraction NuExtract pour bloc ${block.jsonPointer}`);
+  
+  if (!_projectId) {
+    throw new Error('NuExtract project not initialized. Call findOrCreateProject() first. Script stopped.');
+  }
+  
+  try {
+    // Fonction helper interne : Construit un prompt Markdown pour un seul bloc
+    function buildBlockPrompt(block) {
+      console.log(`[info] Construction du prompt d'extraction pour bloc ${block?.jsonPointer || 'inconnu'}`);
+      
       // Validation : htmlContents ne doit pas être vide
       if (block.htmlContents.length === 0) {
         throw new Error('block.htmlContents is empty. No HTML content found for this block. Script stopped.');
@@ -472,14 +202,10 @@ async function extractHermes2022ConceptsWithNuExtract(resolvedSchema, config, ap
       // Construire le prompt Markdown pour ce bloc
       const promptParts = [];
       
-      // Log des instructions d'extraction pour ce bloc (une seule fois)
-      console.log(`[debug] Bloc ${block.jsonPointer} : ${block.instructions.length} instruction(s) d'extraction`);
-      console.log(`[debug] Instructions : ${block.instructions.join(' | ')}`);
-      
-      // En-tête du bloc avec JSON Pointer (une seule fois)
+      // En-tête du bloc avec JSON Pointer
       promptParts.push(`## Block: ${block.jsonPointer}\n`);
       
-      // Instructions d'extraction (une seule fois pour tout le bloc)
+      // Instructions d'extraction
       promptParts.push('### Extraction Instructions\n');
       for (const instruction of block.instructions) {
         promptParts.push(`- ${instruction}`);
@@ -488,466 +214,60 @@ async function extractHermes2022ConceptsWithNuExtract(resolvedSchema, config, ap
       
       // Pour chaque contenu HTML dans le bloc, ajouter une section de contenu
       for (const htmlContent of block.htmlContents) {
-        // Contenu texte (déjà converti HTML→texte) pour cette URL spécifique
         promptParts.push(`### Text Content from ${htmlContent.url}\n`);
         promptParts.push('```text\n');
         promptParts.push(htmlContent.content);
         promptParts.push('\n```\n');
-        
-        // Log pour chaque URL traitée (taille du contenu texte)
-        console.log(`[debug] Contenu ajouté pour ${htmlContent.url} : ${htmlContent.content.length} caractères texte`);
       }
       
       // Concaténation en un seul prompt pour ce bloc
       const prompt = promptParts.join('\n');
       
-      // Journalisation en sortie de fonction pour validation du succès
       console.log(`[info] Prompt d'extraction construit pour bloc ${block.jsonPointer} : ${prompt.length} caractères`);
       
-      // Log temporaire pour validation visuelle de la structure (premiers 800 caractères)
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[debug] ========== PROMPT COMPLET pour ${block.jsonPointer} ==========`);
-        console.log(prompt);
-        console.log(`[debug] ========== FIN PROMPT ==========\n`);
-      }
-      
       return prompt;
-    } catch (error) {
-      // Message contextualisé pour identifier facilement la fonction
-      console.error(`Erreur lors de la construction du prompt d'extraction pour bloc: ${error.message}`);
-      throw error; // Propagation simple avec préservation de la stack trace
     }
-  }
-
-  /**
-   * Fonction helper interne : Recompose l'artefact final en fusionnant les résultats partiels par bloc
-   * @param {Array<{jsonPointer: string, data: object}>} partialResults - Résultats partiels de l'extraction par bloc
-   * @param {object} resolvedSchema - Schéma résolu pour validation
-   * @param {object} config - Configuration complète
-   * @param {string} baseUrl - URL de base
-   * @returns {object} - Artefact final recomposé
-   */
-  function recomposeArtifact(partialResults, resolvedSchema, config, baseUrl) {
-    /**
-     * Fonction helper interne : Fusionne récursivement une valeur dans un objet cible au chemin spécifié (JSON Pointer)
-     * @param {object} target - Objet cible dans lequel fusionner
-     * @param {string} path - Chemin JSON Pointer (ex: "/concepts/overview" ou "/concepts/phases/0/description")
-     * @param {any} value - Valeur à fusionner
-     * @returns {object} - Objet cible modifié
-     */
-    function mergeJsonAtPath(target, path, value) {
-      // Journalisation en entrée de fonction pour traçabilité
-      console.log(`[info] Fusion de valeur au chemin ${path}`);
-      console.log(`[debug] Type de valeur à fusionner : ${typeof value}, est objet : ${typeof value === 'object'}, est array : ${Array.isArray(value)}, est null : ${value === null}`);
-      console.log(`[debug] Clés de la valeur (si objet) :`, value && typeof value === 'object' ? Object.keys(value) : 'N/A');
-      
-      try {
-        // Parser le JSON Pointer (format: /path/to/property ou /path/to/array/0)
-        // Note : path garanti valide par construction (vient de jsonPointer déjà utilisé pour collecte)
-        // Retirer le slash initial et diviser en segments
-        const segments = path.replace(/^\/+/, '').split('/').filter(seg => seg !== '');
-        
-        // Parcourir récursivement les segments pour créer ou accéder aux objets intermédiaires
-        let current = target;
-        for (let i = 0; i < segments.length - 1; i++) {
-          const segment = segments[i];
-          
-          // Vérifier si le segment est un index d'array (nombre)
-          const arrayIndex = parseInt(segment, 10);
-          if (!isNaN(arrayIndex) && Array.isArray(current)) {
-            // Accéder à l'élément de l'array (index garanti valide si schéma cohérent avec JSON retourné)
-            current = current[arrayIndex];
-          } else {
-            // Créer l'objet intermédiaire s'il n'existe pas
-            if (!current[segment] || typeof current[segment] !== 'object') {
-              current[segment] = {};
-            }
-            current = current[segment];
-          }
-        }
-        
-        // Dernier segment : fusionner la valeur
-        const lastSegment = segments[segments.length - 1];
-        const arrayIndex = parseInt(lastSegment, 10);
-        
-        if (!isNaN(arrayIndex) && Array.isArray(current)) {
-          // Fusionner dans un élément d'array
-          if (arrayIndex < 0 || arrayIndex >= current.length) {
-            throw new Error(`Array index out of bounds: ${arrayIndex} at path ${path}. Script stopped.`);
-          }
-          if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-            // Fusionner objet dans l'élément de l'array
-            Object.assign(current[arrayIndex], value);
-          } else {
-            // Remplacer l'élément de l'array
-            current[arrayIndex] = value;
-          }
-        } else {
-          // Fusionner dans une propriété d'objet
-          if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-            // Fusionner objet récursivement
-            if (!current[lastSegment] || typeof current[lastSegment] !== 'object' || Array.isArray(current[lastSegment])) {
-              current[lastSegment] = {};
-            }
-            Object.assign(current[lastSegment], value);
-          } else {
-            // Remplacer la propriété
-            current[lastSegment] = value;
-          }
-        }
-        
-        return target;
-      } catch (error) {
-        // Message contextualisé pour identifier facilement la fonction
-        console.error(`Erreur lors de la fusion au chemin ${path}: ${error.message}`);
-        throw error; // Propagation simple avec préservation de la stack trace
-      }
-    }
-
-    // Journalisation en entrée de fonction pour traçabilité
-    console.log(`[info] Recomposition de l'artefact final depuis ${partialResults?.length || 0} résultat(s) partiel(s)`);
     
-    try {
-      // Initialiser artefact vide avec structure de base
-      const extractionSource = config?.extractionSource || {};
-      const artifact = {
-        config: {
-          extractionSource: extractionSource
-        },
-        method: {},
-        concepts: {}
-      };
-      
-      // Fusionner chaque résultat partiel selon jsonPointer
-      for (const partialResult of partialResults) {
-        const { jsonPointer, data } = partialResult;
-        
-        // Validation uniquement pour data (input externe API) - jsonPointer garanti valide par construction locale
-        if (data === null || typeof data !== 'object') {
-          throw new Error(`Invalid data in partial result for ${jsonPointer}. Script stopped.`);
-        }
-        
-        // Cas principal : NuExtract retourne uniquement le bloc demandé (grâce aux instructions ajustées)
-        // Fallback robuste : si data contient une structure complète (method/concepts), extraire la valeur au chemin jsonPointer
-        
-        let valueToMerge = data;
-        
-        // Détecter si data contient une structure complète (avec method/concepts) ou juste le bloc
-        const hasCompleteStructure = data.method !== undefined || (data.concepts !== undefined && typeof data.concepts === 'object');
-        
-        if (hasCompleteStructure) {
-          // Fallback : data contient la structure complète, extraire la valeur au chemin jsonPointer
-          const segments = jsonPointer.replace(/^\/+/, '').split('/').filter(seg => seg !== '');
-          let extractedValue = data;
-          let extractionSuccess = true;
-          
-          // Naviguer dans data selon les segments du jsonPointer
-          for (const segment of segments) {
-            const arrayIndex = parseInt(segment, 10);
-            if (!isNaN(arrayIndex) && Array.isArray(extractedValue)) {
-              if (arrayIndex < 0 || arrayIndex >= extractedValue.length) {
-                extractionSuccess = false;
-                break;
-              }
-              extractedValue = extractedValue[arrayIndex];
-            } else if (extractedValue && typeof extractedValue === 'object' && segment in extractedValue) {
-              extractedValue = extractedValue[segment];
-            } else {
-              extractionSuccess = false;
-              break;
-            }
-          }
-          
-          // Si l'extraction a réussi, utiliser la valeur extraite, sinon utiliser data tel quel
-          if (extractionSuccess && extractedValue !== undefined) {
-            valueToMerge = extractedValue;
-          }
-          // Sinon, valueToMerge reste = data (fusionner toute la structure)
-        }
-        // Sinon (cas principal), valueToMerge = data (bloc uniquement retourné par NuExtract)
-        
-        // Log de la valeur à fusionner pour debug
-        console.log(`[debug] Valeur à fusionner pour ${jsonPointer} :`, JSON.stringify(valueToMerge, null, 2));
-        
-        // Fusionner la valeur dans l'artefact au chemin jsonPointer
-        mergeJsonAtPath(artifact, jsonPointer, valueToMerge);
-      }
-      
-      // Ajouter hermesVersion au niveau method si présent dans les résultats partiels
-      // Chercher dans tous les résultats partiels pour trouver hermesVersion
-      for (const partialResult of partialResults) {
-        if (partialResult.data?.method?.hermesVersion) {
-          artifact.method.hermesVersion = partialResult.data.method.hermesVersion;
-          break;
-        }
-      }
-      
-      // Journalisation en sortie de fonction pour validation du succès
-      console.log(`[info] Recomposition de l'artefact final terminée avec succès`);
-      
-      return artifact;
-    } catch (error) {
-      // Message contextualisé pour identifier facilement la fonction
-      console.error(`Erreur lors de la recomposition de l'artefact: ${error.message}`);
-      throw error; // Propagation simple avec préservation de la stack trace
-    }
-  }
-
-  /**
-   * Fonction helper interne récursive : Normalise les valeurs enum dans l'artefact selon le schéma
-   * Force les valeurs définies dans items.enum du schéma pour les propriétés paramétriques (sourceUrl, extractionInstructions)
-   * IMPORTANT: Parcourt les propriétés du SCHÉMA (pas de l'artefact) pour ajouter les propriétés paramétriques manquantes
-   * @param {object} artifact - Artefact à normaliser (modifié en place)
-   * @param {object} schema - Schéma résolu avec les enum de référence
-   * @param {string} jsonPointer - Pointeur JSON courant (pour logs)
-   */
-  function normalizeEnumValues(artifact, schema, jsonPointer = '') {
-    if (!schema || !schema.properties) return;
+    // 1. Générer template pour ce bloc
+    const blockTemplate = await generateTemplateForBlock(block.schema, config, apiKey);
     
-    const schemaProps = schema.properties;
+    // 2. Mettre à jour projet avec ce template (utilise _projectId interne)
+    const nuextractConfig = config?.llm?.nuextract || config?.nuextract || {};
+    const hostname = nuextractConfig.baseUrl || 'nuextract.ai';
+    const port = nuextractConfig.port || 443;
+    const pathProjectTemplate = nuextractConfig.projectTemplatePath || '/api/projects/{projectId}/template';
+    const pathPrefix = nuextractConfig.pathPrefix || null;
     
-    // CORRECTION: Parcourir les propriétés du SCHÉMA (pas de l'artefact)
-    // pour détecter et ajouter les propriétés paramétriques manquantes (sourceUrl, extractionInstructions)
-    for (const key in schemaProps) {
-      if (!schemaProps.hasOwnProperty(key)) continue;
-      
-      const schemaProp = schemaProps[key];
-      const currentPointer = jsonPointer ? `${jsonPointer}/${key}` : `/${key}`;
-      
-      // Cas 1 : Array avec items.enum (sourceUrl, extractionInstructions)
-      // Force l'array complet de toutes les valeurs items.enum (propriétés paramétriques)
-      // AJOUTE la propriété si elle n'existe pas dans l'artefact (NuExtract ne retourne pas les propriétés paramétriques)
-      if (schemaProp.type === 'array' && schemaProp.items?.enum && Array.isArray(schemaProp.items.enum)) {
-        const expectedArray = schemaProp.items.enum; // Array complet des valeurs paramétriques
-        console.log(`[debug] Normalisation items.enum pour ${currentPointer} : forcer ${JSON.stringify(expectedArray)}`);
-        artifact[key] = expectedArray; // Force la valeur (ajoute si manquante, écrase si présente)
-      }
-      // Cas 2 : Objet imbriqué (récursion)
-      // Si la propriété existe dans l'artefact ET est un objet, on descend récursivement
-      else if (artifact[key] && typeof artifact[key] === 'object' && !Array.isArray(artifact[key]) && schemaProp.properties) {
-        normalizeEnumValues(artifact[key], schemaProp, currentPointer);
-      }
-      // Cas 3 : Array d'objets (phases)
-      // Si la propriété existe dans l'artefact ET est un array d'objets, on descend récursivement
-      else if (artifact[key] && Array.isArray(artifact[key]) && schemaProp.items?.properties) {
-        artifact[key].forEach((item, index) => {
-          normalizeEnumValues(item, schemaProp.items, `${currentPointer}/${index}`);
-        });
-      }
-    }
-  }
-
-  // Journalisation en entrée de fonction pour traçabilité
-  console.log(`[info] Extraction HERMES2022 concepts avec NuExtract pour projet ${projectId}`);
-  
-  try {
-    // Récupérer maxDepth depuis config
-    const maxDepth = config?.nuextract?.extractionBlocksMaxDepth || 10;
+    await nuextractApi.putProjectTemplate(hostname, port, pathProjectTemplate, pathPrefix, apiKey, _projectId, blockTemplate);
     
-    // Récupérer baseUrl depuis extractionSource
-    const baseUrl = config?.extractionSource?.baseUrl || 'https://www.hermes.admin.ch/en';
+    // 3. Construire prompt (reprendre buildBlockPrompt)
+    const prompt = buildBlockPrompt(block);
     
-    // Phase 1 : Collecte des sources HTML et instructions
-    // IMPORTANT: Utiliser le schéma résolu (AVANT génération du template) qui contient les extractionInstructions
-    // Le template NuExtract généré ne contiendra pas les extractionInstructions (métadonnées d'extraction)
-    // mais les enum du schéma seront transformés en format template par l'API NuExtract via le prompt
-    // Si le schéma résolu a une structure JSON Schema standard avec properties au niveau racine,
-    // passer directement resolvedSchema.properties pour éviter de parcourir les métadonnées ($schema, $id, etc.)
-    const schemaToTraverse = resolvedSchema.properties ? resolvedSchema.properties : resolvedSchema;
-    const preparation = await collectHtmlSourcesAndInstructions(
-      schemaToTraverse,
-      config,
-      baseUrl,
-      '/',
-      0,
-      maxDepth
+    // 4. Appeler infer-text (utilise _projectId interne)
+    const path = nuextractConfig['infer-textPath'] || '/api/projects/{projectId}/infer-text';
+    const timeoutMs = 120000;
+    
+    const partialJson = await nuextractApi.inferTextFromContent(
+      hostname, port, path, pathPrefix, _projectId, apiKey, prompt, timeoutMs
     );
     
-    // Phase 2 : Extraction par bloc via API NuExtract
-    // Récupérer les paramètres pour l'appel API
-    const hostname = config?.nuextract?.baseUrl || 'nuextract.ai';
-    const port = config?.nuextract?.port || 443;
-    const path = config?.nuextract?.['infer-textPath'] || '/api/projects/{projectId}/infer-text';
-    const pathPrefix = config?.nuextract?.pathPrefix || null;
-    const timeoutMs = 120000; // 120s pour gros contenus
-    
-    // Boucle sur chaque bloc pour extraction individuelle
-    const partialResults = [];
-    for (const block of preparation.blocks) {
-      // Construire prompt pour ce bloc
-      const blockPrompt = buildBlockPrompt(block);
-      
-      // Extraction NuExtract pour ce bloc
-      const partialJson = await nuextractApi.inferTextFromContent(
-        hostname,
-        port,
-        path,
-        pathPrefix,
-        projectId,
-        apiKey,
-        blockPrompt,
-        timeoutMs
-      );
-      
-      // Log de la réponse brute de l'API NuExtract pour debug
-      console.log(`[debug] Réponse API NuExtract pour bloc ${block.jsonPointer} - Type:`, typeof partialJson, '- Est objet:', typeof partialJson === 'object', '- Clés:', partialJson ? Object.keys(partialJson).slice(0, 10) : 'null');
-      
-      // Stocker résultat partiel avec son jsonPointer
-      partialResults.push({ jsonPointer: block.jsonPointer, data: partialJson });
-    }
-    
-    // Phase 3 : Recomposition de l'artefact final
-    const artifact = recomposeArtifact(partialResults, resolvedSchema, config, baseUrl);
-    
-    // Normaliser les valeurs enum depuis le schéma (forcer sourceUrl, extractionInstructions selon concept enum paramétrique)
-    console.log(`[info] Normalisation des valeurs enum depuis le schéma`);
-    normalizeEnumValues(artifact, resolvedSchema);
-    
-    // Post-traitement : Générer des IDs conformes pour les phases
-    console.log(`[info] Post-traitement : Génération des IDs phases conformes au pattern ph_abc123`);
-    if (artifact.concepts?.['concept-phases']?.phases) {
-      const crypto = require('crypto');
-      for (const phase of artifact.concepts['concept-phases'].phases) {
-        if (phase.id && !phase.id.match(/^ph_[a-z0-9]{6}$/)) {
-          const hash = crypto.createHash('md5').update((phase.name || phase.id).toLowerCase()).digest('hex');
-          const newId = `ph_${hash.substring(0, 6)}`;
-          console.log(`[debug] Génération ID phase "${phase.name}": "${phase.id}" → "${newId}"`);
-          phase.id = newId;
-        }
-      }
-    }
-    
-    // Phase 4 : Validation avec Ajv (schéma résolu)
-    const ajv = new Ajv({ strict: false, allErrors: true });
-    addFormats(ajv);
-    
-    const validate = ajv.compile(resolvedSchema);
-    const isValid = validate(artifact);
-    
-    // Debug: Sauvegarder l'artefact même en cas d'échec de validation pour analyse
-    if (!isValid) {
-      const pathModule = require('path');
-      const debugDir = resolveFromRepoRoot('hermes2022-concepts-site-extraction/__tests__/tmp-artifacts');
-      if (!fs.existsSync(debugDir)) {
-        fs.mkdirSync(debugDir, { recursive: true });
-      }
-      const debugPath = pathModule.join(debugDir, `artifact-debug-${Date.now()}.json`);
-      fs.writeFileSync(debugPath, JSON.stringify(artifact, null, 2), 'utf8');
-      console.log(`[debug] Artefact invalide sauvegardé pour analyse: ${debugPath}`);
-      
-      const errors = validate.errors?.map(err => `${err.instancePath}: ${err.message}`).join(', ') || 'Unknown validation error';
-      throw new Error(`Extracted JSON does not conform to schema: ${errors}. Script stopped.`);
-    }
-    
-    // Journalisation en sortie de fonction pour validation du succès
-    console.log(`[info] Extraction HERMES2022 concepts terminée avec succès pour projet ${projectId}`);
-    
-    return artifact;
+    console.log(`[info] Extraction NuExtract terminée pour bloc ${block.jsonPointer}`);
+    return { jsonPointer: block.jsonPointer, data: partialJson };
   } catch (error) {
-    // Message contextualisé pour identifier facilement la fonction
-    console.error(`Erreur lors de l'extraction HERMES2022 concepts: ${error.message}`);
-    throw error; // Propagation simple avec préservation de la stack trace
+    console.error(`Erreur lors de l'extraction du bloc ${block.jsonPointer}: ${error.message}`);
+    throw error;
   }
 }
 
-/**
- * Sauvegarde l'artefact JSON et initialise le fichier d'approbation associé
- * @param {object} config - Configuration complète
- * @param {object} artifact - Artefact JSON à persister
- * @param {Date} [now=new Date()] - Date de référence (injectable pour les tests)
- * @returns {{ artifactPath: string, approvalPath: string }} - Chemins des fichiers créés
- */
-async function saveArtifact(config, artifact, now = new Date()) {
-  // Journalisation en entrée de fonction pour traçabilité
-  console.log('[info] Sauvegarde de l\'artefact et initialisation du fichier d\'approbation');
-
-  try {
-    const artifactBaseDir = process.env.HERMES2022_CONCEPTS_ARTIFACT_DIR
-      || config?.artifactBaseDirectory
-      || 'shared/hermes2022-extraction-files/data';
-    const artifactDir = resolveFromRepoRoot(artifactBaseDir);
-
-    if (!fs.existsSync(artifactDir)) {
-      fs.mkdirSync(artifactDir, { recursive: true });
-    }
-
-    const extractionDate = now.toISOString().split('T')[0];
-    const artifactFileName = `hermes2022-concepts-${extractionDate}.json`;
-    const artifactPath = path.join(artifactDir, artifactFileName);
-
-    fs.writeFileSync(artifactPath, JSON.stringify(artifact, null, 2), 'utf8');
-    console.log(`[info] Artefact sauvegardé dans ${artifactPath}`);
-
-    const approvalFileName = `hermes2022-concepts-${extractionDate}.approval.json`;
-    const approvalPath = path.join(artifactDir, approvalFileName);
-    const approvalPayload = {
-      artifact: artifactFileName,
-      approvals: [
-        {
-          target: '/concepts/overview',
-          rule: 'overview-quality',
-          status: 'pending',
-          lastChecked: extractionDate
-        }
-      ]
-    };
-
-    fs.writeFileSync(approvalPath, JSON.stringify(approvalPayload, null, 2), 'utf8');
-    console.log(`[info] Fichier d'approbation initialisé dans ${approvalPath}`);
-
-    return { artifactPath, approvalPath };
-  } catch (error) {
-    console.error(`Erreur lors de la sauvegarde de l'artefact: ${error.message}`);
-    throw error; // Propagation simple avec préservation de la stack trace
-  }
-}
-
-// Point d'entrée du script qui exécute les fonctions séquentiellement
-async function main() {
-  console.log('[info] Démarrage du workflow principal hermes2022-concepts-site-extraction');
-  try {
-    const config = await loadGlobalConfig();
-    const apiKey = await loadApiKey(config);
-    
-    // Résoudre le schéma une fois après apiKey
-    const resolvedJsonSchema = await loadAndResolveSchemas(config);
-    
-    // Générer le template avec le schéma résolu
-    const template = await generateTemplate(config, apiKey, resolvedJsonSchema);
-    
-    // Gestion du projet NuExtract (résout tous les paramètres depuis config en interne)
-    const projectResult = await findOrCreateProject(config, apiKey, template);
-    
-    // Appel extraction HERMES2022 concepts avec NuExtract (utilise le schéma déjà résolu)
-    const artifact = await extractHermes2022ConceptsWithNuExtract(
-      resolvedJsonSchema,
-      config,
-      apiKey,
-      projectResult.id
-    );
-    await saveArtifact(config, artifact);
-
-    console.log('Extraction terminée avec succès');
-  } catch (error) {
-    console.error('Extraction a échoué:', error.message);
-    process.exit(1);
-  }
-}
-
-// N'exécuter main() que si le script est lancé directement, pas lors des imports pour tests
-if (require.main === module) {
-  main();
-}
-
-// Exports pour tests uniquement (logique métier)
+// Exports
 module.exports = {
-  _testOnly_loadGlobalConfig: loadGlobalConfig,
-  _testOnly_loadApiKey: loadApiKey,
-  _testOnly_loadAndResolveSchemas: loadAndResolveSchemas,
-  _testOnly_generateTemplate: generateTemplate,
+  // Tests BDD
   _testOnly_findOrCreateProject: findOrCreateProject,
-  _testOnly_fetchHtmlContent: fetchHtmlContent,
-  _testOnly_collectHtmlSourcesAndInstructions: collectHtmlSourcesAndInstructions,
-  _testOnly_extractHermes2022ConceptsWithNuExtract: extractHermes2022ConceptsWithNuExtract,
-  _testOnly_saveArtifact: saveArtifact
+  _testOnly_generateTemplateForBlock: generateTemplateForBlock,
+  _testOnly_extractSingleBlock: extractSingleBlock,
+  
+  // Interface publique
+  findOrCreateProject,
+  generateTemplateForBlock,
+  extractSingleBlock
 };

@@ -571,9 +571,53 @@ module.exports = {
 - __Configuration plate__ : Éviter un seul jest.config.js pour tous les modules → __Solution__ : Architecture monorepo → __Règle à adopter__ : Configuration par module orchestrée
 - __Chemins absolus__ : Éviter chemins absolus dans projects → __Solution__ : Utiliser `<rootDir>` → __Règle à adopter__ : Portabilité configuration
 
+#### Problème connu : Erreur source-map "version is a required argument" (TEMPORAIRE)
+
+##### Description détaillée du problème source-map
+
+[2025-11-15] Les tests de l'orchestrateur (`concepts-site-extraction-orchestrator-error-handling.steps.ts`) échouent avec l'erreur `"version" is a required argument` provenant de `source-map/lib/util.js` lors de la transformation TypeScript par ts-jest.
+
+##### Cause racine du problème source-map
+
+__Double chargement de `$RefParser`__ durant les tests :
+
+1. __Import direct__ : `concepts-site-extraction-orchestrator.js` importe `$RefParser` pour `loadAndResolveSchemas()`
+2. __Import indirect__ : Les tests mockent `nuextract-client.js` avec `jest.requireActual()`, ce qui force Jest à charger le module réel qui importe aussi `$RefParser`
+
+Ce double chargement provoque un conflit avec `source-map-support` installé par `@babel/core`.
+
+##### Justification de la nature temporaire du problème
+
+Ce problème fait partie de la phase de migration BDD progressive selon le plan d'architecture hybride multi-LLM :
+
+- __Contexte__ : Les instructions initiales précisaient de "rien supprimer de nuextract-client.js dans un premier temps et de reprendre la logique de celui-ci dans l'orchestrateur [...] puis de les retirer progressivement une à une en respectant les principes bdd"
+- __Situation actuelle__ : `loadAndResolveSchemas()` existe dans les DEUX modules pendant la migration
+- __Résolution automatique__ : Une fois que `loadAndResolveSchemas()` sera validée dans l'orchestrateur selon les principes BDD :
+  1. ✅ La fonction sera __retirée__ de `nuextract-client.js`
+  2. ✅ L'import de `$RefParser` sera __retiré__ de `nuextract-client.js`
+  3. ✅ Les tests ne chargeront plus `$RefParser` indirectement via `jest.requireActual()`
+  4. ✅ __Plus de double chargement__ → plus d'erreur source-map
+
+##### Comparaison avec tests fonctionnels
+
+Les tests de `nuextract-client-error-handling.steps.ts` fonctionnent correctement car ils ne chargent `$RefParser` qu'__une seule fois__ (uniquement via `nuextract-client.js`), démontrant que le problème est spécifique au double chargement dans les tests de l'orchestrateur.
+
+##### Anti-Patterns pour problème source-map - Solutions tentées sans succès
+
+- __Changement type d'import__ : Éviter ES module → CommonJS pour `$RefParser` dans les tests → __Solution tentée__ : `const $RefParser = require(...)` → __Résultat__ : Échec, problème persiste
+- __Suppression mocks globaux__ : Éviter mock global `$RefParser` → __Solution tentée__ : Utilisation de `jest.spyOn` ciblé → __Résultat__ : Échec, problème persiste
+- __Désactivation isolatedModules__ : Éviter compilation isolée → __Solution tentée__ : `isolatedModules: false` dans ts-jest → __Résultat__ : Échec, problème persiste
+- __Désactivation source maps__ : Éviter génération source maps → __Solution tentée__ : `sourceMap: false` dans ts-jest config → __Résultat__ : Échec, problème persiste
+- __Interception prepareStackTrace__ : Éviter traitement source maps → __Solution tentée__ : Hook `Error.prepareStackTrace` dans jest-cucumber-setup → __Résultat__ : Échec, problème persiste
+
+##### État d'implémentation du problème source-map
+
+🚧 [Problème temporaire identifié - 2025-11-15] - Sera résolu automatiquement après migration BDD complète de `loadAndResolveSchemas()`
+
 #### État d'implémentation pour Configuration Jest
 
 ✅ [Fonctionnalité réalisée - 2025-10-26]
+🚧 [Problème source-map temporaire documenté - 2025-11-15] - Migration BDD en cours
 
 ### Tests d'intégration mockés pour extractHermes2022ConceptsWithNuExtract
 

@@ -1,11 +1,17 @@
 // @ts-nocheck
 import { defineFeature, loadFeature } from 'jest-cucumber';
 
+// REFACTORING BDD Phase 1 & 2 - Import depuis orchestrateur
+const { 
+  loadAndResolveSchemas,
+  loadGlobalConfig
+} = require('@src/concepts-site-extraction-orchestrator.js');
+
 // Imports avec alias moduleNameMapper (conforme @root-directory-governance)
 const {
-  _testOnly_loadGlobalConfig: loadGlobalConfig,
+  // _testOnly_loadGlobalConfig migrée vers orchestrateur (voir import ci-dessus)
   _testOnly_loadApiKey: loadApiKey,
-  _testOnly_loadAndResolveSchemas: loadAndResolveSchemas,
+  // _testOnly_loadAndResolveSchemas migrée vers orchestrateur (voir import ci-dessus)
   _testOnly_generateTemplate: generateTemplate,
   _testOnly_findOrCreateProject: findOrCreateProject,
   _testOnly_extractHermes2022ConceptsWithNuExtract: extractHermes2022ConceptsWithNuExtract

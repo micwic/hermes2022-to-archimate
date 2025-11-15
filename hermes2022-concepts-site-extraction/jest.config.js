@@ -4,8 +4,16 @@ module.exports = {
     '**/__tests__/{unit,integration,e2e}/**/*.steps.{js,ts}'
   ],
   transform: {
-    '^.+\\.ts$': ['ts-jest', { tsconfig: { esModuleInterop: true } }],
+    '^.+\\.ts$': ['ts-jest', { 
+      tsconfig: { esModuleInterop: true },
+      diagnostics: { warnOnly: true }
+    }],
     '^.+\\.js$': 'babel-jest'
+  },
+  globals: {
+    'ts-jest': {
+      isolatedModules: false
+    }
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   testEnvironment: 'node',

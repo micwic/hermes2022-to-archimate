@@ -63,6 +63,12 @@
           "maxLength": 250,
           "description": "Description courte et factuelle de la méthode HERMES2022 extraite de la page d'accueil (20-100 caractères)"
         },
+        "extractionModel": {
+          "type": "string",
+          "enum": ["claude", "nuextract"],
+          "default": "claude",
+          "description": "Modèle LLM à utiliser pour l'extraction de ce bloc"
+        },
         "sourceUrl": {
           "type": "array",
           "items": {
@@ -90,12 +96,18 @@
           "description": "Instructions for extracting the method overview from the homepage"
         }
       },
-      "required": ["hermesVersion", "publicationDate", "overview", "sourceUrl", "extractionInstructions"],
+      "required": ["hermesVersion", "publicationDate", "overview", "extractionModel", "sourceUrl", "extractionInstructions"],
       "additionalProperties": false
     },
     "concepts": {
       "type": "object",
       "properties": {
+        "extractionModel": {
+          "type": "string",
+          "enum": ["claude", "nuextract"],
+          "default": "claude",
+          "description": "Modèle LLM à utiliser pour l'extraction de ce bloc"
+        },
         "overview": {
           "type": "string",
           "minLength": 50,
@@ -149,7 +161,7 @@
           "description": "Concept de phases HERMES2022 - détail des phases de la méthode"
         }
       },
-      "required": ["overview", "sourceUrl", "extractionInstructions", "concept-phases"],
+      "required": ["overview", "extractionModel", "sourceUrl", "extractionInstructions", "concept-phases"],
       "additionalProperties": false
     }
   },

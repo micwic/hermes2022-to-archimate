@@ -298,6 +298,11 @@ async function collectHtmlSourcesAndInstructions(resolvedSchema, config, baseUrl
   }
 }
 
+// ============================================================================
+// EXPORTS
+// ============================================================================
+
+// Exports normaux (interface publique du module utilitaire)
 module.exports = {
   collectHtmlSourcesAndInstructions,
   fetchHtmlContent
