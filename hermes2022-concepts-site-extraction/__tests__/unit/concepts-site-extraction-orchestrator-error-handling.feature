@@ -144,6 +144,7 @@ Fonctionnalité: Gestion d'erreur robuste pour l'orchestrateur
     Etant donné une configuration valide
     Et un schéma JSON résolu valide
     Et des clés API valides
+    Et les projets LLM sont initialisés avec succès
     Et collectHtmlSourcesAndInstructions échoue
     Quand on tente d'extraire les concepts HERMES2022
     Alors une erreur est propagée depuis html-collector
@@ -153,6 +154,7 @@ Fonctionnalité: Gestion d'erreur robuste pour l'orchestrateur
     Etant donné une configuration valide
     Et un schéma JSON résolu valide
     Et des clés API valides
+    Et les projets LLM sont initialisés avec succès
     Et des blocs HTML collectés avec succès
     Et extractSingleBlock de nuextract-client échoue
     Quand on tente d'extraire les concepts HERMES2022
@@ -163,6 +165,7 @@ Fonctionnalité: Gestion d'erreur robuste pour l'orchestrateur
     Etant donné une configuration valide
     Et un schéma JSON résolu valide
     Et des clés API valides
+    Et les projets LLM sont initialisés avec succès
     Et des blocs HTML collectés avec succès
     Et extractBlock de claude-client échoue
     Quand on tente d'extraire les concepts HERMES2022
@@ -173,6 +176,7 @@ Fonctionnalité: Gestion d'erreur robuste pour l'orchestrateur
     Etant donné une configuration valide
     Et un schéma JSON résolu valide
     Et des clés API valides
+    Et les projets LLM sont initialisés avec succès
     Et des blocs HTML collectés avec succès
     Et un artefact extrait non conforme au schéma
     Quand on tente d'extraire les concepts HERMES2022

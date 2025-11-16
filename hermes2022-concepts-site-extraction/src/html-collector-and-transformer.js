@@ -2,9 +2,21 @@ const https = require('https');
 const http = require('http');
 const { URL } = require('url');
 const { convert } = require('html-to-text');
+const path = require('path');
+const findUp = require('find-up');
+
+// Résolution robuste de la racine du repository (selon @root-directory-governance)
+const fullFilePath = findUp.sync('package.json', { cwd: __dirname });
+if (!fullFilePath) {
+  throw new Error('Impossible de localiser la racine du repository');
+}
+const repoRoot = path.dirname(fullFilePath);
+const resolveFromRepoRoot = (...segments) => path.resolve(repoRoot, ...segments);
+
+const logger = require(resolveFromRepoRoot('shared/src/utils/logger'));
 
 async function fetchHtmlContent(url, timeoutMs = 30000) {
-  console.log(`[info] Chargement et conversion HTML→texte depuis ${url}`);
+  logger.info(` Chargement et conversion HTML→texte depuis ${url}`);
 
   try {
     let parsedUrl;
@@ -35,11 +47,14 @@ async function fetchHtmlContent(url, timeoutMs = 30000) {
         res.on('data', (chunk) => (data += chunk));
         res.on('end', () => {
           if (res.statusCode !== 200) {
-            console.error(`Erreur HTTP ${res.statusCode} lors du chargement de ${url}`);
+            logger.error(`Erreur HTTP ${res.statusCode} lors du chargement de ${url}`);
             reject(new Error(`HTTP error: ${res.statusCode} - ${data.substring(0, 200)}. Script stopped.`, { cause: new Error(`Status ${res.statusCode}`) }));
             return;
           }
           try {
+            // Log DEBUG pour diagnostic
+            logger.debug('Taille HTML brut:', data.length, 'caractères');
+            
             // Configuration optimisée pour hermes.admin.ch (2025-11-10)
             const textContent = convert(data, {
               wordwrap: false,
@@ -85,9 +100,14 @@ async function fetchHtmlContent(url, timeoutMs = 30000) {
                 { selector: 'a', options: { ignoreHref: true } }
               ]
             });
+            
+            // Log DEBUG pour diagnostic
+            logger.debug('Taille texte après conversion:', textContent.length, 'caractères');
+            logger.debug('Réduction:', Math.round((1 - textContent.length / data.length) * 100), '%');
+            
             resolve(textContent);
           } catch (convertError) {
-            console.error(`Erreur lors de la conversion HTML→texte pour ${url}: ${convertError.message}`);
+            logger.error(`Erreur lors de la conversion HTML→texte pour ${url}: ${convertError.message}`);
             reject(new Error(`Error converting HTML to text from ${url}. Script stopped.`, { cause: convertError }));
           }
         });
@@ -95,25 +115,25 @@ async function fetchHtmlContent(url, timeoutMs = 30000) {
 
       req.setTimeout(timeoutMs, () => {
         req.destroy();
-        console.error(`Timeout lors du chargement de ${url} après ${timeoutMs}ms`);
+        logger.error(`Timeout lors du chargement de ${url} après ${timeoutMs}ms`);
         reject(new Error(`Timeout: La requête HTML a dépassé ${timeoutMs / 1000} secondes. Script stopped.`));
       });
 
       req.on('error', (err) => {
-        console.error(`Erreur réseau lors du chargement de ${url}: ${err.message}`);
+        logger.error(`Erreur réseau lors du chargement de ${url}: ${err.message}`);
         reject(new Error(`Network error fetching HTML content from ${url}. Script stopped.`, { cause: err }));
       });
 
       req.end();
     });
   } catch (error) {
-    console.error(`Erreur lors du chargement du contenu HTML: ${error.message}`);
+    logger.error(`Erreur lors du chargement du contenu HTML: ${error.message}`);
     throw error;
   }
 }
 
 async function collectHtmlSourcesAndInstructions(resolvedSchema, config, baseUrl, jsonPointer = '/', depth = 0, maxDepth = 10) {
-  console.log(`[info] Collecte HTML sources et instructions depuis ${jsonPointer} (profondeur ${depth}/${maxDepth})`);
+  logger.info(` Collecte HTML sources et instructions depuis ${jsonPointer} (profondeur ${depth}/${maxDepth})`);
 
   try {
     if (!resolvedSchema || typeof resolvedSchema !== 'object' || Array.isArray(resolvedSchema)) {
@@ -241,24 +261,25 @@ async function collectHtmlSourcesAndInstructions(resolvedSchema, config, baseUrl
             throw new Error(`Invalid sourceUrl for array items at JSON Pointer: ${currentPointer}. Must have items.enum, enum, or default. Script stopped.`);
           }
 
-          const htmlContents = [];
-          for (const sourceUrl of sourceUrls) {
+          // Créer UN BLOC PAR ÉLÉMENT de l'array (une phase = un bloc)
+          for (let i = 0; i < sourceUrls.length; i++) {
+            const sourceUrl = sourceUrls[i];
             const fullUrl = sourceUrl.startsWith('http') ? sourceUrl : `${baseUrl}${sourceUrl.startsWith('/') ? '' : '/'}${sourceUrl}`;
 
             try {
               const htmlContent = await fetchHtmlContent(fullUrl);
-              htmlContents.push({ url: fullUrl, content: htmlContent });
+              
+              // Créer un bloc distinct pour chaque élément de l'array
+              blocks.push({
+                jsonPointer: `${currentPointer}/${i}`,  // Ex: /concepts/concept-phases/phases/0
+                instructions,
+                htmlContents: [{ url: fullUrl, content: htmlContent }]  // Une seule page par bloc
+              });
+              localBlocksCount++; // Bloc trouvé pour cet élément d'array
             } catch (error) {
-              throw new Error(`Error loading HTML from ${fullUrl} at JSON Pointer: ${currentPointer}. Script stopped.`, { cause: error });
+              throw new Error(`Error loading HTML from ${fullUrl} at JSON Pointer: ${currentPointer}/${i}. Script stopped.`, { cause: error });
             }
           }
-
-          blocks.push({
-            jsonPointer: currentPointer,
-            instructions,
-            htmlContents
-          });
-          localBlocksCount++; // Bloc trouvé à ce niveau (array items)
         }
 
         const otherItemsProps = { ...itemsProps };
@@ -282,18 +303,18 @@ async function collectHtmlSourcesAndInstructions(resolvedSchema, config, baseUrl
     // Message de log clair distinguant blocs locaux vs total (incluant sous-jacents)
     const nestedBlocksCount = blocks.length - localBlocksCount;
     if (localBlocksCount === 0 && nestedBlocksCount === 0) {
-      console.log(`[info] Collecte terminée depuis ${jsonPointer} : aucun bloc trouvé, passage à la propriété suivante`);
+      logger.info(` Collecte terminée depuis ${jsonPointer} : aucun bloc trouvé, passage à la propriété suivante`);
     } else if (localBlocksCount > 0 && nestedBlocksCount === 0) {
-      console.log(`[info] Collecte terminée depuis ${jsonPointer} : ${localBlocksCount} bloc(s) trouvé(s) à ce niveau`);
+      logger.info(` Collecte terminée depuis ${jsonPointer} : ${localBlocksCount} bloc(s) trouvé(s) à ce niveau`);
     } else if (localBlocksCount === 0 && nestedBlocksCount > 0) {
-      console.log(`[info] Collecte terminée depuis ${jsonPointer} : ${nestedBlocksCount} bloc(s) sous-jacent(s) trouvé(s) en profondeur`);
+      logger.info(` Collecte terminée depuis ${jsonPointer} : ${nestedBlocksCount} bloc(s) sous-jacent(s) trouvé(s) en profondeur`);
     } else {
-      console.log(`[info] Collecte terminée depuis ${jsonPointer} : ${localBlocksCount} bloc(s) à ce niveau + ${nestedBlocksCount} sous-jacent(s) = ${blocks.length} total`);
+      logger.info(` Collecte terminée depuis ${jsonPointer} : ${localBlocksCount} bloc(s) à ce niveau + ${nestedBlocksCount} sous-jacent(s) = ${blocks.length} total`);
     }
 
     return { blocks };
   } catch (error) {
-    console.error(`Erreur lors de la collecte HTML sources et instructions: ${error.message}`);
+    logger.error(`Erreur lors de la collecte HTML sources et instructions: ${error.message}`);
     throw error;
   }
 }

@@ -67,9 +67,8 @@ defineFeature(feature, (test) => {
     });
 
     and('une API infer-template qui retourne un template valide', () => {
-      (nuextractApi.inferTemplateFromDescription as jest.Mock).mockResolvedValue({
-        overview: 'string'
-      });
+      // Template NuExtract pour un schéma { type: "string" } = "string" directement
+      (nuextractApi.inferTemplateFromDescription as jest.Mock).mockResolvedValue('string');
     });
 
     when('on génère un template pour le bloc avec generateTemplateForBlock en mode sync', async () => {
@@ -82,7 +81,8 @@ defineFeature(feature, (test) => {
     });
 
     and('le template contient la structure attendue', () => {
-      expect(template.overview).toBe('string');
+      // Template NuExtract pour un schéma simple type:string = "string" directement
+      expect(template).toBe('string');
     });
   }, 5000);
 
@@ -110,9 +110,8 @@ defineFeature(feature, (test) => {
     });
 
     and('un polling qui retourne un template valide', () => {
-      (nuextractApi.pollJobUntilComplete as jest.Mock).mockResolvedValue({
-        overview: 'string'
-      });
+      // Template NuExtract pour un schéma { type: "string" } = "string" directement
+      (nuextractApi.pollJobUntilComplete as jest.Mock).mockResolvedValue('string');
     });
 
     when('on génère un template pour le bloc avec generateTemplateForBlock en mode async', async () => {
@@ -126,7 +125,8 @@ defineFeature(feature, (test) => {
     });
 
     and('le template contient la structure attendue', () => {
-      expect(template.overview).toBe('string');
+      // Template NuExtract pour un schéma simple type:string = "string" directement
+      expect(template).toBe('string');
     });
   }, 5000);
 

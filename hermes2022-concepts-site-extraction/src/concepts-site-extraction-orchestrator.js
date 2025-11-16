@@ -21,13 +21,15 @@ if (!fullFilePath) {
 const repoRoot = path.dirname(fullFilePath);
 const resolveFromRepoRoot = (...segments) => path.resolve(repoRoot, ...segments);
 
+const logger = require(resolveFromRepoRoot('shared/src/utils/logger'));
+
 // ============================================================================
 // SECTION 1 : CONFIGURATION (reprises de nuextract-client.js)
 // ============================================================================
 
 async function loadGlobalConfig() {
   // Journalisation en entrée de fonction pour traçabilité (bonne pratique reconnue)
-  console.log(`[info] Chargement de la configuration à partir du schéma JSON Schema`);
+  logger.info(` Chargement de la configuration à partir du schéma JSON Schema`);
   
   try {
     // Fonction helper interne pour transformer le schéma JSON en objet config
@@ -96,7 +98,7 @@ async function loadGlobalConfig() {
     try {
       schemaContent = fs.readFileSync(schemaPath, 'utf8');
     } catch (error) {
-      console.error(`Erreur lors de la lecture du schéma JSON Schema : ${error.message}`);
+      logger.error(`Erreur lors de la lecture du schéma JSON Schema : ${error.message}`);
       throw new Error('Schema file not found. Script stopped.', { cause: error });
     }
     
@@ -105,7 +107,7 @@ async function loadGlobalConfig() {
     try {
       schema = JSON.parse(schemaContent);
     } catch (error) {
-      console.error(`Erreur lors du parsing JSON du schéma : ${error.message}`);
+      logger.error(`Erreur lors du parsing JSON du schéma : ${error.message}`);
       throw new Error('Invalid JSON in schema file. Script stopped.', { cause: error });
     }
     
@@ -121,28 +123,39 @@ async function loadGlobalConfig() {
       
       if (!valid) {
         const errorMessages = validate.errors.map(err => `${err.instancePath} ${err.message}`).join('; ');
-        console.error(`Erreur critique : Le config transformé n'est pas conforme au schéma: ${errorMessages}`);
+        logger.error(`Erreur critique : Le config transformé n'est pas conforme au schéma: ${errorMessages}`);
         throw new Error('Config validation failed after transformation. Script stopped.');
       }
     } catch (error) {
       if (error.message === 'Config validation failed after transformation. Script stopped.') {
         throw error;
       }
-      console.error(`Erreur critique : Échec de la validation du config avec Ajv: ${error.message}`);
+      logger.error(`Erreur critique : Échec de la validation du config avec Ajv: ${error.message}`);
       throw new Error('Config validation failed after transformation. Script stopped.', { cause: error });
     }
     
-    console.log('[info] Configuration chargée avec succès depuis le schéma JSON Schema');
+    logger.info('Configuration chargée avec succès depuis le schéma JSON Schema');
+    
+    // Configurer le logger avec le niveau défini dans la configuration
+    // (sauf si LOG_LEVEL est défini en variable d'environnement, qui a la priorité)
+    if (config.logLevel && !process.env.LOG_LEVEL) {
+      logger.configure(config.logLevel);
+      logger.debug('Logger configuré depuis config avec niveau:', config.logLevel);
+    } else if (process.env.LOG_LEVEL) {
+      logger.configure(config.logLevel); // Résolution interne donnera priorité à LOG_LEVEL
+      logger.debug('Logger configuré depuis LOG_LEVEL avec niveau:', process.env.LOG_LEVEL);
+    }
+    
     return config;
   } catch (error) {
-    console.error(`Erreur lors du chargement de la configuration: ${error.message}`);
+    logger.error(`Erreur lors du chargement de la configuration: ${error.message}`);
     throw error;
   }
 }
 
 async function loadApiKeys(config) {
   // Journalisation en entrée de fonction pour traçabilité (bonne pratique reconnue)
-  console.log(`[info] Chargement des clés API pour les LLM configurés`);
+  logger.info(` Chargement des clés API pour les LLM configurés`);
   
   const apiKeys = {};
   
@@ -156,7 +169,7 @@ async function loadApiKeys(config) {
       continue; // Ignorer les LLM sans configuration apiKeyFile
     }
     
-    console.log(`[info] Chargement de la clé API ${llmName} à partir de : ${llmConfig.apiKeyFile}`);
+    logger.info(` Chargement de la clé API ${llmName} à partir de : ${llmConfig.apiKeyFile}`);
     
     let apiKey = null;
     
@@ -170,7 +183,7 @@ async function loadApiKeys(config) {
       try {
         apiKey = fs.readFileSync(keyPath, 'utf8');
       } catch (error) {
-        console.error(`Impossible de lire la clé API ${llmName} (env ${envVarName} ou fichier ${keyPath}) : ${error.message}`);
+        logger.error(`Impossible de lire la clé API ${llmName} (env ${envVarName} ou fichier ${keyPath}) : ${error.message}`);
         throw new Error(`${llmName} API_KEY is not set. Script stopped.`);
       }
     }
@@ -205,7 +218,7 @@ async function loadApiKeys(config) {
     // Pour Claude et autres LLM : à définir le moment venu
     
     apiKeys[llmName] = apiKey;
-    console.log(`[info] Clé API ${llmName} chargée avec succès`);
+    logger.info(` Clé API ${llmName} chargée avec succès`);
   }
   
   return apiKeys;
@@ -213,12 +226,12 @@ async function loadApiKeys(config) {
 
 async function loadAndResolveSchemas(config) {
   // Journalisation en entrée de fonction pour traçabilité (bonne pratique reconnue)
-  console.log(`[info] Chargement et résolution du schéma JSON`);
+  logger.info(` Chargement et résolution du schéma JSON`);
   
   const mainSchemaFileName = config?.llm?.nuextract?.mainJSONConfigurationFile || 'shared/hermes2022-extraction-files/config/json-schemas/hermes2022-concepts.json';
   const mainSchemaFile = resolveFromRepoRoot(mainSchemaFileName);
   
-  console.log(`[info] Schéma JSON à partir de : ${mainSchemaFile}`);
+  logger.info(` Schéma JSON à partir de : ${mainSchemaFile}`);
   
   let resolvedSchema;
   
@@ -230,7 +243,7 @@ async function loadAndResolveSchemas(config) {
       }
     });
   } catch (error) {
-    console.error(`Erreur critique : Échec du chargement ou de la résolution des références du schéma JSON: ${error.message}`);
+    logger.error(`Erreur critique : Échec du chargement ou de la résolution des références du schéma JSON: ${error.message}`);
     throw new Error('Invalid JSON schema structure or content. Script stopped.', { cause: error });
   }
   
@@ -245,7 +258,7 @@ async function loadAndResolveSchemas(config) {
     if (!valid) {
       const errorMessages = ajv.errors.map(err => `${err.instancePath} ${err.message}`).join('; ');
       const validationError = new Error(`Schema validation failed: ${errorMessages}`);
-      console.error(`Erreur critique : Le schéma résolu n'est pas conforme à JSON Schema Draft-07: ${errorMessages}`);
+      logger.error(`Erreur critique : Le schéma résolu n'est pas conforme à JSON Schema Draft-07: ${errorMessages}`);
       throw new Error('Invalid JSON schema structure or content. Script stopped.', { cause: validationError });
     }
   } catch (error) {
@@ -254,11 +267,17 @@ async function loadAndResolveSchemas(config) {
       throw error;
     }
     // Sinon, c'est une erreur inattendue dans Ajv lui-même
-    console.error(`Erreur critique : Échec de la validation du schéma avec Ajv: ${error.message}`);
+    logger.error(`Erreur critique : Échec de la validation du schéma avec Ajv: ${error.message}`);
     throw new Error('Invalid JSON schema structure or content. Script stopped.', { cause: error });
   }
   
-  console.log(`[info] Schéma JSON chargé, résolu et validé avec succès`);
+  logger.info(` Schéma JSON chargé, résolu et validé avec succès`);
+  
+  // Log DEBUG pour diagnostic
+  const schemaSize = JSON.stringify(resolvedSchema).length;
+  logger.debug('Taille du schéma résolu:', schemaSize, 'caractères');
+  logger.debug('Propriétés racine:', Object.keys(resolvedSchema.properties || {}).join(', '));
+  
   return resolvedSchema;
 }
 
@@ -356,6 +375,75 @@ async function extractHermes2022Concepts(config, resolvedSchema, apiKeys) {
   }
   
   /**
+   * Fonction helper interne : Filtre le schéma RÉCURSIVEMENT pour ne garder que les propriétés à extraire par le LLM
+   * Supprime :
+   * - Les propriétés paramétriques : extractionModel, sourceUrl, extractionInstructions
+   * - Les métadonnées JSON Schema : $schema, $id, title, description (niveau racine), definitions, $comment
+   */
+  function filterSchemaForTemplateGeneration(blockSchema) {
+    if (!blockSchema || typeof blockSchema !== 'object') {
+      return blockSchema;
+    }
+    
+    const PARAMETRIC_PROPERTIES = ['extractionModel', 'sourceUrl', 'extractionInstructions'];
+    const JSON_SCHEMA_METADATA = ['$schema', '$id', 'title', 'definitions', '$comment'];
+    
+    // Créer un schéma filtré sans les métadonnées JSON Schema au niveau racine
+    const filtered = {};
+    
+    for (const key in blockSchema) {
+      // Ignorer les métadonnées JSON Schema
+      if (JSON_SCHEMA_METADATA.includes(key)) {
+        continue;
+      }
+      
+      // Ignorer 'description' au niveau racine (métadonnée du schéma)
+      // Les 'description' dans les properties seront conservées lors du traitement récursif
+      if (key === 'description') {
+        continue;
+      }
+      
+      // Traiter 'properties' avec filtrage récursif
+      if (key === 'properties') {
+        const filteredProperties = {};
+        for (const propKey in blockSchema.properties) {
+          if (!PARAMETRIC_PROPERTIES.includes(propKey)) {
+            // Filtrage récursif : appliquer le filtrage sur les sous-propriétés
+            filteredProperties[propKey] = filterSchemaForTemplateGeneration(blockSchema.properties[propKey]);
+          }
+        }
+        filtered.properties = filteredProperties;
+        continue;
+      }
+      
+      // Traiter 'required' avec filtrage des propriétés paramétriques
+      if (key === 'required' && Array.isArray(blockSchema.required)) {
+        const filteredRequired = [];
+        for (const reqKey of blockSchema.required) {
+          if (!PARAMETRIC_PROPERTIES.includes(reqKey)) {
+            filteredRequired.push(reqKey);
+          }
+        }
+        if (filteredRequired.length > 0) {
+          filtered.required = filteredRequired;
+        }
+        continue;
+      }
+      
+      // Traiter 'items' avec filtrage récursif
+      if (key === 'items') {
+        filtered.items = filterSchemaForTemplateGeneration(blockSchema.items);
+        continue;
+      }
+      
+      // Copier les autres propriétés telles quelles
+      filtered[key] = blockSchema[key];
+    }
+    
+    return filtered;
+  }
+  
+  /**
    * Fonction helper interne : Extrait le schéma d'un bloc selon son JSON Pointer
    */
   function getBlockSchema(schema, jsonPointer) {
@@ -417,7 +505,7 @@ async function extractHermes2022Concepts(config, resolvedSchema, apiKeys) {
    */
   async function extractBlockWithModel(block, model, config, apiKeys) {
     // Journalisation en entrée de fonction pour traçabilité (bonne pratique reconnue)
-    console.log(`[info] Extraction du bloc ${block.jsonPointer} avec le modèle ${model}`);
+    logger.info(` Extraction du bloc ${block.jsonPointer} avec le modèle ${model}`);
     
     switch (model) {
       case 'nuextract':
@@ -437,13 +525,13 @@ async function extractHermes2022Concepts(config, resolvedSchema, apiKeys) {
    */
   function recomposeArtifact(partialResults, resolvedSchema, config, baseUrl) {
     // Journalisation en entrée de fonction pour traçabilité (bonne pratique reconnue)
-    console.log(`[info] Recomposition de l'artefact final depuis ${partialResults?.length || 0} résultat(s) partiel(s)`);
+    logger.info(` Recomposition de l'artefact final depuis ${partialResults?.length || 0} résultat(s) partiel(s)`);
     
     /**
      * Fonction helper interne : Fusionne récursivement une valeur dans un objet cible au chemin spécifié (JSON Pointer)
      */
     function mergeJsonAtPath(target, path, value) {
-      console.log(`[info] Fusion de valeur au chemin ${path}`);
+      logger.info(` Fusion de valeur au chemin ${path}`);
       
       try {
         // Parser le JSON Pointer
@@ -453,15 +541,28 @@ async function extractHermes2022Concepts(config, resolvedSchema, apiKeys) {
         let current = target;
         for (let i = 0; i < segments.length - 1; i++) {
           const segment = segments[i];
+          const nextSegment = segments[i + 1];
           
           // Vérifier si le segment est un index d'array (nombre)
           const arrayIndex = parseInt(segment, 10);
-          if (!isNaN(arrayIndex) && Array.isArray(current)) {
+          if (!isNaN(arrayIndex)) {
+            // Segment est un index → le parent doit être un array
+            if (!Array.isArray(current)) {
+              throw new Error(`Expected array at path ${path} but found ${typeof current}. Script stopped.`);
+            }
+            // Étendre l'array si nécessaire
+            while (current.length <= arrayIndex) {
+              current.push({});
+            }
             current = current[arrayIndex];
           } else {
-            // Créer l'objet intermédiaire s'il n'existe pas
-            if (!current[segment] || typeof current[segment] !== 'object') {
-              current[segment] = {};
+            // Vérifier si le prochain segment est un index d'array
+            const nextArrayIndex = parseInt(nextSegment, 10);
+            const shouldBeArray = !isNaN(nextArrayIndex);
+            
+            // Créer la structure appropriée (array ou objet)
+            if (!current[segment]) {
+              current[segment] = shouldBeArray ? [] : {};
             }
             current = current[segment];
           }
@@ -471,11 +572,16 @@ async function extractHermes2022Concepts(config, resolvedSchema, apiKeys) {
         const lastSegment = segments[segments.length - 1];
         const arrayIndex = parseInt(lastSegment, 10);
         
-        if (!isNaN(arrayIndex) && Array.isArray(current)) {
-          // Fusionner dans un élément d'array
-          if (arrayIndex < 0 || arrayIndex >= current.length) {
-            throw new Error(`Array index out of bounds: ${arrayIndex} at path ${path}. Script stopped.`);
+        if (!isNaN(arrayIndex)) {
+          // Dernier segment est un index d'array
+          if (!Array.isArray(current)) {
+            throw new Error(`Expected array at path ${path} but found ${typeof current}. Script stopped.`);
           }
+          // Étendre l'array si nécessaire
+          while (current.length <= arrayIndex) {
+            current.push({});
+          }
+          // Fusionner la valeur
           if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
             Object.assign(current[arrayIndex], value);
           } else {
@@ -495,7 +601,7 @@ async function extractHermes2022Concepts(config, resolvedSchema, apiKeys) {
         
         return target;
       } catch (error) {
-        console.error(`Erreur lors de la fusion au chemin ${path}: ${error.message}`);
+        logger.error(`Erreur lors de la fusion au chemin ${path}: ${error.message}`);
         throw error;
       }
     }
@@ -570,11 +676,11 @@ async function extractHermes2022Concepts(config, resolvedSchema, apiKeys) {
         }
       }
       
-      console.log(`[info] Recomposition de l'artefact final terminée avec succès`);
+      logger.info(` Recomposition de l'artefact final terminée avec succès`);
       
       return artifact;
     } catch (error) {
-      console.error(`Erreur lors de la recomposition de l'artefact: ${error.message}`);
+      logger.error(`Erreur lors de la recomposition de l'artefact: ${error.message}`);
       throw error;
     }
   }
@@ -629,14 +735,21 @@ async function extractHermes2022Concepts(config, resolvedSchema, apiKeys) {
       schemaToTraverse, config, baseUrl, '/', 0, maxDepth
     );
     
+    // Log DEBUG pour diagnostic
+    logger.debug('Nombre de blocs collectés:', preparation.blocks.length);
+    logger.debug('Blocs:', preparation.blocks.map(b => b.jsonPointer).join(', '));
+    
     // Enrichir chaque bloc avec son schéma et extraire avec le bon LLM
     const partialResults = [];
     for (const block of preparation.blocks) {
       // Lire extractionModel depuis schéma résolu
       const model = getExtractionModelForBlock(resolvedSchema, block.jsonPointer) || 'nuextract';
       
-      // Extraire schéma du bloc
-      block.schema = getBlockSchema(resolvedSchema, block.jsonPointer);
+      // Extraire schéma du bloc complet
+      const fullBlockSchema = getBlockSchema(resolvedSchema, block.jsonPointer);
+      
+      // Filtrer pour ne garder que les propriétés à extraire (supprime extractionModel, sourceUrl, extractionInstructions)
+      block.schema = filterSchemaForTemplateGeneration(fullBlockSchema);
       
       // Extraire bloc avec le bon LLM (pas de projects passé, projectId caché)
       const result = await extractBlockWithModel(block, model, config, apiKeys);
@@ -648,15 +761,28 @@ async function extractHermes2022Concepts(config, resolvedSchema, apiKeys) {
     normalizeEnumValues(artifact, resolvedSchema);
     
     // Post-traitement : Générer des IDs conformes pour les phases
-    console.log(`[info] Post-traitement : Génération des IDs phases conformes au pattern ph_abc123`);
+    logger.info(` Post-traitement : Génération des IDs phases conformes au pattern ph_abc123`);
     if (artifact.concepts?.['concept-phases']?.phases) {
-      const crypto = require('crypto');
-      for (const phase of artifact.concepts['concept-phases'].phases) {
-        if (phase.id && !phase.id.match(/^ph_[a-z0-9]{6}$/)) {
-          const hash = crypto.createHash('md5').update((phase.name || phase.id).toLowerCase()).digest('hex');
-          const newId = `ph_${hash.substring(0, 6)}`;
-          console.log(`[debug] Génération ID phase "${phase.name}": "${phase.id}" → "${newId}"`);
-          phase.id = newId;
+      // Validation : phases doit être un array
+      if (!Array.isArray(artifact.concepts['concept-phases'].phases)) {
+        logger.warn(`Phases n'est pas un array (type: ${typeof artifact.concepts['concept-phases'].phases}), génération d'IDs skippée`);
+        logger.debug('Valeur de phases:', JSON.stringify(artifact.concepts['concept-phases'].phases, null, 2).substring(0, 500));
+      } else {
+        const crypto = require('crypto');
+        for (const phase of artifact.concepts['concept-phases'].phases) {
+          if (phase.id && !phase.id.match(/^ph_[a-z0-9]{6}$/)) {
+            const hash = crypto.createHash('md5').update((phase.name || phase.id).toLowerCase()).digest('hex');
+            const newId = `ph_${hash.substring(0, 6)}`;
+            logger.debug(`Génération ID phase "${phase.name}": "${phase.id}" → "${newId}"`);
+            phase.id = newId;
+          }
+          
+          // Normalisation du champ order : convertir en string si number
+          if (typeof phase.order === 'number') {
+            const oldOrder = phase.order;
+            phase.order = String(phase.order);
+            logger.debug(`Normalisation order phase "${phase.name}": ${oldOrder} (number) → "${phase.order}" (string)`);
+          }
         }
       }
     }
@@ -682,11 +808,11 @@ async function extractHermes2022Concepts(config, resolvedSchema, apiKeys) {
       throw new Error(`Extracted JSON does not conform to schema: ${errors}. Script stopped.`);
     }
     
-    console.log(`[info] Extraction HERMES2022 concepts terminée avec succès`);
+    logger.info(` Extraction HERMES2022 concepts terminée avec succès`);
     
     return artifact;
   } catch (error) {
-    console.error(`Erreur lors de l'extraction HERMES2022 concepts: ${error.message}`);
+    logger.error(`Erreur lors de l'extraction HERMES2022 concepts: ${error.message}`);
     throw error;
   }
 }
@@ -709,7 +835,7 @@ async function saveArtifact(config, artifact, now = new Date()) {
     const artifactPath = path.join(artifactDir, artifactFileName);
 
     fs.writeFileSync(artifactPath, JSON.stringify(artifact, null, 2), 'utf8');
-    console.log(`[info] Artefact sauvegardé dans ${artifactPath}`);
+    logger.info(` Artefact sauvegardé dans ${artifactPath}`);
 
     const approvalFileName = `hermes2022-concepts-${extractionDate}.approval.json`;
     const approvalPath = path.join(artifactDir, approvalFileName);
@@ -726,11 +852,11 @@ async function saveArtifact(config, artifact, now = new Date()) {
     };
 
     fs.writeFileSync(approvalPath, JSON.stringify(approvalPayload, null, 2), 'utf8');
-    console.log(`[info] Fichier d'approbation initialisé dans ${approvalPath}`);
+    logger.info(` Fichier d'approbation initialisé dans ${approvalPath}`);
 
     return { artifactPath, approvalPath };
   } catch (error) {
-    console.error(`Erreur lors de la sauvegarde de l'artefact: ${error.message}`);
+    logger.error(`Erreur lors de la sauvegarde de l'artefact: ${error.message}`);
     throw error;
   }
 }
@@ -768,14 +894,14 @@ async function main() {
     console.log('[info] Sauvegarde de l\'artefact');
     const { artifactPath, approvalPath } = await saveArtifact(config, artifact);
     
-    console.log(`[info] Extraction terminée avec succès`);
-    console.log(`[info] Artefact sauvegardé : ${artifactPath}`);
-    console.log(`[info] Sidecar d'approbation : ${approvalPath}`);
+    logger.info(` Extraction terminée avec succès`);
+    logger.info(` Artefact sauvegardé : ${artifactPath}`);
+    logger.info(` Sidecar d'approbation : ${approvalPath}`);
     
   } catch (error) {
-    console.error(`[error] Extraction a échoué : ${error.message}`);
+    logger.error(`[error] Extraction a échoué : ${error.message}`);
     if (error.cause) {
-      console.error(`[error] Cause : ${error.cause.message}`);
+      logger.error(`[error] Cause : ${error.cause.message}`);
     }
     process.exit(1);
   }

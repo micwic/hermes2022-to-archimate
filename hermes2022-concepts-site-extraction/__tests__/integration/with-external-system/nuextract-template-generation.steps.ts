@@ -24,7 +24,7 @@ const {
   _testOnly_generateTemplateForBlock: generateTemplateForBlock
 } = require(nuextractClientModulePath);
 
-const feature = loadFeature(__dirname + '/template-generation.feature');
+const feature = loadFeature(__dirname + '/nuextract-template-generation.feature');
 
 defineFeature(feature, (test) => {
   let config;
@@ -83,8 +83,8 @@ defineFeature(feature, (test) => {
     });
 
     and('le template contient les champs attendus du schéma de bloc', () => {
-      // Le template NuExtract pour un bloc string doit être "string"
-      expect(template.overview).toBe('string');
+      // Le template NuExtract pour un schéma { type: "string" } = "string" directement
+      expect(template).toBe('string');
     });
 
     and('le template respecte le format NuExtract', () => {
@@ -121,8 +121,8 @@ defineFeature(feature, (test) => {
     });
 
     and('le template contient les champs attendus du schéma de bloc', () => {
-      // Le template NuExtract pour un bloc string doit être "string"
-      expect(template.overview).toBe('string');
+      // Le template NuExtract pour un schéma { type: "string" } = "string" directement
+      expect(template).toBe('string');
     });
 
     and('le template respecte le format NuExtract', () => {

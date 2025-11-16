@@ -3,6 +3,18 @@
 // Pas de variables globales, tous les paramètres sont explicites
 
 const https = require('https');
+const path = require('path');
+const findUp = require('find-up');
+
+// Résolution robuste de la racine du repository (selon @root-directory-governance)
+const fullFilePath = findUp.sync('package.json', { cwd: __dirname });
+if (!fullFilePath) {
+  throw new Error('Impossible de localiser la racine du repository');
+}
+const repoRoot = path.dirname(fullFilePath);
+const resolveFromRepoRoot = (...segments) => path.resolve(repoRoot, ...segments);
+
+const logger = require(resolveFromRepoRoot('shared/src/utils/logger'));
 
 // Dériver un template depuis une description textuelle (mode synchrone)
 async function inferTemplateFromDescription(hostname, port, path, pathPrefix, apiKey, description, timeoutMs = 35000) {
@@ -50,7 +62,12 @@ async function inferTemplateFromDescription(hostname, port, path, pathPrefix, ap
     req.on('error', (err) => {
       reject(new Error('Network error calling infer-template API. Script stopped.', { cause: err }));
     });
-    req.write(JSON.stringify({ description }));
+    
+    const payload = JSON.stringify({ description });
+    logger.debug('Payload infer-template:', payload.length, 'caractères');
+    logger.debug('Payload complet:', payload);
+    
+    req.write(payload);
     req.end();
   });
 }
@@ -103,7 +120,12 @@ async function inferTemplateFromDescriptionAsync(hostname, port, path, pathPrefi
     req.on('error', (err) => {
       reject(new Error('Network error calling infer-template-async API. Script stopped.', { cause: err }));
     });
-    req.write(JSON.stringify({ description }));
+    
+    const payload = JSON.stringify({ description });
+    logger.debug('Payload infer-template-async:', payload.length, 'caractères');
+    logger.debug('Premiers 500 car:', payload.substring(0, 500));
+    
+    req.write(payload);
     req.end();
   });
 }
@@ -167,14 +189,14 @@ async function getJobStatus(hostname, port, path, pathPrefix, apiKey, jobId) {
 
 // Fonction pour poller le statut d'un job jusqu'à completion
 async function pollJobUntilComplete(hostname, port, path, pathPrefix, apiKey, jobId, maxAttempts = 20, interval = 3000, initialSleepMs = 30000) {
-  console.log(`Polling job ${jobId} - attente initiale de ${initialSleepMs}ms...`);
+  logger.info(`Polling job ${jobId} - attente initiale de ${initialSleepMs}ms...`);
   await new Promise(resolve => setTimeout(resolve, initialSleepMs));
   
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const jobResponse = await getJobStatus(hostname, port, path, pathPrefix, apiKey, jobId);
     const status = jobResponse.status;
     
-    console.log(`[${attempt}/${maxAttempts}] Statut: ${status}`);
+    logger.info(`[${attempt}/${maxAttempts}] Statut: ${status}`);
     
     // Statuts terminaux
     if (status === 'completed' || status === 'timeout') {
@@ -355,7 +377,12 @@ async function createNuExtractProject(hostname, port, path, pathPrefix, apiKey, 
     req.on('error', (err) => {
       reject(new Error('Network error calling POST /api/projects. Script stopped.', { cause: err }));
     });
-    req.write(JSON.stringify(body));
+    
+    const payload = JSON.stringify(body);
+    logger.debug('Payload POST /api/projects:', payload.length, 'caractères');
+    logger.debug('Contenu:', payload);
+    
+    req.write(payload);
     req.end();
   });
 }
@@ -411,7 +438,12 @@ async function putProjectTemplate(hostname, port, path, pathPrefix, apiKey, proj
     req.on('error', (err) => {
       reject(new Error('Network error calling PUT /api/projects/{projectId}/template. Script stopped.', { cause: err }));
     });
-    req.write(JSON.stringify({ template }));
+    
+    const payload = JSON.stringify({ template });
+    logger.debug('Payload PUT template:', payload.length, 'caractères');
+    logger.debug('Premiers 500 car:', payload.substring(0, 500));
+    
+    req.write(payload);
     req.end();
   });
 }
@@ -479,7 +511,11 @@ async function inferTextFromContent(hostname, port, path, pathPrefix, projectId,
       reject(new Error('Network error calling infer-text API. Script stopped.', { cause: err }));
     });
     
-    req.write(JSON.stringify({ text }));
+    const payload = JSON.stringify({ text });
+    logger.debug('Payload infer-text:', payload.length, 'caractères');
+    logger.debug('Premiers 500 car:', payload.substring(0, 500));
+    
+    req.write(payload);
     req.end();
   });
 }

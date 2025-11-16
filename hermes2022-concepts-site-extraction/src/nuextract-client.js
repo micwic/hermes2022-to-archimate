@@ -5,12 +5,15 @@ const path = require('path');
 const findUp = require('find-up');
 const nuextractApi = require('./nuextract-api.js');
 
+// Résolution robuste de la racine du repository (selon @root-directory-governance)
 const fullFilePath = findUp.sync('package.json', { cwd: __dirname });
 if (!fullFilePath) {
   throw new Error('Impossible de localiser la racine du repository');
 }
 const repoRoot = path.dirname(fullFilePath);
 const resolveFromRepoRoot = (...segments) => path.resolve(repoRoot, ...segments);
+
+const logger = require(resolveFromRepoRoot('shared/src/utils/logger'));
 
 // Cache du projectId NuExtract (immutable après initialisation)
 let _projectId = null;
@@ -19,7 +22,7 @@ let _projectId = null;
 
 // Gestion du projet NuExtract : recherche ou création (template appliqué par bloc)
 async function findOrCreateProject(config, apiKey) {
-  console.log(`[info] Gestion du projet NuExtract`);
+  logger.info(` Gestion du projet NuExtract`);
   
   try {
     // Résoudre tous les paramètres depuis config avec fallbacks
@@ -36,14 +39,14 @@ async function findOrCreateProject(config, apiKey) {
       throw new Error('Missing required valid parameter: projectName. Script stopped.');
     }
 
-    console.log(`[info] Recherche du projet ${projectName} sur la plateforme NuExtract`);
+    logger.info(` Recherche du projet ${projectName} sur la plateforme NuExtract`);
 
     // Appel API avec tous les paramètres explicites
     const projects = await nuextractApi.getNuExtractProjects(hostname, port, pathProjects, pathPrefix, apiKey);
     const existingProject = projects.find((p) => p.name === projectName);
     
     if (!existingProject) {
-      console.log(`[info] Pas de projet existant trouvé sur la plateforme NuExtract : ${projectName}`);
+      logger.info(` Pas de projet existant trouvé sur la plateforme NuExtract : ${projectName}`);
       console.log(`Création du projet ${projectName} (template sera appliqué par bloc)`);
       
       // Créer le projet sans template (sera appliqué par bloc)
@@ -62,13 +65,13 @@ async function findOrCreateProject(config, apiKey) {
     }
     
     // Projet existant trouvé, réutilisation
-    console.log(`[info] Projet existant trouvé sur la plateforme NuExtract : ${projectName} (id: ${existingProject.id})`);
+    logger.info(` Projet existant trouvé sur la plateforme NuExtract : ${projectName} (id: ${existingProject.id})`);
     console.log(`Projet ${projectName} trouvé, réutilisation (template appliqué par bloc)`);
     _projectId = existingProject.id;  // Cache interne
     return { id: existingProject.id, name: projectName, existing: true };
     
   } catch (error) {
-    console.error(`Erreur lors de la gestion du projet NuExtract: ${error.message}`);
+    logger.error(`Erreur lors de la gestion du projet NuExtract: ${error.message}`);
     throw error;
   }
 }
@@ -81,7 +84,7 @@ async function findOrCreateProject(config, apiKey) {
  * @returns {Promise<object>} Template NuExtract
  */
 async function generateTemplateForBlock(blockSchema, config, apiKey) {
-  console.log(`[info] Génération du template NuExtract pour un bloc`);
+  logger.info(` Génération du template NuExtract pour un bloc`);
   
   try {
     // Charger les instructions depuis config
@@ -102,6 +105,11 @@ async function generateTemplateForBlock(blockSchema, config, apiKey) {
     // Stringifier le schéma du bloc uniquement
     const schemaStr = JSON.stringify(blockSchema, null, 2);
     const description = schemaStr + '\n\n' + instructions;
+    
+    // Logs DEBUG pour diagnostic
+    logger.debug('Schéma bloc envoyé:', schemaStr.length, 'caractères');
+    logger.debug('Description totale (schéma + instructions):', description.length, 'caractères');
+    logger.debug('Premiers 300 car du schéma:', schemaStr.substring(0, 300));
     
     // Déterminer le mode (sync par défaut)
     const templateMode = nuextractConfig.templateMode || 'sync';
@@ -170,7 +178,7 @@ async function generateTemplateForBlock(blockSchema, config, apiKey) {
     console.log('Template NuExtract généré avec succès pour bloc');
     return template;
   } catch (error) {
-    console.error(`Erreur lors de la génération du template pour bloc: ${error.message}`);
+    logger.error(`Erreur lors de la génération du template pour bloc: ${error.message}`);
     throw error;
   }
 }
@@ -183,7 +191,7 @@ async function generateTemplateForBlock(blockSchema, config, apiKey) {
  * @returns {Promise<{jsonPointer: string, data: object}>} Résultat extraction
  */
 async function extractSingleBlock(block, config, apiKey) {
-  console.log(`[info] Extraction NuExtract pour bloc ${block.jsonPointer}`);
+  logger.info(` Extraction NuExtract pour bloc ${block.jsonPointer}`);
   
   if (!_projectId) {
     throw new Error('NuExtract project not initialized. Call findOrCreateProject() first. Script stopped.');
@@ -192,7 +200,7 @@ async function extractSingleBlock(block, config, apiKey) {
   try {
     // Fonction helper interne : Construit un prompt Markdown pour un seul bloc
     function buildBlockPrompt(block) {
-      console.log(`[info] Construction du prompt d'extraction pour bloc ${block?.jsonPointer || 'inconnu'}`);
+      logger.info(` Construction du prompt d'extraction pour bloc ${block?.jsonPointer || 'inconnu'}`);
       
       // Validation : htmlContents ne doit pas être vide
       if (block.htmlContents.length === 0) {
@@ -223,7 +231,7 @@ async function extractSingleBlock(block, config, apiKey) {
       // Concaténation en un seul prompt pour ce bloc
       const prompt = promptParts.join('\n');
       
-      console.log(`[info] Prompt d'extraction construit pour bloc ${block.jsonPointer} : ${prompt.length} caractères`);
+      logger.info(` Prompt d'extraction construit pour bloc ${block.jsonPointer} : ${prompt.length} caractères`);
       
       return prompt;
     }
@@ -251,10 +259,10 @@ async function extractSingleBlock(block, config, apiKey) {
       hostname, port, path, pathPrefix, _projectId, apiKey, prompt, timeoutMs
     );
     
-    console.log(`[info] Extraction NuExtract terminée pour bloc ${block.jsonPointer}`);
+    logger.info(` Extraction NuExtract terminée pour bloc ${block.jsonPointer}`);
     return { jsonPointer: block.jsonPointer, data: partialJson };
   } catch (error) {
-    console.error(`Erreur lors de l'extraction du bloc ${block.jsonPointer}: ${error.message}`);
+    logger.error(`Erreur lors de l'extraction du bloc ${block.jsonPointer}: ${error.message}`);
     throw error;
   }
 }
@@ -275,7 +283,7 @@ async function initializeProject(config, apiKey, resolvedSchema) {
     
     return { projectInitialized: true };
   } catch (error) {
-    console.error(`Erreur lors de l'initialisation du projet NuExtract: ${error.message}`);
+    logger.error(`Erreur lors de l'initialisation du projet NuExtract: ${error.message}`);
     throw error;
   }
 }

@@ -249,6 +249,12 @@
       "type": "string",
       "enum": ["shared/hermes2022-extraction-files/data"],
       "description": "Répertoire de base pour les artefacts d'extraction"
+    },
+    "logLevel": {
+      "type": "string",
+      "enum": ["NONE", "INFO", "DEBUG"],
+      "default": "NONE",
+      "description": "Niveau de journalisation (NONE=erreurs/warnings uniquement, INFO=+infos, DEBUG=+détails)"
     }
   },
   "required": [

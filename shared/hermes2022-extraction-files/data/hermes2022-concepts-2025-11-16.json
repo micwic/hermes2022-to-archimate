@@ -9,7 +9,7 @@
   "method": {
     "hermesVersion": "2022",
     "publicationDate": "2023-04-01",
-    "overview": "HERMES is a project management method developed by the Swiss Federal Government for steering and managing projects.",
+    "overview": "HERMES 2022 is a project management method for structured execution with classic or agile implementation, adaptable to project size and complexity using user-defined scenarios.",
     "extractionModel": "nuextract",
     "sourceUrl": [
       "/"
@@ -25,154 +25,87 @@
     ]
   },
   "concepts": {
-    "overview": "HERMES is a project management method developed by the Swiss Federal Government. It provides a comprehensive framework for managing projects of all sizes. The method covers the entire project lifecycle from initiation to closure. HERMES supports traditional, agile, and hybrid approaches with flexible configuration capabilities. The methodology emphasizes outcome-focused project management with structured phases, scenarios, modules, tasks, results, and roles. HERMES is a project management method developed by the Swiss Federal Government. It provides a comprehensive framework for managing projects of all sizes. The method covers the entire project lifecycle from initiation to closure. HERMES supports traditional, agile, and hybrid approaches with flexible configuration capabilities. The methodology emphasizes outcome-focused project management with structured phases, scenarios, modules, tasks, results, and roles. ",
+    "overview": "HERMES is a comprehensive project management method designed to support the steering, management, and execution of projects across various fields, emphasizing outcomes and adaptability. It supports both traditional and agile methodologies, providing a modular, flexible, and scalable framework for managing projects of high complexity.",
     "concept-phases": {
-      "overview": "HERMES phases structure the project lifecycle from initiation to closure. Traditional projects use all phases sequentially. Agile projects may adapt the execution phase. The phase hierarchy follows: 1=Initiation (project start), 2=Execution (development with 2.1=Concept, 2.2=Implementation, 2.3=Deployment), 3=Closure (project end). HERMES phases structure the project lifecycle from initiation to closure. Traditional projects use all phases sequentially. Agile projects may adapt the execution phase. The phase hierarchy follows: 1=Initiation (project start), 2=Execution (development with 2.1=Concept, 2.2=Implementation, 2.3=Deployment), 3=Closure (project end). HERMES phases structure the project lifecycle from initiation to closure. Traditional projects use all phases sequentially. Agile projects may adapt the execution phase. The phase hierarchy follows: 1=Initiation (project start), 2=Execution (development with 2.1=Concept, 2.2=Implementation, 2.3=Deployment), 3=Closure (project end). ",
+      "overview": "The HERMES project management method supports both traditional and agile approaches, providing a structured phase model based on the project life cycle. This model ensures a common understanding of the project process among all participants, with phases determining the project structure. The phases include project start, solution development, and project end, with initiation and closure phases being common to all projects. The model is designed to handle various requirements across different types of projects and organizations, maintaining uniform interfaces and ensuring a consistent project structure.",
       "phases": [
         {
           "id": "ph_dc8179",
           "name": "Initiation",
+          "order": "0",
+          "type": "simple",
+          "description": "The initiation phase creates a defined starting position for possible solution development and the subsequent project closure. It ensures that the set objectives are aligned with the organization's requirements. The project foundations and execution order are drawn up.",
+          "context": "The initiation phase is always handled using the traditional approach, but Agile tools can also be used. It is carried out regardless of the approach subsequently chosen.",
+          "outcomes": [
+            "Initial status report",
+            "Objectives and rough requirements",
+            "Solution options",
+            "Project and operational risks",
+            "Legal basis analysis",
+            "Protection needs analysis",
+            "Decision on next steps",
+            "Procurement analysis",
+            "Project management plan",
+            "Execution order",
+            "Stakeholder interests analysis",
+            "Decision on execution release"
+          ],
+          "milestones": [
+            "Resources released by the project sponsor",
+            "Decision on execution release"
+          ],
+          "approach": [
+            "traditional",
+            "agile",
+            "both"
+          ],
+          "extractionModel": "claude",
+          "sourceUrl": [
+            "/project-management/phases/initiation.html",
+            "/project-management/phases/concept.html",
+            "/project-management/phases/deployment.html",
+            "/project-management/phases/implementation.html",
+            "/project-management/phases/execution.html",
+            "/project-management/phases/closure.html"
+          ],
+          "extractionInstructions": [
+            "Extract phase information from the specific phase page",
+            "Extract base information: name, hierarchical order, type",
+            "Extract main description explaining main objective, role in project lifecycle, and foundations created",
+            "Extract context explaining how phase integrates in lifecycle, relationship with other phases, importance in HERMES2022 methodology",
+            "Identify and list main outcomes (results): documents produced, decisions taken, foundations established",
+            "Identify control points and milestones: phase release decisions, required validations, success criteria",
+            "Determine supported approaches as array: [\"traditional\"], [\"agile\"], or [\"traditional\", \"agile\"] if both are supported.",
+            "Output: plain text (no rich Markdown). Site language. Factual, neutral style, without extrapolation",
+            "Extract only information present on the page",
+            "Respect JSON structure defined in schema",
+            "Maintain coherence with validation schema",
+            "Prioritize precision over quantity of information"
+          ]
+        },
+        {
+          "id": "ph_45b4ea",
+          "name": "Concept Phase",
           "order": "1",
-          "type": "simple",
-          "description": "Project start phase with initial planning and setup activities",
-          "context": "First phase establishing project foundations",
-          "outcomes": [
-            "Project charter",
-            "Initial plan"
-          ],
-          "milestones": [
-            "Project approved"
-          ],
-          "approach": [
-            "traditional",
-            "agile",
-            "both"
-          ],
-          "extractionModel": "claude",
-          "sourceUrl": [
-            "/project-management/phases/initiation.html",
-            "/project-management/phases/concept.html",
-            "/project-management/phases/deployment.html",
-            "/project-management/phases/implementation.html",
-            "/project-management/phases/execution.html",
-            "/project-management/phases/closure.html"
-          ],
-          "extractionInstructions": [
-            "Extract phase information from the specific phase page",
-            "Extract base information: name, hierarchical order, type",
-            "Extract main description explaining main objective, role in project lifecycle, and foundations created",
-            "Extract context explaining how phase integrates in lifecycle, relationship with other phases, importance in HERMES2022 methodology",
-            "Identify and list main outcomes (results): documents produced, decisions taken, foundations established",
-            "Identify control points and milestones: phase release decisions, required validations, success criteria",
-            "Determine supported approaches as array: [\"traditional\"], [\"agile\"], or [\"traditional\", \"agile\"] if both are supported.",
-            "Output: plain text (no rich Markdown). Site language. Factual, neutral style, without extrapolation",
-            "Extract only information present on the page",
-            "Respect JSON structure defined in schema",
-            "Maintain coherence with validation schema",
-            "Prioritize precision over quantity of information"
-          ]
-        },
-        {
-          "id": "ph_ffc92c",
-          "name": "Execution",
-          "order": "2",
           "type": "composite",
-          "description": "Development phase including concept, implementation, and deployment",
-          "context": "Core project execution with iterative development",
+          "description": "The option chosen in the initiation phase is fleshed out. The outcomes are drawn up in such detail that those involved in the project can plan, offer, and implement the solution based on reliable foundations.",
+          "context": "The concept phase integrates into the project lifecycle by building on the selected option and initial status report from the study. It involves situation analyses, fleshing out requirements, and developing the solution conceptually. It is crucial in the HERMES2022 methodology for ensuring that the project is feasible and aligns with organizational objectives.",
           "outcomes": [
-            "Working solution",
-            "Documentation"
+            "Situation analyses",
+            "Solution requirements",
+            "Organizational requirements",
+            "Organization concept",
+            "Deployment concept",
+            "Test concept",
+            "Migration concept",
+            "Solution architecture",
+            "Operating concept",
+            "Integration concept"
           ],
           "milestones": [
-            "Concept complete",
-            "Implementation complete",
-            "Deployment complete"
-          ],
-          "approach": [
-            "traditional",
-            "agile",
-            "both"
-          ],
-          "extractionModel": "claude",
-          "sourceUrl": [
-            "/project-management/phases/initiation.html",
-            "/project-management/phases/concept.html",
-            "/project-management/phases/deployment.html",
-            "/project-management/phases/implementation.html",
-            "/project-management/phases/execution.html",
-            "/project-management/phases/closure.html"
-          ],
-          "extractionInstructions": [
-            "Extract phase information from the specific phase page",
-            "Extract base information: name, hierarchical order, type",
-            "Extract main description explaining main objective, role in project lifecycle, and foundations created",
-            "Extract context explaining how phase integrates in lifecycle, relationship with other phases, importance in HERMES2022 methodology",
-            "Identify and list main outcomes (results): documents produced, decisions taken, foundations established",
-            "Identify control points and milestones: phase release decisions, required validations, success criteria",
-            "Determine supported approaches as array: [\"traditional\"], [\"agile\"], or [\"traditional\", \"agile\"] if both are supported.",
-            "Output: plain text (no rich Markdown). Site language. Factual, neutral style, without extrapolation",
-            "Extract only information present on the page",
-            "Respect JSON structure defined in schema",
-            "Maintain coherence with validation schema",
-            "Prioritize precision over quantity of information"
-          ]
-        },
-        {
-          "id": "ph_47cb06",
-          "name": "Concept",
-          "order": "2.1",
-          "type": "simple",
-          "description": "Concept definition within execution phase",
-          "context": "Solution architecture and design",
-          "outcomes": [
-            "Architecture document",
-            "Design specifications"
-          ],
-          "milestones": [
-            "Design approved"
-          ],
-          "approach": [
-            "traditional",
-            "agile",
-            "both"
-          ],
-          "extractionModel": "claude",
-          "sourceUrl": [
-            "/project-management/phases/initiation.html",
-            "/project-management/phases/concept.html",
-            "/project-management/phases/deployment.html",
-            "/project-management/phases/implementation.html",
-            "/project-management/phases/execution.html",
-            "/project-management/phases/closure.html"
-          ],
-          "extractionInstructions": [
-            "Extract phase information from the specific phase page",
-            "Extract base information: name, hierarchical order, type",
-            "Extract main description explaining main objective, role in project lifecycle, and foundations created",
-            "Extract context explaining how phase integrates in lifecycle, relationship with other phases, importance in HERMES2022 methodology",
-            "Identify and list main outcomes (results): documents produced, decisions taken, foundations established",
-            "Identify control points and milestones: phase release decisions, required validations, success criteria",
-            "Determine supported approaches as array: [\"traditional\"], [\"agile\"], or [\"traditional\", \"agile\"] if both are supported.",
-            "Output: plain text (no rich Markdown). Site language. Factual, neutral style, without extrapolation",
-            "Extract only information present on the page",
-            "Respect JSON structure defined in schema",
-            "Maintain coherence with validation schema",
-            "Prioritize precision over quantity of information"
-          ]
-        },
-        {
-          "id": "ph_b6fa15",
-          "name": "Implementation",
-          "order": "2.2",
-          "type": "simple",
-          "description": "Implementation activities within execution phase",
-          "context": "Development and construction of solution",
-          "outcomes": [
-            "Implemented solution",
-            "Test results"
-          ],
-          "milestones": [
-            "Implementation complete"
+            "Implementation release decision",
+            "Feasibility confirmation",
+            "Resource release for next phase"
           ],
           "approach": [
             "traditional",
@@ -206,16 +139,121 @@
         {
           "id": "ph_06e5c0",
           "name": "Deployment",
-          "order": "2.3",
+          "order": "2",
           "type": "simple",
-          "description": "Deployment activities within execution phase",
-          "context": "Solution rollout and stabilization",
+          "description": "The deployment phase ensures a safe transition to the new state. Operation is launched.",
+          "context": "The deployment phase integrates into the project lifecycle by ensuring a smooth transition to the new state. It involves user training, migration, activation of the product or system, and organization. The ISDP concept is transferred, and the project supports problem analysis and resolution during the initial operational period.",
           "outcomes": [
-            "Deployed solution",
-            "Training materials"
+            "User training completed",
+            "Migration performed",
+            "Product or system activated",
+            "Operation launched",
+            "ISDP concept transferred",
+            "Decision on closure phase release made"
           ],
           "milestones": [
-            "Solution deployed"
+            "Operation successfully launched",
+            "Decision on acceptance made"
+          ],
+          "approach": [
+            "traditional",
+            "agile",
+            "both"
+          ],
+          "extractionModel": "claude",
+          "sourceUrl": [
+            "/project-management/phases/initiation.html",
+            "/project-management/phases/concept.html",
+            "/project-management/phases/deployment.html",
+            "/project-management/phases/implementation.html",
+            "/project-management/phases/execution.html",
+            "/project-management/phases/closure.html"
+          ],
+          "extractionInstructions": [
+            "Extract phase information from the specific phase page",
+            "Extract base information: name, hierarchical order, type",
+            "Extract main description explaining main objective, role in project lifecycle, and foundations created",
+            "Extract context explaining how phase integrates in lifecycle, relationship with other phases, importance in HERMES2022 methodology",
+            "Identify and list main outcomes (results): documents produced, decisions taken, foundations established",
+            "Identify control points and milestones: phase release decisions, required validations, success criteria",
+            "Determine supported approaches as array: [\"traditional\"], [\"agile\"], or [\"traditional\", \"agile\"] if both are supported.",
+            "Output: plain text (no rich Markdown). Site language. Factual, neutral style, without extrapolation",
+            "Extract only information present on the page",
+            "Respect JSON structure defined in schema",
+            "Maintain coherence with validation schema",
+            "Prioritize precision over quantity of information"
+          ]
+        },
+        {
+          "id": "ph_b6fa15",
+          "name": "Implementation",
+          "order": "3",
+          "type": "composite",
+          "description": "The product or system is implemented and tested. The necessary preparatory work is done to minimize the deployment risks.",
+          "context": "The product or system is developed or, if procured, parameterized or adapted. The organization is implemented. In IT projects, the IT system is integrated into the operating infrastructure. Preliminary acceptance is carried out. The operating organization is implemented and the documentation is prepared. Deployment is prepared on the basis of the deployment concept. Depending on the scenario, tests are carried out and migration is prepared.",
+          "outcomes": [
+            "The deployment risks must be assessed and be acceptable."
+          ],
+          "milestones": [
+            "The deployment release decision is made based on the preliminary acceptance decision."
+          ],
+          "approach": [
+            "traditional",
+            "agile",
+            "both"
+          ],
+          "extractionModel": "claude",
+          "sourceUrl": [
+            "/project-management/phases/initiation.html",
+            "/project-management/phases/concept.html",
+            "/project-management/phases/deployment.html",
+            "/project-management/phases/implementation.html",
+            "/project-management/phases/execution.html",
+            "/project-management/phases/closure.html"
+          ],
+          "extractionInstructions": [
+            "Extract phase information from the specific phase page",
+            "Extract base information: name, hierarchical order, type",
+            "Extract main description explaining main objective, role in project lifecycle, and foundations created",
+            "Extract context explaining how phase integrates in lifecycle, relationship with other phases, importance in HERMES2022 methodology",
+            "Identify and list main outcomes (results): documents produced, decisions taken, foundations established",
+            "Identify control points and milestones: phase release decisions, required validations, success criteria",
+            "Determine supported approaches as array: [\"traditional\"], [\"agile\"], or [\"traditional\", \"agile\"] if both are supported.",
+            "Output: plain text (no rich Markdown). Site language. Factual, neutral style, without extrapolation",
+            "Extract only information present on the page",
+            "Respect JSON structure defined in schema",
+            "Maintain coherence with validation schema",
+            "Prioritize precision over quantity of information"
+          ]
+        },
+        {
+          "id": "ph_ffc92c",
+          "name": "Execution",
+          "order": "4",
+          "type": "composite",
+          "description": "The option selected in the initiation phase is executed iteratively and incrementally. The project organization, including the development team, is established. The solution requirements are further divided, refined, and fleshed out. The requirements are updated, prioritized, and processed (developed, realized, and put into operation) in descending order of priority; priorities are updated continuously and adjusted according to project findings.",
+          "context": "The execution phase integrates into the project lifecycle by implementing the selected option from the initiation phase. It involves iterative and incremental execution, where each individual solution requirement is continuously fleshed out, refined, completed, and divided and prioritized to such an extent that they can be processed in descending order of priority.",
+          "outcomes": [
+            "Situation analyses are carried out based on the selected option and the initial status report from the study.",
+            "Requirements from the study are fleshed out, completed, and defined as prioritized initial solution requirements.",
+            "Organizational requirements are drawn up if the envisaged solution affects business processes or structures.",
+            "If a solution is to be procured, the call for tenders is issued, the offers are evaluated, and the selected product or system is procured.",
+            "With each iteration, a further part of the solution - the increment - is created, which can be seamlessly connected to the already created scope of execution results.",
+            "The organization concept is drawn up and the successively emerging organization is realized and documented.",
+            "Project, operational, and deployment risks are identified, analyzed, evaluated, and assessed.",
+            "The product is developed or adapted or the system is developed or parameterized.",
+            "In parallel, the operating organization and all other outcomes of the remaining modules are successively developed, realized, and documented.",
+            "For systems, the integration concept is designed and the decision on solution architecture is made.",
+            "For systems, tests are designed and conducted, migration is prepared and carried out, and the system is integrated into the operating infrastructure.",
+            "The deployment concept is designed and the preliminary acceptance, deployment measures such as user training etc., and the launch of operation are carried out.",
+            "The organization, the relevant part of the solution (one or more increments), and the operation are activated.",
+            "During the initial period of operation until the acceptance of the part of the solution, the project supports problem analysis and resolution.",
+            "If so defined in the project management plan, the decision on approval of the next release is made.",
+            "The decision on closure phase release is made. The resources for the closure phase are released based on the updated project management plan."
+          ],
+          "milestones": [
+            "The decision on approval of the next release is made.",
+            "The decision on closure phase release is made."
           ],
           "approach": [
             "traditional",
@@ -249,16 +287,23 @@
         {
           "id": "ph_580601",
           "name": "Closure",
-          "order": "3",
+          "order": "5",
           "type": "simple",
-          "description": "Project end phase with final activities and handover",
-          "context": "Project completion and lessons learned",
+          "description": "The closure phase provides a structure for the systematic shutting down of a project. Project documentation is checked and amended as needed. The project closure is prepared.",
+          "context": "From the perspective of project management, the closure phase is always handled using the traditional approach. Agile tools can nevertheless also be used.",
           "outcomes": [
-            "Final report",
-            "Lessons learned"
+            "The outcomes are checked for completeness and amended, in particular from a formal perspective.",
+            "The final project evaluation is checked and approved as appropriate.",
+            "The project organization is dissolved.",
+            "The outcomes, documentation, etc., are transferred to the core organization, specifically the application, operating, and maintenance organization.",
+            "In IT projects, the test infrastructure, including the test concept and the tools, is also transferred.",
+            "The documentation of the project execution, including the outcomes of the approach, is archived according to the filing rules of the core organization.",
+            "The legacy system is decommissioned and removed, including the old, no longer required infrastructure, and the legacy data is archived or destroyed."
           ],
           "milestones": [
-            "Project closed"
+            "The final project evaluation is prepared.",
+            "Open points are transferred to the core organization and the application organization.",
+            "The project is closed and the project organization is dissolved."
           ],
           "approach": [
             "traditional",
