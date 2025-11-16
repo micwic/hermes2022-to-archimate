@@ -222,3 +222,4 @@ cd /home/micwic/gitRepositories/hermes2022-to-archimate && npm test -- --testPat
 
 
 
+
