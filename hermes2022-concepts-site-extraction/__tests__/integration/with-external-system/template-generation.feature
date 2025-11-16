@@ -1,24 +1,21 @@
 # language: fr
-Fonctionnalité: Génération de templates NuExtract (système externe réel)
+Fonctionnalité: Génération de templates par bloc NuExtract (système externe réel)
 
-  Scénario: Génération de template NuExtract avec infer-template-async
-    Etant donné des paramètres de configuration NuExtract pour la génération du template
-    Et une clé API NuExtract
-    Et des instructions de transformation depuis config
-    Et un schéma JSON de concepts HERMES2022
-    Quand on génère un template NuExtract avec infer-template-async
-    Alors le template est créé avec succès dans le répertoire de sortie des templates NuExtract
-    Et le template contient les champs principaux attendus
+  Contexte:
+    Etant donné une configuration valide pour la génération de template par bloc
+    Et une clé API NuExtract valide
+    Et un schéma de bloc pour /concepts/overview
+
+  Scénario: Génération de template bloc en mode async (API réelle)
+    Quand on génère un template pour le bloc avec generateTemplateForBlock en mode async
+    Alors le template est créé avec succès
+    Et le template contient les champs attendus du schéma de bloc
     Et le template respecte le format NuExtract
 
-  Scénario: Génération de template NuExtract avec infer-template
-    Etant donné des paramètres de configuration NuExtract pour la génération du template
-    Et une clé API NuExtract
-    Et des instructions de transformation depuis config
-    Et un schéma JSON de concepts HERMES2022
-    Quand on génère un template NuExtract avec infer-template
-    Alors le template est créé avec succès dans le répertoire de sortie des templates NuExtract
-    Et le template contient les champs principaux attendus
+  Scénario: Génération de template bloc en mode sync (API réelle)
+    Quand on génère un template pour le bloc avec generateTemplateForBlock en mode sync
+    Alors le template est créé avec succès
+    Et le template contient les champs attendus du schéma de bloc
     Et le template respecte le format NuExtract
 
 

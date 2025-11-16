@@ -260,6 +260,26 @@ async function extractSingleBlock(block, config, apiKey) {
 }
 
 // Exports
+/**
+ * Initialise le projet NuExtract (cache _projectId en interne)
+ * Cette fonction est appelée par l'orchestrateur avant l'extraction
+ */
+async function initializeProject(config, apiKey, resolvedSchema) {
+  console.log('[info] Initialisation du projet NuExtract');
+  
+  try {
+    // Appeler findOrCreateProject pour initialiser _projectId
+    await findOrCreateProject(config, apiKey);
+    
+    console.log('[info] Projet NuExtract initialisé avec succès');
+    
+    return { projectInitialized: true };
+  } catch (error) {
+    console.error(`Erreur lors de l'initialisation du projet NuExtract: ${error.message}`);
+    throw error;
+  }
+}
+
 module.exports = {
   // Tests BDD
   _testOnly_findOrCreateProject: findOrCreateProject,
@@ -267,6 +287,7 @@ module.exports = {
   _testOnly_extractSingleBlock: extractSingleBlock,
   
   // Interface publique
+  initializeProject,
   findOrCreateProject,
   generateTemplateForBlock,
   extractSingleBlock

@@ -65,8 +65,8 @@
         },
         "extractionModel": {
           "type": "string",
-          "enum": ["claude", "nuextract"],
-          "default": "claude",
+          "enum": ["nuextract", "claude"],
+          "default": "nuextract",
           "description": "Modèle LLM à utiliser pour l'extraction de ce bloc"
         },
         "sourceUrl": {
@@ -104,8 +104,8 @@
       "properties": {
         "extractionModel": {
           "type": "string",
-          "enum": ["claude", "nuextract"],
-          "default": "claude",
+          "enum": ["nuextract", "claude"],
+          "default": "nuextract",
           "description": "Modèle LLM à utiliser pour l'extraction de ce bloc"
         },
         "overview": {

@@ -1,0 +1,11 @@
+{
+  "artifact": "hermes2022-concepts-2025-11-16.json",
+  "approvals": [
+    {
+      "target": "/concepts/overview",
+      "rule": "overview-quality",
+      "status": "pending",
+      "lastChecked": "2025-11-16"
+    }
+  ]
+}

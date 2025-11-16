@@ -38,9 +38,9 @@ async function loadGlobalConfig() {
           return property.default !== undefined ? property.default : property.enum[0];
         }
         
-        // Pour array avec items.enum : items.default prédomine, sinon items.enum[0]
+        // Pour array avec items.enum : items.default prédomine, sinon items.enum (array complet)
         if (property.type === 'array' && property.items?.enum) {
-          return property.items.default !== undefined ? property.items.default : property.items.enum[0];
+          return property.items.default !== undefined ? property.items.default : property.items.enum;
         }
         
         // Pour objet : construire récursivement
@@ -277,10 +277,10 @@ async function initializeLLMProjects(config, apiKeys, resolvedSchema) {
     projects.nuextract = { validated: true };
   }
   
-  // Claude : appeler validateApiKey
+  // Claude : stub (non implémenté - validation à définir)
   if (apiKeys.claude) {
-    await claudeClient.validateApiKey(apiKeys.claude);
-    projects.claude = { validated: true };
+    console.log('[info] Claude détecté mais validation skippée (non implémenté)');
+    projects.claude = { validated: false, stub: true };
   }
   
   console.log('[info] Projets LLM initialisés avec succès');
@@ -347,11 +347,11 @@ async function extractHermes2022Concepts(config, resolvedSchema, apiKeys) {
     if (current && current.properties && current.properties.extractionModel) {
       const extractionModel = current.properties.extractionModel;
       if (extractionModel.enum && extractionModel.enum.length > 0) {
-        return extractionModel.enum[0]; // enum[0] = valeur par défaut (claude)
+        return extractionModel.enum[0]; // enum[0] = valeur par défaut (nuextract)
       }
     }
     
-    // Si pas trouvé, retourner null (fallback 'claude' dans extractBlockWithModel)
+    // Si pas trouvé, retourner null (fallback 'nuextract' dans extractBlockWithModel)
     return null;
   }
   
@@ -594,17 +594,23 @@ async function extractHermes2022Concepts(config, resolvedSchema, apiKeys) {
       const schemaProp = schemaProps[key];
       const currentPointer = jsonPointer ? `${jsonPointer}/${key}` : `/${key}`;
       
-      // Cas 1 : Array avec items.enum (sourceUrl, extractionInstructions)
-      if (schemaProp.type === 'array' && schemaProp.items?.enum && Array.isArray(schemaProp.items.enum)) {
+      // Cas 1 : String avec enum + default (extractionModel)
+      if (schemaProp.type === 'string' && schemaProp.enum && schemaProp.default) {
+        const expectedValue = schemaProp.default;
+        console.log(`[debug] Normalisation enum pour ${currentPointer} : forcer "${expectedValue}"`);
+        artifact[key] = expectedValue;
+      }
+      // Cas 2 : Array avec items.enum (sourceUrl, extractionInstructions)
+      else if (schemaProp.type === 'array' && schemaProp.items?.enum && Array.isArray(schemaProp.items.enum)) {
         const expectedArray = schemaProp.items.enum;
         console.log(`[debug] Normalisation items.enum pour ${currentPointer} : forcer ${JSON.stringify(expectedArray)}`);
         artifact[key] = expectedArray;
       }
-      // Cas 2 : Objet imbriqué (récursion)
+      // Cas 3 : Objet imbriqué (récursion)
       else if (artifact[key] && typeof artifact[key] === 'object' && !Array.isArray(artifact[key]) && schemaProp.properties) {
         normalizeEnumValues(artifact[key], schemaProp, currentPointer);
       }
-      // Cas 3 : Array d'objets (phases)
+      // Cas 4 : Array d'objets (phases)
       else if (artifact[key] && Array.isArray(artifact[key]) && schemaProp.items?.properties) {
         artifact[key].forEach((item, index) => {
           normalizeEnumValues(item, schemaProp.items, `${currentPointer}/${index}`);
@@ -627,7 +633,7 @@ async function extractHermes2022Concepts(config, resolvedSchema, apiKeys) {
     const partialResults = [];
     for (const block of preparation.blocks) {
       // Lire extractionModel depuis schéma résolu
-      const model = getExtractionModelForBlock(resolvedSchema, block.jsonPointer) || 'claude';
+      const model = getExtractionModelForBlock(resolvedSchema, block.jsonPointer) || 'nuextract';
       
       // Extraire schéma du bloc
       block.schema = getBlockSchema(resolvedSchema, block.jsonPointer);

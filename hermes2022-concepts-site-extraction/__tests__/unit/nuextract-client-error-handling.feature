@@ -88,3 +88,22 @@ Fonctionnalité: Gestion d'erreur robuste
     Quand on tente d'appeler l'API NuExtract infer-template
     Alors une erreur contenant "Network error calling infer-template API" est générée
     Et le processus s'arrête proprement
+  #
+  # === Gestion des erreurs d'extraction de bloc (fonction extractSingleBlock) ===
+
+  Scénario: Erreur _projectId non initialisé avant extraction
+    Etant donné un bloc valide avec schema et contenus HTML
+    Et un projet NuExtract non initialisé
+    Quand on tente d'extraire le bloc avec extractSingleBlock
+    Alors une erreur "NuExtract project not initialized" est générée
+    Et le message suggère d'appeler "findOrCreateProject() first"
+    Et le processus s'arrête proprement
+
+  Scénario: Erreur htmlContents vide dans le bloc
+    Etant donné un bloc avec schema valide
+    Et le bloc a des htmlContents vides
+    Et un projet NuExtract initialisé
+    Quand on tente d'extraire le bloc avec extractSingleBlock
+    Alors une erreur "block.htmlContents is empty" est générée
+    Et le message indique "No HTML content found for this block"
+    Et le processus s'arrête proprement

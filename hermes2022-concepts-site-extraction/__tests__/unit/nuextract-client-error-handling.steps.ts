@@ -670,4 +670,144 @@ defineFeature(feature, (test) => {
       jest.clearAllMocks();
     });
   });
+
+  // === Gestion des erreurs d'extraction de bloc (fonction extractSingleBlock) ===
+
+  test('Erreur _projectId non initialisé avant extraction', ({ given, and, when, then }) => {
+    let error;
+    let block;
+    let config;
+    let apiKey;
+
+    given('un bloc valide avec schema et contenus HTML', () => {
+      block = {
+        jsonPointer: '/concepts/overview',
+        schema: {
+          type: 'string',
+          minLength: 10
+        },
+        instructions: ['Synthétiser l\'overview des concepts HERMES2022'],
+        htmlContents: [
+          {
+            url: 'https://www.hermes.admin.ch/en/project-management/phases.html',
+            content: 'Contenu HTML exemple pour les phases.'
+          }
+        ]
+      };
+      
+      config = {
+        llm: {
+          nuextract: {
+            templateTransformationInstructions: {
+              instructions: ['instruction1', 'instruction2']
+            }
+          }
+        }
+      };
+      
+      apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U';
+    });
+
+    and('un projet NuExtract non initialisé', () => {
+      // Ne pas appeler findOrCreateProject, donc _projectId reste null
+      expect(block).toBeDefined();
+    });
+
+    when('on tente d\'extraire le bloc avec extractSingleBlock', async () => {
+      try {
+        await extractSingleBlock(block, config, apiKey);
+      } catch (e) {
+        error = e;
+      }
+    });
+
+    then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+
+    and(/^le message suggère d'appeler "(.*)"$/, (expectedCall) => {
+      expect(error.message).toContain(expectedCall);
+    });
+
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      jest.clearAllMocks();
+    });
+  });
+
+  test('Erreur htmlContents vide dans le bloc', ({ given, and, when, then }) => {
+    let error;
+    let block;
+    let config;
+    let apiKey;
+
+    given('un bloc avec schema valide', () => {
+      block = {
+        jsonPointer: '/concepts/overview',
+        schema: {
+          type: 'string',
+          minLength: 10
+        },
+        instructions: ['Synthétiser l\'overview des concepts HERMES2022'],
+        htmlContents: [] // VIDE pour tester l'erreur
+      };
+      
+      config = {
+        llm: {
+          nuextract: {
+            templateTransformationInstructions: {
+              instructions: ['instruction1', 'instruction2']
+            },
+            projectName: 'HERMES2022',
+            projectDescription: 'Test project'
+          }
+        }
+      };
+      
+      apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U';
+    });
+
+    and('le bloc a des htmlContents vides', () => {
+      expect(block.htmlContents).toEqual([]);
+    });
+
+    and('un projet NuExtract initialisé', async () => {
+      // Mock pour initialiser le projet
+      (nuextractApi.getNuExtractProjects as jest.Mock).mockResolvedValue([
+        { id: 'project-initialized-999', name: 'HERMES2022' }
+      ]);
+      await findOrCreateProject(config, apiKey);
+    });
+
+    when('on tente d\'extraire le bloc avec extractSingleBlock', async () => {
+      try {
+        // Mock generateTemplateForBlock pour passer cette étape
+        (nuextractApi.inferTemplateFromDescription as jest.Mock).mockResolvedValue({
+          overview: 'string'
+        });
+        
+        // Mock putProjectTemplate pour passer cette étape
+        (nuextractApi.putProjectTemplate as jest.Mock).mockResolvedValue({});
+        
+        await extractSingleBlock(block, config, apiKey);
+      } catch (e) {
+        error = e;
+      }
+    });
+
+    then(/^une erreur "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+
+    and(/^le message indique "(.*)"$/, (expectedMessage) => {
+      expect(error.message).toContain(expectedMessage);
+    });
+
+    and('le processus s\'arrête proprement', () => {
+      expect(error).toBeInstanceOf(Error);
+      jest.clearAllMocks();
+    });
+  });
 });

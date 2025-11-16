@@ -2,14 +2,14 @@
 import { defineFeature, loadFeature } from 'jest-cucumber';
 import * as nuextractApi from '@src/nuextract-api.js';
 
-// Mock global du module API avec alias moduleNameMapper (conforme @root-directory-governance)
+// Mock global du module API pour prévoir l'intégration multi-LLM
+// TESTS D'INTÉGRATION MOCKÉS : Mock UNIQUEMENT la frontière externe (API NuExtract)
 jest.mock('@src/nuextract-api.js', () => {
   const actual = jest.requireActual('@src/nuextract-api.js');
   return {
     ...actual,
     getNuExtractProjects: jest.fn(actual.getNuExtractProjects),
-    createNuExtractProject: jest.fn(actual.createNuExtractProject),
-    putProjectTemplate: jest.fn(actual.putProjectTemplate)
+    createNuExtractProject: jest.fn(actual.createNuExtractProject)
   };
 });
 
@@ -17,7 +17,6 @@ jest.mock('@src/nuextract-api.js', () => {
 import { loadGlobalConfig } from '@src/concepts-site-extraction-orchestrator.js';
 
 import {
-  // _testOnly_loadGlobalConfig migrée vers orchestrateur (voir import ci-dessus)
   _testOnly_findOrCreateProject as findOrCreateProject
 } from '@src/nuextract-client.js';
 
@@ -25,46 +24,120 @@ const feature = loadFeature(__dirname + '/nuextract-project-management-mocked.fe
 
 defineFeature(feature, (test) => {
   let config;
+  let apiKey;
+  let result;
   let error;
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    
+    // Charger la config réelle via loadGlobalConfig (pas mockée)
+    // TESTS D'INTÉGRATION : Fonctions internes non mockées
     config = await loadGlobalConfig();
+    apiKey = 'fake-api-key';
+    result = null;
+    error = null;
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
-  const arrangeRun = async (templateObj, templateReset, existingProject) => {
-    try {
-      if (existingProject) {
-        (nuextractApi.getNuExtractProjects as jest.Mock).mockResolvedValue([{ id: 'p1', name: config.nuextract.projectName }]);
-      } else {
-        (nuextractApi.getNuExtractProjects as jest.Mock).mockResolvedValue([]);
-      }
-      config.nuextract.templateReset = templateReset;
-      await findOrCreateProject(config, 'fake-api-key', templateObj);
-    } catch (e) {
-      error = e;
-    }
-  };
+  // === Scénarios de succès ===
 
-  test('Création de projet sans template (orchestration)', ({ given, when, then }) => {
+  test('Création réussie de projet (sans template, workflow par blocs)', ({ given, and, when, then }) => {
+    given('une configuration valide pour la gestion de projet', () => {
+      expect(config).toBeDefined();
+      expect(config.llm.nuextract.projectName).toBeDefined();
+    });
+
+    and('aucun projet existant avec le nom configuré', () => {
+      // Mock getNuExtractProjects pour retourner array vide
+      (nuextractApi.getNuExtractProjects as jest.Mock).mockResolvedValue([]);
+      
+      // Mock createNuExtractProject pour retourner projet créé
+      (nuextractApi.createNuExtractProject as jest.Mock).mockResolvedValue({
+        id: 'new-project-123',
+        name: config.llm.nuextract.projectName
+      });
+    });
+
+    when('on appelle findOrCreateProject avec la config et l\'apiKey', async () => {
+      result = await findOrCreateProject(config, apiKey);
+    });
+
+    then('le projet est créé avec succès', () => {
+      expect(result).toBeDefined();
+      expect(result.id).toBe('new-project-123');
+      expect(result.name).toBe(config.llm.nuextract.projectName);
+    });
+
+    and('l\'id du projet est mis en cache dans _projectId', () => {
+      // Validé par comportement interne (cache _projectId dans nuextract-client.js)
+      // Cette validation est indirecte via le retour de findOrCreateProject
+      expect(result.id).toBeDefined();
+    });
+
+    and('la réponse contient created: true', () => {
+      expect(result.created).toBe(true);
+    });
+  }, 5000);
+
+  test('Réutilisation de projet existant (cache _projectId)', ({ given, and, when, then }) => {
+    given('une configuration valide pour la gestion de projet', () => {
+      expect(config).toBeDefined();
+      expect(config.llm.nuextract.projectName).toBeDefined();
+    });
+
+    and(/^un projet existant sur la plateforme avec id "(.*)"$/, (projectId) => {
+      // Mock getNuExtractProjects pour retourner projet existant
+      (nuextractApi.getNuExtractProjects as jest.Mock).mockResolvedValue([
+        {
+          id: projectId,
+          name: config.llm.nuextract.projectName
+        }
+      ]);
+    });
+
+    when('on appelle findOrCreateProject avec la config et l\'apiKey', async () => {
+      result = await findOrCreateProject(config, apiKey);
+    });
+
+    then('le projet existant est réutilisé', () => {
+      expect(result).toBeDefined();
+      expect(result.id).toBe('project-123');
+      expect(result.name).toBe(config.llm.nuextract.projectName);
+    });
+
+    and('l\'id du projet est mis en cache dans _projectId', () => {
+      // Validé par comportement interne
+      expect(result.id).toBeDefined();
+    });
+
+    and('la réponse contient existing: true', () => {
+      expect(result.existing).toBe(true);
+    });
+  }, 5000);
+
+  // === Scénarios d'erreur ===
+
+  test('Erreur projectName manquant dans config', ({ given, and, when, then }) => {
     given('une configuration valide pour la gestion de projet', () => {
       expect(config).toBeDefined();
     });
 
-    given('aucun projet existant avec le nom configuré', () => {
-      // handled by arrangeRun with existingProject=false
+    and('une config avec projectName vide', () => {
+      // Créer une config vide pour contourner le fallback || 'HERMES2022'
+      // Le fallback ne s'applique que si nuextractConfig.projectName existe
+      config.llm.nuextract.projectName = '   '; // Chaîne avec espaces seulement → .trim() === ''
     });
 
-    given('un template null', () => {
-      // handled by arrangeRun with templateObj=null
-    });
-
-    when("on exécute l'orchestration de gestion de projet", async () => {
-      await arrangeRun(null, false, false);
+    when('on tente d\'appeler findOrCreateProject', async () => {
+      try {
+        await findOrCreateProject(config, apiKey);
+      } catch (e) {
+        error = e;
+      }
     });
 
     then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
@@ -73,25 +146,55 @@ defineFeature(feature, (test) => {
     });
   }, 5000);
 
-  test('Mise à jour demandée sans template (orchestration)', ({ given, when, then }) => {
+  test('Erreur API getNuExtractProjects (HTTP 500)', ({ given, and, when, then }) => {
     given('une configuration valide pour la gestion de projet', () => {
       expect(config).toBeDefined();
     });
 
-    given('un projet existant sur la plateforme', () => {
-      // handled by arrangeRun with existingProject=true
+    and('une API getNuExtractProjects qui retourne 500', () => {
+      // Mock getNuExtractProjects pour lever erreur HTTP 500
+      (nuextractApi.getNuExtractProjects as jest.Mock).mockRejectedValue(
+        new Error('API error: 500 - Internal Server Error')
+      );
     });
 
-    given('templateReset est true', () => {
-      // handled by arrangeRun with templateReset=true
+    when('on tente d\'appeler findOrCreateProject', async () => {
+      try {
+        await findOrCreateProject(config, apiKey);
+      } catch (e) {
+        error = e;
+      }
     });
 
-    given('un template null', () => {
-      // handled by arrangeRun with templateObj=null
+    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain(expectedMessage);
+    });
+  }, 5000);
+
+  test('Erreur API createNuExtractProject (HTTP 403)', ({ given, and, when, then }) => {
+    given('une configuration valide pour la gestion de projet', () => {
+      expect(config).toBeDefined();
     });
 
-    when("on exécute l'orchestration de gestion de projet", async () => {
-      await arrangeRun(null, true, true);
+    and('aucun projet existant avec le nom configuré', () => {
+      // Mock getNuExtractProjects pour retourner array vide
+      (nuextractApi.getNuExtractProjects as jest.Mock).mockResolvedValue([]);
+    });
+
+    and('une API createNuExtractProject qui retourne 403', () => {
+      // Mock createNuExtractProject pour lever erreur HTTP 403
+      (nuextractApi.createNuExtractProject as jest.Mock).mockRejectedValue(
+        new Error('API error: 403 - Forbidden')
+      );
+    });
+
+    when('on tente d\'appeler findOrCreateProject', async () => {
+      try {
+        await findOrCreateProject(config, apiKey);
+      } catch (e) {
+        error = e;
+      }
     });
 
     then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
@@ -100,5 +203,3 @@ defineFeature(feature, (test) => {
     });
   }, 5000);
 });
-
-

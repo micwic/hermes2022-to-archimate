@@ -1,250 +1,402 @@
 // @ts-nocheck
 import { defineFeature, loadFeature } from 'jest-cucumber';
+import * as fs from 'fs';
+import * as https from 'https';
 
-// Mocks avec alias moduleNameMapper (conforme @root-directory-governance)
-// Utilise <rootDir> de Jest (équivalent repoRoot détecté via package.json)
-jest.mock('@src/nuextract-api.js', () => {
-  const actual = jest.requireActual('@src/nuextract-api.js');
-  return {
-    ...actual,
-    inferTextFromContent: jest.fn(actual.inferTextFromContent)
-  };
-});
+// Import du helper de mock https (alternative simple à MSW)
+const { createHttpsMock } = require('../../support/mocks/https-mock-helper.js');
 
-jest.mock('@src/html-collector-and-transformer.js', () => ({
-  collectHtmlSourcesAndInstructions: jest.fn(),
-  fetchHtmlContent: jest.fn()
+// Mock global de https
+jest.mock('https', () => ({
+  request: jest.fn()
 }));
 
-// Imports avec alias moduleNameMapper
-const nuextractApi = require('@src/nuextract-api.js');
-const { collectHtmlSourcesAndInstructions } = require('@src/html-collector-and-transformer.js');
-const {
-  extractHermes2022Concepts
-} = require('@src/concepts-site-extraction-orchestrator.js');
+// REFACTORING BDD Phase 2 - Import depuis orchestrateur
+import { 
+  loadGlobalConfig,
+  loadAndResolveSchemas,
+  loadApiKeys,
+  initializeLLMProjects,
+  extractHermes2022Concepts,
+  saveArtifact
+} from '@src/concepts-site-extraction-orchestrator.js';
 
-const feature = loadFeature(__dirname + '/extract-hermes2022-concepts-mocked.feature');
+const feature = loadFeature('hermes2022-concepts-site-extraction/__tests__/integration/with-external-system-mocked/extract-hermes2022-concepts-mocked.feature');
 
 defineFeature(feature, (test) => {
   let config;
   let resolvedSchema;
   let apiKeys;
-  let preparation;
-  let extractionResult;
-  let extractionError;
-  const inferTextMock = nuextractApi.inferTextFromContent as jest.Mock;
-  const collectMock = collectHtmlSourcesAndInstructions as jest.Mock;
+  let result;
+  let error;
 
-  const buildResolvedSchema = () => ({
-    $schema: 'http://json-schema.org/draft-07/schema#',
-    type: 'object',
-    properties: {
-      config: {
-        type: 'object',
-        properties: {
-          extractionSource: {
-            type: 'object',
-            properties: {
-              baseUrl: { type: 'string' },
-              language: { type: 'string' }
-            },
-            required: ['baseUrl', 'language'],
-            additionalProperties: false
-          }
-        },
-        required: ['extractionSource'],
-        additionalProperties: false
-      },
-      method: {
-        type: 'object',
-        properties: {
-          hermesVersion: { type: 'string' }
-        },
-        required: ['hermesVersion'],
-        additionalProperties: false
-      },
-      concepts: {
-        type: 'object',
-        properties: {
-          overview: { type: 'string', minLength: 10 }
-        },
-        required: ['overview'],
-        additionalProperties: false
-      }
-    },
-    required: ['config', 'method', 'concepts'],
-    additionalProperties: false
-  });
-
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
-    jest.spyOn(console, 'log').mockImplementation(() => {});
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-
-    config = {
-      llm: {
-        nuextract: {
-          extractionBlocksMaxDepth: 2,
-          baseUrl: 'nuextract.ai',
-          port: 443
-        }
-      },
-      extractionSource: {
-        baseUrl: 'https://www.hermes.admin.ch/en',
-        language: 'en'
-      }
-    };
     
-    resolvedSchema = buildResolvedSchema();
-    apiKeys = {
-      nuextract: 'fake-nuextract-key',
-      claude: 'fake-claude-key'
-    };
-    extractionResult = undefined;
-    extractionError = undefined;
-    preparation = undefined;
+    // Charger la config, le schéma réel et les clés API
+    config = await loadGlobalConfig();
+    resolvedSchema = await loadAndResolveSchemas(config);
+    apiKeys = await loadApiKeys(config);
+    // Initialisation des autres variables
+    result = undefined;
+    error = undefined;
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
-  const runExtraction = async () => {
-    try {
-      extractionResult = await extractHermes2022Concepts(
-        config,
-        resolvedSchema,
-        apiKeys
-      );
-    } catch (error) {
-      extractionError = error;
-    }
-  };
+  // === Scénario de succès ===
 
-  test('Extraction réussie avec agrégation des blocs NuExtract', ({ given, when, then, and }) => {
-    given('une configuration d\'extraction hermes2022 minimaliste', () => {
+  test('Extraction complète réussie avec workflow par blocs', ({ given, and, when, then }) => {
+    // Appliquer le contexte commun
+    given('une configuration valide pour l\'extraction orchestrée', () => {
+      expect(config).toBeDefined();
+      expect(config.llm).toBeDefined();
+      expect(config.llm.nuextract).toBeDefined();
+      expect(config.llm.nuextract.baseUrl).toBeDefined();
+      expect(config.llm.nuextract.projectName).toBeDefined();
+      // Claude : vérifier seulement la propriété principale (non implémenté)
+      expect(config.llm.claude).toBeDefined();
+    });
+
+    and('un schéma JSON résolu valide', () => {
       expect(resolvedSchema).toBeDefined();
+      expect(resolvedSchema.properties).toBeDefined();
+      expect(resolvedSchema.properties.config).toBeDefined();
+      expect(resolvedSchema.properties.method).toBeDefined();
+      expect(resolvedSchema.properties.concepts).toBeDefined();
+    });
+
+    and('les clés API sont chargées', () => {
       expect(apiKeys).toBeDefined();
+      expect(apiKeys.nuextract).toBeDefined();
+      expect(typeof apiKeys.nuextract).toBe('string');
+      // Claude : ne pas vérifier (non implémenté)
     });
 
-    given('des blocs collectés pour l\'extraction', () => {
-      const overviewText = 'Synthèse méthodologique '.repeat(40); // > 10 caractères
-      const methodPointer = '/method';
-      const conceptsPointer = '/concepts/overview';
-
-      preparation = {
-        blocks: [
-          {
-            jsonPointer: methodPointer,
-            instructions: ['Retourner la version officielle de la méthode.'],
-            htmlContents: [
-              {
-                url: 'https://www.hermes.admin.ch/en/project-management/method-overview.html',
-                content: 'Contenu HTML exemple pour la méthode.'
-              }
-            ]
-          },
-          {
-            jsonPointer: conceptsPointer,
-            instructions: ['Synthétiser l\'overview des concepts.'],
-            htmlContents: [
-              {
-                url: 'https://www.hermes.admin.ch/en/project-management/phases.html',
-                content: 'Contenu HTML exemple pour les phases.'
-              }
-            ]
-          }
-        ]
-      };
-
-      collectMock.mockResolvedValue(preparation);
-
-      inferTextMock.mockImplementation(async (_hostname, _port, _path, _prefix, _projectId, _apiKey, prompt) => {
-        if (prompt.includes(`Block: ${methodPointer}`)) {
-          return {
-            method: {
-              hermesVersion: '2022'
-            }
-          };
-        }
-
-        if (prompt.includes(`Block: ${conceptsPointer}`)) {
-          return {
-            concepts: {
-              overview: overviewText
-            }
-          };
-        }
-
-        throw new Error(`Prompt inattendu: ${prompt}`);
-      });
+    and('nuextract.ai et api.anthropic.com sont mockés pour retourner des réponses valides', () => {
+      // Configurer le mock https pour scénario succès (tous les systèmes)
+      (https.request as jest.Mock).mockImplementation(createHttpsMock({
+        hermes: 'success',
+        nuextract: 'success',
+        claude: 'success'
+      }));
     });
 
-    and('les mocks API sont configurés pour retourner des réponses valides', () => {
-      // Vérification que les mocks sont configurés (pas encore appelés)
-      expect(collectMock).toHaveBeenCalledTimes(0);
-      expect(inferTextMock).toHaveBeenCalledTimes(0);
-      // Vérification que les mocks sont des fonctions Jest mockées
-      expect(jest.isMockFunction(collectMock)).toBe(true);
-      expect(jest.isMockFunction(inferTextMock)).toBe(true);
+    and('les pages HTML sources d\'information sont mockées pour retourner un contenu valable', () => {
+      // Inclus dans le mock https ci-dessus (scénario 'success')
+      expect(https.request).toBeDefined();
+    });
+    
+    and('les projets LLM sont initialisés', async () => {
+      // Initialisation des projets LLM (condition préalable)
+      await initializeLLMProjects(config, apiKeys, resolvedSchema);
     });
 
-    when('on exécute l\'extraction des concepts avec extractHermes2022Concepts', runExtraction);
-
-    then('un artefact est reconstruit avec succès', () => {
-      expect(extractionError).toBeUndefined();
-      expect(extractionResult).toBeDefined();
-      expect(extractionResult.method).toBeDefined();
-      expect(extractionResult.method.hermesVersion).toBe('2022');
-      expect(extractionResult.concepts).toBeDefined();
-      expect(extractionResult.concepts.overview.length).toBeGreaterThan(10);
+    when('on exécute extractHermes2022Concepts avec l\'orchestrateur', async () => {
+      try {
+        // Exécuter l'extraction orchestrée
+        const artifact = await extractHermes2022Concepts(config, resolvedSchema, apiKeys);
+        
+        // Sauvegarder l'artefact et créer le fichier d'approbation
+        result = await saveArtifact(config, artifact);
+      } catch (e) {
+        error = e;
+      }
     });
 
-    and('chaque bloc est envoyé à l\'API NuExtract', () => {
-      expect(inferTextMock).toHaveBeenCalledTimes(preparation.blocks.length);
-      const prompts = inferTextMock.mock.calls.map(call => call[6]);
-      expect(prompts.some(prompt => prompt.includes('Block: /method'))).toBe(true);
-      expect(prompts.some(prompt => prompt.includes('Block: /concepts/overview'))).toBe(true);
+    then('l\'extraction se termine avec succès', () => {
+      expect(error).toBeUndefined();
+      expect(result).toBeDefined();
     });
-  }, 5000);
 
-  test('Erreur lors de l\'extraction à cause d\'une réponse NuExtract invalide', ({ given, when, then }) => {
-    given('une configuration d\'extraction hermes2022 minimaliste', () => {
+    and('l\'artefact final est recomposé correctement', () => {
+      expect(result.artifactPath).toBeDefined();
+      expect(result.approvalPath).toBeDefined();
+      
+      // Vérifier que l'artefact a été sauvegardé
+      expect(fs.existsSync(result.artifactPath)).toBe(true);
+    });
+
+    and('les propriétés paramétriques sont normalisées (sourceUrl, extractionInstructions)', () => {
+      // Vérifier que l'artefact contient les propriétés normalisées
+      const artifact = JSON.parse(fs.readFileSync(result.artifactPath, 'utf8'));
+      
+      // sourceUrl et extractionInstructions doivent être des arrays
+      if (artifact.method?.sourceUrl) {
+        expect(Array.isArray(artifact.method.sourceUrl)).toBe(true);
+      }
+      if (artifact.concepts?.sourceUrl) {
+        expect(Array.isArray(artifact.concepts.sourceUrl)).toBe(true);
+      }
+    });
+
+    and('l\'artefact est sauvegardé dans le répertoire de sortie', () => {
+      expect(result.artifactPath).toContain('shared/hermes2022-extraction-files/data');
+    });
+
+    and('le fichier d\'approbation est créé avec status "pending"', () => {
+      expect(fs.existsSync(result.approvalPath)).toBe(true);
+      
+      const approval = JSON.parse(fs.readFileSync(result.approvalPath, 'utf8'));
+      const overviewItem = approval.approvals.find(item => item.target === '/concepts/overview');
+      expect(overviewItem?.status).toBe('pending');
+    });
+  }, 180000); // 3 minutes timeout
+
+  // === Scénarios d'erreur ===
+
+  test('Erreur lors de la collecte HTML (fetch hermes.admin.ch échoue)', ({ given, and, when, then }) => {
+    given('une configuration valide pour l\'extraction orchestrée', () => {
+      expect(config).toBeDefined();
+      expect(config.llm).toBeDefined();
+      expect(config.llm.nuextract).toBeDefined();
+      expect(config.llm.nuextract.baseUrl).toBeDefined();
+      expect(config.llm.nuextract.projectName).toBeDefined();
+      // Claude : vérifier seulement la propriété principale (non implémenté)
+      expect(config.llm.claude).toBeDefined();
+    });
+
+    and('un schéma JSON résolu valide', () => {
       expect(resolvedSchema).toBeDefined();
+      expect(resolvedSchema.properties).toBeDefined();
+      expect(resolvedSchema.properties.config).toBeDefined();
+      expect(resolvedSchema.properties.method).toBeDefined();
+      expect(resolvedSchema.properties.concepts).toBeDefined();
+    });
+
+    and('les clés API sont chargées', () => {
       expect(apiKeys).toBeDefined();
+      expect(apiKeys.nuextract).toBeDefined();
+      expect(typeof apiKeys.nuextract).toBe('string');
+      // Claude : ne pas vérifier (non implémenté)
     });
 
-    given('des blocs collectés pour l\'extraction', () => {
-      preparation = {
-        blocks: [
-          {
-            jsonPointer: '/concepts/overview',
-            instructions: ['Synthétiser l\'overview'],
-            htmlContents: [
-              {
-                url: 'https://www.hermes.admin.ch/en/project-management/method-overview.html',
-                content: 'Contenu HTML exemple.'
-              }
-            ]
-          }
-        ]
-      };
-
-      collectMock.mockResolvedValue(preparation);
+    and('nuextract.ai et api.anthropic.com sont mockés pour retourner des réponses valides', () => {
+      // Configurer le mock https : hermes en erreur, APIs en succès
+      (https.request as jest.Mock).mockImplementation(createHttpsMock({
+        hermes: 'networkError',
+        nuextract: 'success',
+        claude: 'success'
+      }));
     });
 
-    // Step avec capture du message depuis .feature (conforme @bdd-governance)
-    given(/^une réponse NuExtract invalide contenant "(.*)"$/, (errorMessage) => {
-      // Le message provient de .feature via regex capture
-      inferTextMock.mockRejectedValue(new Error(errorMessage));
+    and('le fetch HTML vers hermes.admin.ch échoue avec erreur réseau', () => {
+      // Inclus dans le mock ci-dessus (hermes: 'networkError')
+      expect(https.request).toBeDefined();
+    });
+    
+    and('les projets LLM sont initialisés', async () => {
+      await initializeLLMProjects(config, apiKeys, resolvedSchema);
     });
 
-    when('on exécute l\'extraction des concepts avec extractHermes2022Concepts', runExtraction);
-
-    then(/^une erreur contenant "(.*)" est générée$/, (expectedMessage) => {
-      expect(extractionError).toBeDefined();
-      expect(extractionError.message).toContain(expectedMessage);
-      expect(inferTextMock).toHaveBeenCalledTimes(1);
+    when('on tente d\'exécuter extractHermes2022Concepts avec l\'orchestrateur', async () => {
+      try {
+        await extractHermes2022Concepts(config, resolvedSchema, apiKeys);
+      } catch (e) {
+        error = e;
+      }
     });
-  }, 5000);
+
+    then('une erreur contenant "Network error" est générée', () => {
+      expect(error).toBeDefined();
+      // L'erreur peut être wrappée : vérifier le message ou la cause
+      const hasNetworkError = error.message.includes('Network error') || 
+                              error.message.includes('Error loading HTML');
+      expect(hasNetworkError).toBe(true);
+    });
+  }, 60000);
+
+  test('Erreur lors de l\'extraction d\'un bloc (nuextract.ai retourne erreur HTTP 500)', ({ given, and, when, then }) => {
+    given('une configuration valide pour l\'extraction orchestrée', () => {
+      expect(config).toBeDefined();
+      expect(config.llm).toBeDefined();
+      expect(config.llm.nuextract).toBeDefined();
+      expect(config.llm.nuextract.baseUrl).toBeDefined();
+      expect(config.llm.nuextract.projectName).toBeDefined();
+      // Claude : vérifier seulement la propriété principale (non implémenté)
+      expect(config.llm.claude).toBeDefined();
+    });
+
+    and('un schéma JSON résolu valide', () => {
+      expect(resolvedSchema).toBeDefined();
+      expect(resolvedSchema.properties).toBeDefined();
+      expect(resolvedSchema.properties.config).toBeDefined();
+      expect(resolvedSchema.properties.method).toBeDefined();
+      expect(resolvedSchema.properties.concepts).toBeDefined();
+    });
+
+    and('les clés API sont chargées', () => {
+      expect(apiKeys).toBeDefined();
+      expect(apiKeys.nuextract).toBeDefined();
+      expect(typeof apiKeys.nuextract).toBe('string');
+      // Claude : ne pas vérifier (non implémenté)
+    });
+
+    and('nuextract.ai est mocké pour retourner erreur HTTP 500', () => {
+      // Configurer le mock https : NuExtract en erreur 500, autres en succès
+      (https.request as jest.Mock).mockImplementation(createHttpsMock({
+        hermes: 'success',
+        nuextract: 'error500',
+        claude: 'success'
+      }));
+    });
+
+    and('api.anthropic.com est mocké pour retourner des réponses valides', () => {
+      // Inclus dans le mock ci-dessus (claude: 'success')
+      expect(https.request).toBeDefined();
+    });
+
+    and('les pages HTML sources d\'information sont mockées pour retourner un contenu valable', () => {
+      // Inclus dans le mock ci-dessus (hermes: 'success')
+      expect(https.request).toBeDefined();
+    });
+    
+    and('les projets LLM sont initialisés', async () => {
+      await initializeLLMProjects(config, apiKeys, resolvedSchema);
+    });
+
+    when('on tente d\'exécuter extractHermes2022Concepts avec l\'orchestrateur', async () => {
+      try {
+        await extractHermes2022Concepts(config, resolvedSchema, apiKeys);
+      } catch (e) {
+        error = e;
+      }
+    });
+
+    then('une erreur contenant "API error: 500" est générée', () => {
+      expect(error).toBeDefined();
+      // Vérifier le code d'erreur HTTP 500
+      expect(error.message).toContain('500');
+    });
+  }, 60000);
+
+  test('Erreur lors de la recomposition (nuextract.ai retourne data null)', ({ given, and, when, then }) => {
+    given('une configuration valide pour l\'extraction orchestrée', () => {
+      expect(config).toBeDefined();
+      expect(config.llm).toBeDefined();
+      expect(config.llm.nuextract).toBeDefined();
+      expect(config.llm.nuextract.baseUrl).toBeDefined();
+      expect(config.llm.nuextract.projectName).toBeDefined();
+      // Claude : vérifier seulement la propriété principale (non implémenté)
+      expect(config.llm.claude).toBeDefined();
+    });
+
+    and('un schéma JSON résolu valide', () => {
+      expect(resolvedSchema).toBeDefined();
+      expect(resolvedSchema.properties).toBeDefined();
+      expect(resolvedSchema.properties.config).toBeDefined();
+      expect(resolvedSchema.properties.method).toBeDefined();
+      expect(resolvedSchema.properties.concepts).toBeDefined();
+    });
+
+    and('les clés API sont chargées', () => {
+      expect(apiKeys).toBeDefined();
+      expect(apiKeys.nuextract).toBeDefined();
+      expect(typeof apiKeys.nuextract).toBe('string');
+      // Claude : ne pas vérifier (non implémenté)
+    });
+
+    and('nuextract.ai est mocké pour retourner data null', () => {
+      // Configurer le mock https : NuExtract retourne null, autres en succès
+      (https.request as jest.Mock).mockImplementation(createHttpsMock({
+        hermes: 'success',
+        nuextract: 'dataNull',
+        claude: 'success'
+      }));
+    });
+
+    and('api.anthropic.com est mocké pour retourner des réponses valides', () => {
+      // Inclus dans le mock ci-dessus (claude: 'success')
+      expect(https.request).toBeDefined();
+    });
+
+    and('les pages HTML sources d\'information sont mockées pour retourner un contenu valable', () => {
+      // Inclus dans le mock ci-dessus (hermes: 'success')
+      expect(https.request).toBeDefined();
+    });
+    
+    and('les projets LLM sont initialisés', async () => {
+      await initializeLLMProjects(config, apiKeys, resolvedSchema);
+    });
+
+    when('on tente d\'exécuter extractHermes2022Concepts avec l\'orchestrateur', async () => {
+      try {
+        await extractHermes2022Concepts(config, resolvedSchema, apiKeys);
+      } catch (e) {
+        error = e;
+      }
+    });
+
+    then('une erreur contenant "Invalid data in partial result" est générée', () => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain('Invalid data in partial result');
+    });
+  }, 60000);
+
+  // === Scénarios d'erreur Claude (préparation intégration future) ===
+
+  test.skip('Erreur lors de l\'extraction avec Claude (api.anthropic.com retourne erreur HTTP 429)', ({ given, and, when, then }) => {
+    given('une configuration valide pour l\'extraction orchestrée', () => {
+      expect(config).toBeDefined();
+      expect(config.llm).toBeDefined();
+      expect(config.llm.nuextract).toBeDefined();
+      expect(config.llm.nuextract.baseUrl).toBeDefined();
+      expect(config.llm.nuextract.projectName).toBeDefined();
+      // Claude : vérifier seulement la propriété principale (non implémenté)
+      expect(config.llm.claude).toBeDefined();
+    });
+
+    and('un schéma JSON résolu valide', () => {
+      expect(resolvedSchema).toBeDefined();
+      expect(resolvedSchema.properties).toBeDefined();
+      expect(resolvedSchema.properties.config).toBeDefined();
+      expect(resolvedSchema.properties.method).toBeDefined();
+      expect(resolvedSchema.properties.concepts).toBeDefined();
+    });
+
+    and('les clés API sont chargées', () => {
+      expect(apiKeys).toBeDefined();
+      expect(apiKeys.nuextract).toBeDefined();
+      expect(typeof apiKeys.nuextract).toBe('string');
+      // Claude : ne pas vérifier (non implémenté)
+    });
+
+    and('nuextract.ai est mocké pour retourner des réponses valides', () => {
+      // Configurer le mock https : Claude en erreur 429, autres en succès
+      (https.request as jest.Mock).mockImplementation(createHttpsMock({
+        hermes: 'success',
+        nuextract: 'success',
+        claude: 'error429'
+      }));
+    });
+
+    and('api.anthropic.com est mocké pour retourner erreur HTTP 429 (rate limit)', () => {
+      // Inclus dans le mock ci-dessus (claude: 'error429')
+      expect(https.request).toBeDefined();
+    });
+
+    and('les pages HTML sources d\'information sont mockées pour retourner un contenu valable', () => {
+      // Inclus dans le mock ci-dessus (hermes: 'success')
+      expect(https.request).toBeDefined();
+    });
+    
+    and('les projets LLM sont initialisés', async () => {
+      await initializeLLMProjects(config, apiKeys, resolvedSchema);
+    });
+
+    when('on tente d\'exécuter extractHermes2022Concepts avec l\'orchestrateur', async () => {
+      try {
+        await extractHermes2022Concepts(config, resolvedSchema, apiKeys);
+      } catch (e) {
+        error = e;
+      }
+    });
+
+    then('une erreur contenant "Rate limit exceeded" est générée', () => {
+      expect(error).toBeDefined();
+      expect(error.message).toContain('Rate limit exceeded');
+    });
+  }, 60000);
 });

@@ -522,7 +522,7 @@ defineFeature(feature, (test) => {
 
   test.skip('Erreur fichier $ref manquant', ({ given, when, then, and }) => {
     let error;
-    const tmpDir = '__tests__/tmp-test-schemas';
+    const tmpDir = path.resolve(__dirname, '../tmp-test-schemas');
     const schemaPath = path.join(tmpDir, 'test-schema-with-invalid-ref.json');
 
     given('un schéma JSON valide avec une référence $ref vers un fichier inexistant', () => {
@@ -611,7 +611,7 @@ defineFeature(feature, (test) => {
 
   test('Erreur schéma JSON non conforme à JSON Schema Draft-07', ({ given, when, then, and }) => {
     let error;
-    const tmpDir = '__tests__/tmp-test-schemas';
+    const tmpDir = path.resolve(__dirname, '../tmp-test-schemas');
     const schemaPath = path.join(tmpDir, 'test-invalid-schema-structure.json');
 
     given('un JSON valide mais non conforme à JSON Schema Draft-07', () => {

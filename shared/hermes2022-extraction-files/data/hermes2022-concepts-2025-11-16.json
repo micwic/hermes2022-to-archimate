@@ -1,0 +1,337 @@
+{
+  "config": {
+    "extractionSource": {
+      "baseUrl": "https://www.hermes.admin.ch/en",
+      "language": "en",
+      "description": "Site de référence en anglais pour l'extraction des concepts HERMES2022"
+    }
+  },
+  "method": {
+    "hermesVersion": "2022",
+    "publicationDate": "2023-04-01",
+    "overview": "HERMES is a project management method developed by the Swiss Federal Government for steering and managing projects.",
+    "extractionModel": "nuextract",
+    "sourceUrl": [
+      "/"
+    ],
+    "extractionInstructions": [
+      "Extract the version (hermesVersion) and publication date (publicationDate) of the HERMES method from the homepage",
+      "Publication date must be in ISO 8601 format: YYYY-MM-DD",
+      "The publication date for HERMES 2022 is always 2023-04-01",
+      "The publication date for HERMES 5 is always 2013-04-22",
+      "The publication date for HERMES 5.1 is always 2014-06-03",
+      "Extract the name and a very synthetic description (overview) of the HERMES method from the homepage",
+      "The overview must be factual, 20 characters minimal length, 250 characters maximum length, plain text English"
+    ]
+  },
+  "concepts": {
+    "overview": "HERMES is a project management method developed by the Swiss Federal Government. It provides a comprehensive framework for managing projects of all sizes. The method covers the entire project lifecycle from initiation to closure. HERMES supports traditional, agile, and hybrid approaches with flexible configuration capabilities. The methodology emphasizes outcome-focused project management with structured phases, scenarios, modules, tasks, results, and roles. HERMES is a project management method developed by the Swiss Federal Government. It provides a comprehensive framework for managing projects of all sizes. The method covers the entire project lifecycle from initiation to closure. HERMES supports traditional, agile, and hybrid approaches with flexible configuration capabilities. The methodology emphasizes outcome-focused project management with structured phases, scenarios, modules, tasks, results, and roles. ",
+    "concept-phases": {
+      "overview": "HERMES phases structure the project lifecycle from initiation to closure. Traditional projects use all phases sequentially. Agile projects may adapt the execution phase. The phase hierarchy follows: 1=Initiation (project start), 2=Execution (development with 2.1=Concept, 2.2=Implementation, 2.3=Deployment), 3=Closure (project end). HERMES phases structure the project lifecycle from initiation to closure. Traditional projects use all phases sequentially. Agile projects may adapt the execution phase. The phase hierarchy follows: 1=Initiation (project start), 2=Execution (development with 2.1=Concept, 2.2=Implementation, 2.3=Deployment), 3=Closure (project end). HERMES phases structure the project lifecycle from initiation to closure. Traditional projects use all phases sequentially. Agile projects may adapt the execution phase. The phase hierarchy follows: 1=Initiation (project start), 2=Execution (development with 2.1=Concept, 2.2=Implementation, 2.3=Deployment), 3=Closure (project end). ",
+      "phases": [
+        {
+          "id": "ph_dc8179",
+          "name": "Initiation",
+          "order": "1",
+          "type": "simple",
+          "description": "Project start phase with initial planning and setup activities",
+          "context": "First phase establishing project foundations",
+          "outcomes": [
+            "Project charter",
+            "Initial plan"
+          ],
+          "milestones": [
+            "Project approved"
+          ],
+          "approach": [
+            "traditional",
+            "agile",
+            "both"
+          ],
+          "extractionModel": "claude",
+          "sourceUrl": [
+            "/project-management/phases/initiation.html",
+            "/project-management/phases/concept.html",
+            "/project-management/phases/deployment.html",
+            "/project-management/phases/implementation.html",
+            "/project-management/phases/execution.html",
+            "/project-management/phases/closure.html"
+          ],
+          "extractionInstructions": [
+            "Extract phase information from the specific phase page",
+            "Extract base information: name, hierarchical order, type",
+            "Extract main description explaining main objective, role in project lifecycle, and foundations created",
+            "Extract context explaining how phase integrates in lifecycle, relationship with other phases, importance in HERMES2022 methodology",
+            "Identify and list main outcomes (results): documents produced, decisions taken, foundations established",
+            "Identify control points and milestones: phase release decisions, required validations, success criteria",
+            "Determine supported approaches as array: [\"traditional\"], [\"agile\"], or [\"traditional\", \"agile\"] if both are supported.",
+            "Output: plain text (no rich Markdown). Site language. Factual, neutral style, without extrapolation",
+            "Extract only information present on the page",
+            "Respect JSON structure defined in schema",
+            "Maintain coherence with validation schema",
+            "Prioritize precision over quantity of information"
+          ]
+        },
+        {
+          "id": "ph_ffc92c",
+          "name": "Execution",
+          "order": "2",
+          "type": "composite",
+          "description": "Development phase including concept, implementation, and deployment",
+          "context": "Core project execution with iterative development",
+          "outcomes": [
+            "Working solution",
+            "Documentation"
+          ],
+          "milestones": [
+            "Concept complete",
+            "Implementation complete",
+            "Deployment complete"
+          ],
+          "approach": [
+            "traditional",
+            "agile",
+            "both"
+          ],
+          "extractionModel": "claude",
+          "sourceUrl": [
+            "/project-management/phases/initiation.html",
+            "/project-management/phases/concept.html",
+            "/project-management/phases/deployment.html",
+            "/project-management/phases/implementation.html",
+            "/project-management/phases/execution.html",
+            "/project-management/phases/closure.html"
+          ],
+          "extractionInstructions": [
+            "Extract phase information from the specific phase page",
+            "Extract base information: name, hierarchical order, type",
+            "Extract main description explaining main objective, role in project lifecycle, and foundations created",
+            "Extract context explaining how phase integrates in lifecycle, relationship with other phases, importance in HERMES2022 methodology",
+            "Identify and list main outcomes (results): documents produced, decisions taken, foundations established",
+            "Identify control points and milestones: phase release decisions, required validations, success criteria",
+            "Determine supported approaches as array: [\"traditional\"], [\"agile\"], or [\"traditional\", \"agile\"] if both are supported.",
+            "Output: plain text (no rich Markdown). Site language. Factual, neutral style, without extrapolation",
+            "Extract only information present on the page",
+            "Respect JSON structure defined in schema",
+            "Maintain coherence with validation schema",
+            "Prioritize precision over quantity of information"
+          ]
+        },
+        {
+          "id": "ph_47cb06",
+          "name": "Concept",
+          "order": "2.1",
+          "type": "simple",
+          "description": "Concept definition within execution phase",
+          "context": "Solution architecture and design",
+          "outcomes": [
+            "Architecture document",
+            "Design specifications"
+          ],
+          "milestones": [
+            "Design approved"
+          ],
+          "approach": [
+            "traditional",
+            "agile",
+            "both"
+          ],
+          "extractionModel": "claude",
+          "sourceUrl": [
+            "/project-management/phases/initiation.html",
+            "/project-management/phases/concept.html",
+            "/project-management/phases/deployment.html",
+            "/project-management/phases/implementation.html",
+            "/project-management/phases/execution.html",
+            "/project-management/phases/closure.html"
+          ],
+          "extractionInstructions": [
+            "Extract phase information from the specific phase page",
+            "Extract base information: name, hierarchical order, type",
+            "Extract main description explaining main objective, role in project lifecycle, and foundations created",
+            "Extract context explaining how phase integrates in lifecycle, relationship with other phases, importance in HERMES2022 methodology",
+            "Identify and list main outcomes (results): documents produced, decisions taken, foundations established",
+            "Identify control points and milestones: phase release decisions, required validations, success criteria",
+            "Determine supported approaches as array: [\"traditional\"], [\"agile\"], or [\"traditional\", \"agile\"] if both are supported.",
+            "Output: plain text (no rich Markdown). Site language. Factual, neutral style, without extrapolation",
+            "Extract only information present on the page",
+            "Respect JSON structure defined in schema",
+            "Maintain coherence with validation schema",
+            "Prioritize precision over quantity of information"
+          ]
+        },
+        {
+          "id": "ph_b6fa15",
+          "name": "Implementation",
+          "order": "2.2",
+          "type": "simple",
+          "description": "Implementation activities within execution phase",
+          "context": "Development and construction of solution",
+          "outcomes": [
+            "Implemented solution",
+            "Test results"
+          ],
+          "milestones": [
+            "Implementation complete"
+          ],
+          "approach": [
+            "traditional",
+            "agile",
+            "both"
+          ],
+          "extractionModel": "claude",
+          "sourceUrl": [
+            "/project-management/phases/initiation.html",
+            "/project-management/phases/concept.html",
+            "/project-management/phases/deployment.html",
+            "/project-management/phases/implementation.html",
+            "/project-management/phases/execution.html",
+            "/project-management/phases/closure.html"
+          ],
+          "extractionInstructions": [
+            "Extract phase information from the specific phase page",
+            "Extract base information: name, hierarchical order, type",
+            "Extract main description explaining main objective, role in project lifecycle, and foundations created",
+            "Extract context explaining how phase integrates in lifecycle, relationship with other phases, importance in HERMES2022 methodology",
+            "Identify and list main outcomes (results): documents produced, decisions taken, foundations established",
+            "Identify control points and milestones: phase release decisions, required validations, success criteria",
+            "Determine supported approaches as array: [\"traditional\"], [\"agile\"], or [\"traditional\", \"agile\"] if both are supported.",
+            "Output: plain text (no rich Markdown). Site language. Factual, neutral style, without extrapolation",
+            "Extract only information present on the page",
+            "Respect JSON structure defined in schema",
+            "Maintain coherence with validation schema",
+            "Prioritize precision over quantity of information"
+          ]
+        },
+        {
+          "id": "ph_06e5c0",
+          "name": "Deployment",
+          "order": "2.3",
+          "type": "simple",
+          "description": "Deployment activities within execution phase",
+          "context": "Solution rollout and stabilization",
+          "outcomes": [
+            "Deployed solution",
+            "Training materials"
+          ],
+          "milestones": [
+            "Solution deployed"
+          ],
+          "approach": [
+            "traditional",
+            "agile",
+            "both"
+          ],
+          "extractionModel": "claude",
+          "sourceUrl": [
+            "/project-management/phases/initiation.html",
+            "/project-management/phases/concept.html",
+            "/project-management/phases/deployment.html",
+            "/project-management/phases/implementation.html",
+            "/project-management/phases/execution.html",
+            "/project-management/phases/closure.html"
+          ],
+          "extractionInstructions": [
+            "Extract phase information from the specific phase page",
+            "Extract base information: name, hierarchical order, type",
+            "Extract main description explaining main objective, role in project lifecycle, and foundations created",
+            "Extract context explaining how phase integrates in lifecycle, relationship with other phases, importance in HERMES2022 methodology",
+            "Identify and list main outcomes (results): documents produced, decisions taken, foundations established",
+            "Identify control points and milestones: phase release decisions, required validations, success criteria",
+            "Determine supported approaches as array: [\"traditional\"], [\"agile\"], or [\"traditional\", \"agile\"] if both are supported.",
+            "Output: plain text (no rich Markdown). Site language. Factual, neutral style, without extrapolation",
+            "Extract only information present on the page",
+            "Respect JSON structure defined in schema",
+            "Maintain coherence with validation schema",
+            "Prioritize precision over quantity of information"
+          ]
+        },
+        {
+          "id": "ph_580601",
+          "name": "Closure",
+          "order": "3",
+          "type": "simple",
+          "description": "Project end phase with final activities and handover",
+          "context": "Project completion and lessons learned",
+          "outcomes": [
+            "Final report",
+            "Lessons learned"
+          ],
+          "milestones": [
+            "Project closed"
+          ],
+          "approach": [
+            "traditional",
+            "agile",
+            "both"
+          ],
+          "extractionModel": "claude",
+          "sourceUrl": [
+            "/project-management/phases/initiation.html",
+            "/project-management/phases/concept.html",
+            "/project-management/phases/deployment.html",
+            "/project-management/phases/implementation.html",
+            "/project-management/phases/execution.html",
+            "/project-management/phases/closure.html"
+          ],
+          "extractionInstructions": [
+            "Extract phase information from the specific phase page",
+            "Extract base information: name, hierarchical order, type",
+            "Extract main description explaining main objective, role in project lifecycle, and foundations created",
+            "Extract context explaining how phase integrates in lifecycle, relationship with other phases, importance in HERMES2022 methodology",
+            "Identify and list main outcomes (results): documents produced, decisions taken, foundations established",
+            "Identify control points and milestones: phase release decisions, required validations, success criteria",
+            "Determine supported approaches as array: [\"traditional\"], [\"agile\"], or [\"traditional\", \"agile\"] if both are supported.",
+            "Output: plain text (no rich Markdown). Site language. Factual, neutral style, without extrapolation",
+            "Extract only information present on the page",
+            "Respect JSON structure defined in schema",
+            "Maintain coherence with validation schema",
+            "Prioritize precision over quantity of information"
+          ]
+        }
+      ],
+      "extractionModel": "claude",
+      "sourceUrl": [
+        "/project-management/phases.html"
+      ],
+      "extractionInstructions": [
+        "Produce a synthetic text (overview) covering:",
+        "Lifecycle (project start, solution development, project end)",
+        "Traditional vs agile approaches (Execution not subdivided in agile)",
+        "Uniformity of interfaces, milestones/quality gates, releases",
+        "Hierarchy and order (1, 2, 2.1, 2.2, 2.3, 3), role Initiation/Closure",
+        "Target length: 600-1500 words, factual style and faithful to source",
+        "Integrate salient points useful for AI for context and articulation"
+      ]
+    },
+    "extractionModel": "nuextract",
+    "sourceUrl": [
+      "/project-management/method-overview.html",
+      "/project-management/method-overview/preface.html"
+    ],
+    "extractionInstructions": [
+      "Extract comprehensive overview of HERMES project management method from the two referenced pages",
+      "FINALITY: Extract what HERMES aims to achieve - steering, management, and execution of projects with outcome-focused approach",
+      "SCOPE: Extract specific domain covered - project management (traditional and agile) vs domains out of scope (portfolio management, application management)",
+      "STRUCTURAL COMPONENTS: Extract and explain the main building blocks - phases (lifecycle stages), scenarios (situation-specific configurations), modules (functional groupings), tasks (work units), results (deliverables), roles (responsibilities)",
+      "PHASE STRUCTURE: Extract phase hierarchy - 1=Initiation (project start), 2=Execution (solution development with 2.1=Concept, 2.2=Implementation, 2.3=Deployment), 3=Closure (project end). Explain how phases structure the project lifecycle",
+      "SCENARIOS: Extract what scenarios are and their purpose - predefined configurations for different project situations, how they adapt HERMES to specific contexts",
+      "MODULES: Extract what modules are - thematic groupings of tasks that organize work across scenarios, their role in structuring activities",
+      "TASKS: Extract what tasks are - discrete work units executed within modules, how they relate to results and roles",
+      "RESULTS: Extract what results are - deliverables produced by tasks, their role as project outcomes and decision points",
+      "ROLES: Extract what roles are - responsibilities assigned to stakeholders, how they interact with tasks and results",
+      "RELATIONSHIPS: Extract how these components interact - how scenarios combine modules, how modules group tasks, how tasks produce results and involve roles",
+      "GOVERNANCE: Extract governance mechanisms - milestones, quality gates, release decisions, how HERMES ensures project control and quality assurance",
+      "METHODOLOGY CHARACTERISTICS: Extract key features - modularity (adaptable configuration), uniformity (consistent interfaces), flexibility (traditional/agile support), scalability (different project sizes)",
+      "TRADITIONAL APPROACH: Extract how HERMES supports traditional project management - sequential phases, comprehensive planning upfront, waterfall execution",
+      "AGILE APPROACH: Extract how HERMES supports agile methods - iterative execution, incremental delivery, adaptive planning",
+      "HYBRID APPROACH: Extract how HERMES accommodates hybrid methodologies - combining traditional and agile elements, flexibility in approach selection",
+      "OUTCOME FOCUS: Extract HERMES emphasis on outcomes - deliverable-driven approach, results as success criteria, outcome-based project control",
+      "ADAPTABILITY: Extract how HERMES adapts to different contexts - scenario selection, module configuration, task tailoring",
+      "CONSISTENCY: Extract how HERMES ensures consistency - standard terminology, uniform phase structure, common interfaces between components",
+      "Target length: 300-500 words (≈ 1800-3000 characters). Extract only information explicitly present on the two referenced pages",
+      "Output: plain text (no Markdown formatting). Site language (English). Factual, neutral style, without extrapolation",
+      "Construct a flowing narrative that integrates all extracted elements into a coherent overview of the methodology as a whole"
+    ]
+  }
+}

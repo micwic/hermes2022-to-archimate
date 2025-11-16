@@ -1,4 +1,5 @@
 node_modules
 hermes2022-concepts-site-extraction/__tests__/tmp-artifacts/
+hermes2022-concepts-site-extraction/__tests__/tmp-test-schemas/
 hermes2022-concepts-site-extraction/aragre.config.json
 hermes2022-concepts-site-extraction/config/nuextract-api-key.key
